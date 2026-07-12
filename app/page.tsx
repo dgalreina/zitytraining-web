@@ -1,11 +1,19 @@
-import Link from 'next/link';
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function Home() {
-  return (
-    <main style={{ padding: '2rem' }}>
-      <h1>Zitytraining</h1>
-      <p>Bienvenido a la plataforma de gestión del gimnasio.</p>
-      <Link href="/login">Iniciar sesión</Link>
-    </main>
-  );
+  const router = useRouter();
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      router.push('/dashboard');
+    } else {
+      router.push('/login');
+    }
+  }, [router]);
+
+  return null; // no muestra nada, solo redirige
 }
