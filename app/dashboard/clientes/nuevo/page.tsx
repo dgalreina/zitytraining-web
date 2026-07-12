@@ -4,6 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import { createUserByAdmin } from '@/lib/api';
 
 const inputClass =
@@ -19,14 +21,22 @@ export default function NuevoClientePage() {
     password: '',
     phone: '',
     address: '',
-    membershipNumber: '',
   });
+  const [dob, setDob] = useState<Date | null>(null);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const router = useRouter();
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setForm({ ...form, [e.target.name]: e.target.value });
+  }
+
+  function handleDobChange(date: Date | null) {
+    setDob(date);
+    setForm({
+      ...form,
+      dateOfBirth: date ? date.toISOString().split('T')[0] : '',
+    });
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -44,7 +54,6 @@ export default function NuevoClientePage() {
       await createUserByAdmin(token, {
         ...form,
         roles: ['client'],
-        membershipNumber: form.membershipNumber || undefined,
       });
       router.push('/dashboard/clientes');
     } catch (err: any) {
@@ -96,37 +105,17 @@ export default function NuevoClientePage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>Fecha de nacimiento</label>
-              <input
-                type="date"
-                name="dateOfBirth"
-                value={form.dateOfBirth}
-                onChange={handleChange}
+              <DatePicker
+                selected={dob}
+                onChange={handleDobChange}
+                dateFormat="dd/MM/yyyy"
+                showYearDropdown
+                yearDropdownItemNumber={80}
+                scrollableYearDropdown
+                placeholderText="Selecciona una fecha"
+                className={inputClass}
+                wrapperClassName="w-full"
                 required
-                className={inputClass}
-              />
-            </div>
-            <div>
-              <label className={labelClass}>Nº de socio (opcional)</label>
-              <input
-                name="membershipNumber"
-                value={form.membershipNumber}
-                onChange={handleChange}
-                placeholder="SOC-0001"
-                className={inputClass}
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className={labelClass}>Email</label>
-              <input
-                type="email"
-                name="email"
-                value={form.email}
-                onChange={handleChange}
-                required
-                className={inputClass}
               />
             </div>
             <div>
@@ -139,6 +128,18 @@ export default function NuevoClientePage() {
                 className={inputClass}
               />
             </div>
+          </div>
+
+          <div>
+            <label className={labelClass}>Email</label>
+            <input
+              type="email"
+              name="email"
+              value={form.email}
+              onChange={handleChange}
+              required
+              className={inputClass}
+            />
           </div>
 
           <div>

@@ -3,22 +3,26 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Check, X } from 'lucide-react';
+import { ArrowLeft, Check, X, Pencil } from 'lucide-react';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import { getUser, updateUser, approveUser, rejectUser } from '@/lib/api';
 
 const inputClass =
-  'w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none focus:ring-2 focus:ring-[#a2c037]/20';
+  'w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none focus:ring-2 focus:ring-[#a2c037]/20 disabled:bg-gray-50 disabled:text-gray-500';
 const labelClass = 'mb-1 block text-xs font-semibold text-[#868585]';
 
 function statusBadge(status: string) {
   const styles: Record<string, string> = {
     active: 'bg-[#a2c037]/15 text-[#4b7a1f]',
     pending: 'bg-amber-100 text-amber-700',
+    inactive: 'bg-gray-100 text-gray-600',
     rejected: 'bg-red-100 text-red-700',
   };
   const labels: Record<string, string> = {
     active: 'Activo',
     pending: 'Pendiente',
+    inactive: 'Inactivo',
     rejected: 'Rechazado',
   };
   return (
@@ -30,6 +34,9 @@ function statusBadge(status: string) {
 
 export default function DetalleClientePage() {
   const [form, setForm] = useState<any>(null);
+  const [original, setOriginal] = useState<any>(null);
+  const [dob, setDob] = useState<Date | null>(null);
+  const [editing, setEditing] = useState(false);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -46,16 +53,20 @@ export default function DetalleClientePage() {
 
     getUser(token, id)
       .then((user) => {
-        setForm({
+        const dateOfBirth = user.dateOfBirth?.split('T')[0] ?? '';
+        const data = {
           firstName: user.firstName,
           lastName: user.lastName,
-          dateOfBirth: user.dateOfBirth?.split('T')[0] ?? '',
+          dateOfBirth,
           email: user.email,
           phone: user.phone,
           address: user.address,
           membershipNumber: user.membershipNumber || '',
           status: user.status,
-        });
+        };
+        setForm(data);
+        setOriginal(data);
+        setDob(dateOfBirth ? new Date(dateOfBirth) : null);
       })
       .catch(() => setError('No se pudo cargar el cliente'))
       .finally(() => setLoading(false));
@@ -63,6 +74,25 @@ export default function DetalleClientePage() {
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     setForm({ ...form, [e.target.name]: e.target.value });
+  }
+
+  function handleDobChange(date: Date | null) {
+    setDob(date);
+    setForm({
+      ...form,
+      dateOfBirth: date ? date.toISOString().split('T')[0] : '',
+    });
+  }
+
+  function handleToggleStatus() {
+    setForm({ ...form, status: form.status === 'active' ? 'inactive' : 'active' });
+  }
+
+  function handleCancel() {
+    setForm(original);
+    setDob(original.dateOfBirth ? new Date(original.dateOfBirth) : null);
+    setError('');
+    setEditing(false);
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -77,12 +107,23 @@ export default function DetalleClientePage() {
     }
 
     try {
-      const { status, ...data } = form;
-      await updateUser(token, id, {
-        ...data,
-        membershipNumber: data.membershipNumber || undefined,
+      const updated = await updateUser(token, id, {
+        ...form,
+        membershipNumber: form.membershipNumber || undefined,
       });
-      router.push('/dashboard/clientes');
+      const data = {
+        firstName: updated.firstName,
+        lastName: updated.lastName,
+        dateOfBirth: updated.dateOfBirth?.split('T')[0] ?? '',
+        email: updated.email,
+        phone: updated.phone,
+        address: updated.address,
+        membershipNumber: updated.membershipNumber || '',
+        status: updated.status,
+      };
+      setForm(data);
+      setOriginal(data);
+      setEditing(false);
     } catch (err: any) {
       setError(err.message || 'No se pudo guardar el cliente');
     } finally {
@@ -95,6 +136,7 @@ export default function DetalleClientePage() {
     if (!token) return;
     await approveUser(token, id);
     setForm({ ...form, status: 'active' });
+    setOriginal({ ...original, status: 'active' });
   }
 
   async function handleReject() {
@@ -102,6 +144,7 @@ export default function DetalleClientePage() {
     if (!token) return;
     await rejectUser(token, id);
     setForm({ ...form, status: 'rejected' });
+    setOriginal({ ...original, status: 'rejected' });
   }
 
   if (loading) return <p className="text-sm text-gray-400">Cargando...</p>;
@@ -124,6 +167,7 @@ export default function DetalleClientePage() {
           </h2>
           <div className="flex items-center gap-2">
             {statusBadge(form.status)}
+
             {form.status === 'pending' && (
               <>
                 <button
@@ -142,6 +186,16 @@ export default function DetalleClientePage() {
                 </button>
               </>
             )}
+
+            {!editing && (
+              <button
+                onClick={() => setEditing(true)}
+                className="flex items-center gap-1.5 rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-semibold text-[#2b2b2a] hover:bg-gray-200"
+              >
+                <Pencil size={13} />
+                Editar
+              </button>
+            )}
           </div>
         </div>
 
@@ -154,6 +208,7 @@ export default function DetalleClientePage() {
                 value={form.firstName}
                 onChange={handleChange}
                 required
+                disabled={!editing}
                 className={inputClass}
               />
             </div>
@@ -164,6 +219,7 @@ export default function DetalleClientePage() {
                 value={form.lastName}
                 onChange={handleChange}
                 required
+                disabled={!editing}
                 className={inputClass}
               />
             </div>
@@ -172,13 +228,18 @@ export default function DetalleClientePage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>Fecha de nacimiento</label>
-              <input
-                type="date"
-                name="dateOfBirth"
-                value={form.dateOfBirth}
-                onChange={handleChange}
-                required
+              <DatePicker
+                selected={dob}
+                onChange={handleDobChange}
+                dateFormat="dd/MM/yyyy"
+                showYearDropdown
+                yearDropdownItemNumber={80}
+                scrollableYearDropdown
+                placeholderText="Selecciona una fecha"
                 className={inputClass}
+                wrapperClassName="w-full"
+                disabled={!editing}
+                required
               />
             </div>
             <div>
@@ -188,6 +249,7 @@ export default function DetalleClientePage() {
                 value={form.membershipNumber}
                 onChange={handleChange}
                 placeholder="SOC-0001"
+                disabled={!editing}
                 className={inputClass}
               />
             </div>
@@ -202,6 +264,7 @@ export default function DetalleClientePage() {
                 value={form.email}
                 onChange={handleChange}
                 required
+                disabled={!editing}
                 className={inputClass}
               />
             </div>
@@ -212,6 +275,7 @@ export default function DetalleClientePage() {
                 value={form.phone}
                 onChange={handleChange}
                 required
+                disabled={!editing}
                 className={inputClass}
               />
             </div>
@@ -224,19 +288,60 @@ export default function DetalleClientePage() {
               value={form.address}
               onChange={handleChange}
               required
+              disabled={!editing}
               className={inputClass}
             />
           </div>
 
+          {editing && (form.status === 'active' || form.status === 'inactive') && (
+            <div className="flex items-center justify-between rounded-lg border border-gray-200 px-4 py-3">
+              <div>
+                <p className="text-sm font-semibold text-[#2b2b2a]">
+                  {form.status === 'active' ? 'Cuenta activa' : 'Cuenta inactiva'}
+                </p>
+                <p className="text-xs text-[#868585]">
+                  {form.status === 'active'
+                    ? 'El cliente puede acceder con normalidad.'
+                    : 'El cliente está pausado y no puede acceder.'}
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={form.status === 'active'}
+                onClick={handleToggleStatus}
+                className={`flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition-colors ${
+                  form.status === 'active'
+                    ? 'justify-end bg-gradient-to-r from-[#a2c037] to-[#6aa842]'
+                    : 'justify-start bg-gray-300'
+                }`}
+              >
+                <span className="h-5 w-5 rounded-full bg-white shadow" />
+              </button>
+            </div>
+          )}
+
           {error && <p className="text-sm font-medium text-red-600">{error}</p>}
 
-          <button
-            type="submit"
-            disabled={saving}
-            className="mt-2 rounded-lg bg-gradient-to-r from-[#a2c037] to-[#6aa842] py-2.5 font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
-          >
-            {saving ? 'Guardando...' : 'Guardar cambios'}
-          </button>
+          {editing && (
+            <div className="mt-2 flex gap-3">
+              <button
+                type="submit"
+                disabled={saving}
+                className="flex-1 rounded-lg bg-gradient-to-r from-[#a2c037] to-[#6aa842] py-2.5 font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+              >
+                {saving ? 'Guardando...' : 'Guardar cambios'}
+              </button>
+              <button
+                type="button"
+                onClick={handleCancel}
+                disabled={saving}
+                className="rounded-lg bg-gray-100 px-5 py-2.5 font-semibold text-[#2b2b2a] hover:bg-gray-200"
+              >
+                Cancelar
+              </button>
+            </div>
+          )}
         </form>
       </div>
     </div>
