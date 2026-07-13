@@ -310,13 +310,15 @@ export default function DetalleClientePage() {
                 role="switch"
                 aria-checked={form.status === 'active'}
                 onClick={handleToggleStatus}
-                className={`flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition-colors ${
-                  form.status === 'active'
-                    ? 'justify-end bg-gradient-to-r from-[#a2c037] to-[#6aa842]'
-                    : 'justify-start bg-gray-300'
+                className={`relative h-6 w-11 shrink-0 rounded-full transition-colors duration-300 ${
+                  form.status === 'active' ? 'bg-[#6aa842]' : 'bg-gray-300'
                 }`}
               >
-                <span className="h-5 w-5 rounded-full bg-white shadow" />
+                <span
+                  className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all duration-300 ${
+                    form.status === 'active' ? 'left-[22px]' : 'left-0.5'
+                  }`}
+                />
               </button>
             </div>
           )}
