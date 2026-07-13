@@ -13,7 +13,7 @@ export default function DashboardHome() {
     const token = localStorage.getItem('token');
     if (!token) return;
 
-    getUsers(token)
+    /* getUsers(token)
       .then((users) => {
         setTotalUsers(users.length);
         setPendingCount(users.filter((u: any) => u.status === 'pending').length);
@@ -22,7 +22,7 @@ export default function DashboardHome() {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         router.push('/login');
-      });
+      }); */
   }, [router]);
 
   return (

@@ -115,9 +115,13 @@ export default function DashboardLayout({
               Hola, {userName.split(' ')[0]}
             </h1>
           </div>
-          <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-[#a2c037] to-[#6aa842] text-lg font-bold text-white">
+          <Link
+            href="/dashboard/perfil"
+            title="Ver mi perfil"
+            className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-[#a2c037] to-[#6aa842] text-lg font-bold text-white transition hover:opacity-90"
+          >
             {initials}
-          </div>
+          </Link>
         </div>
 
         {children}
