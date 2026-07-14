@@ -4,14 +4,22 @@ import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { LayoutDashboard, CalendarDays, Users, Dumbbell, BarChart3, Settings, LogOut } from 'lucide-react';
+import {
+  LayoutDashboard,
+  CalendarDays,
+  CalendarClock,
+  Users,
+  Dumbbell,
+  BarChart3,
+  Settings,
+  LogOut,
+} from 'lucide-react';
 
-const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/dashboard/calendario', label: 'Calendario', icon: CalendarDays },
-  { href: '/dashboard/clientes', label: 'Clientes', icon: Users },
-  { href: '/dashboard/entrenadores', label: 'Entrenadores', icon: Dumbbell },
-  { href: '/dashboard/estadisticas', label: 'Estadísticas', icon: BarChart3 },
+const ADMIN_ONLY_PREFIXES = [
+  '/dashboard/calendario',
+  '/dashboard/clientes',
+  '/dashboard/entrenadores',
+  '/dashboard/estadisticas',
 ];
 
 export default function DashboardLayout({
@@ -23,6 +31,8 @@ export default function DashboardLayout({
   const router = useRouter();
   const [userName, setUserName] = useState('');
   const [initials, setInitials] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -33,18 +43,48 @@ export default function DashboardLayout({
       return;
     }
 
+    let admin = false;
+
     if (storedUser) {
       const parsed = JSON.parse(storedUser);
       setUserName(`${parsed.firstName} ${parsed.lastName}`);
       setInitials(`${parsed.firstName?.[0] ?? ''}${parsed.lastName?.[0] ?? ''}`);
+      admin = parsed.roles?.includes('admin') ?? false;
+      setIsAdmin(admin);
     }
-  }, [router]);
+
+    const isBlockedRoute = ADMIN_ONLY_PREFIXES.some((prefix) =>
+      pathname.startsWith(prefix),
+    );
+
+    if (!admin && isBlockedRoute) {
+      router.push('/dashboard');
+      return;
+    }
+
+    setReady(true);
+  }, [router, pathname]);
 
   function handleLogout() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     router.push('/login');
   }
+
+  const navItems = [
+    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/dashboard/mi-calendario', label: 'Mi Calendario', icon: CalendarClock },
+    ...(isAdmin
+      ? [
+          { href: '/dashboard/calendario', label: 'Calendario', icon: CalendarDays },
+          { href: '/dashboard/clientes', label: 'Clientes', icon: Users },
+          { href: '/dashboard/entrenadores', label: 'Entrenadores', icon: Dumbbell },
+          { href: '/dashboard/estadisticas', label: 'Estadísticas', icon: BarChart3 },
+        ]
+      : []),
+  ];
+
+  if (!ready) return null;
 
   return (
     <div className="flex min-h-screen bg-[#f7f7f5] font-[family-name:var(--font-inter)]">
