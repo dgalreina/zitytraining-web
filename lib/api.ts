@@ -65,6 +65,13 @@ export async function updateMe(token: string, data: any) {
   return handleResponse(res);
 }
 
+export async function getActiveClients(token: string) {
+  const res = await fetch(`${API_URL}/users/clients`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res);
+}
+
 export async function createUserByAdmin(token: string, data: any) {
   const res = await fetch(`${API_URL}/users/admin`, {
     method: 'POST',
@@ -103,4 +110,48 @@ export async function rejectUser(token: string, id: string) {
     headers: { Authorization: `Bearer ${token}` },
   });
   return handleResponse(res);
+}
+
+// --- Bookings ---
+
+export async function getBookings(token: string, trainerId: string, from: string, to: string) {
+  const params = new URLSearchParams({ trainer: trainerId, from, to });
+  const res = await fetch(`${API_URL}/bookings?${params}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res);
+}
+
+export async function createBooking(token: string, data: any) {
+  const res = await fetch(`${API_URL}/bookings`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(res);
+}
+
+export async function updateBooking(token: string, id: string, data: any) {
+  const res = await fetch(`${API_URL}/bookings/${id}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(res);
+}
+
+export async function deleteBooking(token: string, id: string) {
+  const res = await fetch(`${API_URL}/bookings/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (res.status === 401) return handleResponse(res);
+  if (!res.ok) throw new Error(`Error ${res.status}`);
+  return true;
 }
