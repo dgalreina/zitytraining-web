@@ -46,6 +46,25 @@ export async function getUser(token: string, id: string) {
   return handleResponse(res);
 }
 
+export async function getMe(token: string) {
+  const res = await fetch(`${API_URL}/users/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res);
+}
+
+export async function updateMe(token: string, data: any) {
+  const res = await fetch(`${API_URL}/users/me`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(res);
+}
+
 export async function createUserByAdmin(token: string, data: any) {
   const res = await fetch(`${API_URL}/users/admin`, {
     method: 'POST',

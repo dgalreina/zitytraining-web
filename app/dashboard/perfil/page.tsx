@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Pencil } from 'lucide-react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { getUser, updateUser } from '@/lib/api';
+import { getMe, updateMe } from '@/lib/api';
 
 const inputClass =
   'w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none focus:ring-2 focus:ring-[#a2c037]/20 disabled:bg-gray-50 disabled:text-gray-500';
@@ -24,16 +24,12 @@ export default function PerfilPage() {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-
-    if (!token || !storedUser) {
+    if (!token) {
       router.push('/login');
       return;
     }
 
-    const { id } = JSON.parse(storedUser);
-
-    getUser(token, id)
+    getMe(token)
       .then((user) => {
         const dateOfBirth = user.dateOfBirth?.split('T')[0] ?? '';
         const data = {
@@ -78,16 +74,13 @@ export default function PerfilPage() {
     setSaving(true);
 
     const token = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-    if (!token || !storedUser) {
+    if (!token) {
       router.push('/login');
       return;
     }
 
-    const { id } = JSON.parse(storedUser);
-
     try {
-      const updated = await updateUser(token, id, form);
+      const updated = await updateMe(token, form);
       const data = {
         firstName: updated.firstName,
         lastName: updated.lastName,
@@ -101,11 +94,14 @@ export default function PerfilPage() {
       setEditing(false);
 
       // mantiene sincronizado el nombre mostrado en la cabecera del layout
-      const currentUser = JSON.parse(storedUser);
-      localStorage.setItem(
-        'user',
-        JSON.stringify({ ...currentUser, firstName: data.firstName, lastName: data.lastName }),
-      );
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        const currentUser = JSON.parse(storedUser);
+        localStorage.setItem(
+          'user',
+          JSON.stringify({ ...currentUser, firstName: data.firstName, lastName: data.lastName }),
+        );
+      }
     } catch (err: any) {
       setError(err.message || 'No se pudo guardar tu perfil');
     } finally {
