@@ -201,6 +201,11 @@ export default function MiCalendarioPage() {
     }
   }
 
+  function handleStartTimeChange(date: Date | null) {
+    if (!modal || !date) return;
+    setModal({ ...modal, start: date } as ModalState);
+  }
+
   function toggleClient(id: string) {
     setSelectedClientIds((prev) =>
       prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id],
@@ -287,9 +292,9 @@ export default function MiCalendarioPage() {
   }
 
   return (
-    <div className="flex gap-5">
+    <div className="flex h-[calc(100vh-130px)] gap-5">
       {/* Mini calendario lateral */}
-      <div className="w-64 shrink-0 rounded-xl bg-white p-4">
+      <div className="w-64 shrink-0 overflow-y-auto rounded-xl bg-white p-4">
         <DatePicker
           selected={selectedDate}
           onChange={handleMiniDateChange}
@@ -297,14 +302,17 @@ export default function MiCalendarioPage() {
           locale="es"
           inline
           calendarClassName="ziti-mini-calendar"
-          dayClassName={(date) =>
-            daysWithBookings.has(dayKey(date)) ? 'ziti-has-booking' : undefined
-          }
+          dayClassName={(date) => {
+            const classes = [];
+            if (daysWithBookings.has(dayKey(date))) classes.push('ziti-has-booking');
+            if (date.getDay() === 0 || date.getDay() === 6) classes.push('ziti-weekend');
+            return classes.join(' ');
+          }}
         />
       </div>
 
       {/* Calendario grande del día/semana */}
-      <div className="min-w-0 flex-1 rounded-xl bg-white p-4">
+      <div className="min-w-0 flex-1 overflow-hidden rounded-xl bg-white p-4">
         <FullCalendar
           ref={calendarRef}
           plugins={[timeGridPlugin, interactionPlugin]}
@@ -316,7 +324,7 @@ export default function MiCalendarioPage() {
           allDaySlot={false}
           slotMinTime="07:00:00"
           slotMaxTime="22:00:00"
-          height="auto"
+          height="100%"
           selectable
           editable
           select={handleSelect}
@@ -327,6 +335,7 @@ export default function MiCalendarioPage() {
           events={events}
           eventColor="#6aa842"
           slotDuration="00:30:00"
+          snapDuration="00:05:00"
           displayEventTime={false}
           eventContent={(arg) => {
             const raw = arg.event.extendedProps.raw;
@@ -342,8 +351,13 @@ export default function MiCalendarioPage() {
                     minute: '2-digit',
                   })}`
                 : '';
-            const parts = [arg.event.title, timeStr, raw?.notes].filter(Boolean);
-            return <div className="ziti-event-line">{parts.join(' · ')}</div>;
+            return (
+              <div className="ziti-event-box">
+                <div className="ziti-event-time">{timeStr}</div>
+                <div className="ziti-event-name">{arg.event.title}</div>
+                {raw?.notes && <div className="ziti-event-tooltip">{raw.notes}</div>}
+              </div>
+            );
           }}
         />
       </div>
@@ -361,14 +375,26 @@ export default function MiCalendarioPage() {
               </button>
             </div>
 
-            <p className="mb-3 text-xs font-semibold text-[#868585]">
-              Comienza a las{' '}
-              {modal.start.toLocaleString('es-ES', {
-                weekday: 'short',
+            <label className="mb-1 block text-xs font-semibold text-[#868585]">
+              Hora de inicio
+            </label>
+            <DatePicker
+              selected={modal.start}
+              onChange={handleStartTimeChange}
+              showTimeSelect
+              showTimeSelectOnly
+              timeIntervals={5}
+              timeCaption="Hora"
+              dateFormat="HH:mm"
+              locale="es"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#6aa842] focus:outline-none"
+              wrapperClassName="mb-3 w-full block"
+            />
+            <p className="mb-3 text-xs text-[#868585]">
+              {modal.start.toLocaleDateString('es-ES', {
+                weekday: 'long',
                 day: 'numeric',
-                month: 'short',
-                hour: '2-digit',
-                minute: '2-digit',
+                month: 'long',
               })}
             </p>
 

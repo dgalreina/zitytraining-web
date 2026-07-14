@@ -3,9 +3,12 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Pencil } from 'lucide-react';
-import DatePicker from 'react-datepicker';
+import DatePicker, { registerLocale } from 'react-datepicker';
+import { es } from 'date-fns/locale';
 import 'react-datepicker/dist/react-datepicker.css';
 import { getMe, updateMe } from '@/lib/api';
+
+registerLocale('es', es);
 
 const inputClass =
   'w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none focus:ring-2 focus:ring-[#a2c037]/20 disabled:bg-gray-50 disabled:text-gray-500';
@@ -168,6 +171,8 @@ export default function PerfilPage() {
               <DatePicker
                 selected={dob}
                 onChange={handleDobChange}
+                locale="es"
+                calendarStartDay={1}
                 dateFormat="dd/MM/yyyy"
                 showYearDropdown
                 yearDropdownItemNumber={80}
