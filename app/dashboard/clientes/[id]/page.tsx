@@ -4,12 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Check, X, Pencil } from 'lucide-react';
-import DatePicker, { registerLocale } from 'react-datepicker';
-import { es } from 'date-fns/locale';
-import 'react-datepicker/dist/react-datepicker.css';
+import DateOfBirthPicker from '@/components/DateOfBirthPicker';
 import { getUser, updateUser, approveUser, rejectUser } from '@/lib/api';
-
-registerLocale('es', es);
 
 const inputClass =
   'w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none focus:ring-2 focus:ring-[#a2c037]/20 disabled:bg-gray-50 disabled:text-gray-500';
@@ -38,7 +34,6 @@ function statusBadge(status: string) {
 export default function DetalleClientePage() {
   const [form, setForm] = useState<any>(null);
   const [original, setOriginal] = useState<any>(null);
-  const [dob, setDob] = useState<Date | null>(null);
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -69,7 +64,6 @@ export default function DetalleClientePage() {
         };
         setForm(data);
         setOriginal(data);
-        setDob(dateOfBirth ? new Date(dateOfBirth) : null);
       })
       .catch(() => setError('No se pudo cargar el cliente'))
       .finally(() => setLoading(false));
@@ -79,21 +73,12 @@ export default function DetalleClientePage() {
     setForm({ ...form, [e.target.name]: e.target.value });
   }
 
-  function handleDobChange(date: Date | null) {
-    setDob(date);
-    setForm({
-      ...form,
-      dateOfBirth: date ? date.toISOString().split('T')[0] : '',
-    });
-  }
-
   function handleToggleStatus() {
     setForm({ ...form, status: form.status === 'active' ? 'inactive' : 'active' });
   }
 
   function handleCancel() {
     setForm(original);
-    setDob(original.dateOfBirth ? new Date(original.dateOfBirth) : null);
     setError('');
     setEditing(false);
   }
@@ -229,24 +214,11 @@ export default function DetalleClientePage() {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className={labelClass}>Fecha de nacimiento</label>
-              <DatePicker
-                selected={dob}
-                onChange={handleDobChange}
-                locale="es"
-                calendarStartDay={1}
-                dateFormat="dd/MM/yyyy"
-                showYearDropdown
-                yearDropdownItemNumber={80}
-                scrollableYearDropdown
-                placeholderText="Selecciona una fecha"
-                className={inputClass}
-                wrapperClassName="w-full"
-                disabled={!editing}
-                required
-              />
-            </div>
+            <DateOfBirthPicker
+              value={form.dateOfBirth}
+              onChange={(value) => setForm({ ...form, dateOfBirth: value })}
+              disabled={!editing}
+            />
             <div>
               <label className={labelClass}>Nº de socio</label>
               <input

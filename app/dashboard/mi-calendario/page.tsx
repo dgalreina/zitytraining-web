@@ -8,7 +8,10 @@ import interactionPlugin from '@fullcalendar/interaction';
 import DatePicker, { registerLocale } from 'react-datepicker';
 import { es } from 'date-fns/locale';
 import 'react-datepicker/dist/react-datepicker.css';
+import '@/styles/datepicker-theme.css';
+import '@/styles/fullcalendar-theme.css';
 import { X, Trash2 } from 'lucide-react';
+import MiniCalendar, { dayKey } from '@/components/MiniCalendar';
 import {
   getActiveClients,
   getBookings,
@@ -28,12 +31,6 @@ type DurationOption = '40' | '60' | 'custom';
 
 function minutesBetween(start: Date, end: Date) {
   return Math.round((end.getTime() - start.getTime()) / 60000);
-}
-
-function dayKey(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
-    date.getDate(),
-  ).padStart(2, '0')}`;
 }
 
 export default function MiCalendarioPage() {
@@ -295,19 +292,11 @@ export default function MiCalendarioPage() {
     <div className="flex h-[calc(100vh-130px)] gap-5">
       {/* Mini calendario lateral */}
       <div className="w-64 shrink-0 overflow-y-auto rounded-xl bg-white p-4">
-        <DatePicker
+        <MiniCalendar
           selected={selectedDate}
           onChange={handleMiniDateChange}
           onMonthChange={handleMiniMonthChange}
-          locale="es"
-          inline
-          calendarClassName="ziti-mini-calendar"
-          dayClassName={(date) => {
-            const classes = [];
-            if (daysWithBookings.has(dayKey(date))) classes.push('ziti-has-booking');
-            if (date.getDay() === 0 || date.getDay() === 6) classes.push('ziti-weekend');
-            return classes.join(' ');
-          }}
+          daysWithBookings={daysWithBookings}
         />
       </div>
 
