@@ -45,7 +45,9 @@ export default function MiCalendarioPage() {
   const [customMinutes, setCustomMinutes] = useState(60);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [trainerId, setTrainerId] = useState('');
+  const [userId, setUserId] = useState('');
+  const [isTrainerView, setIsTrainerView] = useState(true);
+  const [roleReady, setRoleReady] = useState(false);
   const calendarRef = useRef<FullCalendar>(null);
   const router = useRouter();
 
@@ -56,21 +58,32 @@ export default function MiCalendarioPage() {
       router.push('/login');
       return;
     }
-    const { id } = JSON.parse(storedUser);
-    setTrainerId(id);
+    const { id, roles } = JSON.parse(storedUser);
+    setUserId(id);
 
-    getActiveClients(token)
-      .then(setClients)
-      .catch(() => {});
+    const trainerView = roles?.includes('trainer') ?? false;
+    setIsTrainerView(trainerView);
+    setRoleReady(true);
+
+    if (trainerView) {
+      getActiveClients(token)
+        .then(setClients)
+        .catch(() => {});
+    }
   }, [router]);
 
   function bookingToEvent(b: any) {
-    const names = (b.clients || [])
-      .map((c: any) => `${c.firstName} ${c.lastName?.[0] ?? ''}.`)
-      .join(', ');
+    let label = '';
+    if (isTrainerView) {
+      label = (b.clients || [])
+        .map((c: any) => `${c.firstName} ${c.lastName?.[0] ?? ''}.`)
+        .join(', ');
+    } else {
+      label = b.trainer ? `${b.trainer.firstName} ${b.trainer.lastName}` : 'Entrenador';
+    }
     return {
       id: b._id,
-      title: names || 'Sesión',
+      title: label || 'Sesión',
       start: b.startTime,
       end: b.endTime,
       extendedProps: { raw: b },
@@ -79,9 +92,12 @@ export default function MiCalendarioPage() {
 
   async function loadBookings(fromStr: string, toStr: string) {
     const token = localStorage.getItem('token');
-    if (!token || !trainerId) return;
+    if (!token || !userId) return;
     try {
-      const data = await getBookings(token, trainerId, fromStr, toStr);
+      const params = isTrainerView
+        ? { trainer: userId, from: fromStr, to: toStr }
+        : { client: userId, from: fromStr, to: toStr };
+      const data = await getBookings(token, params);
       setEvents(data.map(bookingToEvent));
     } catch {
       // silencioso: si falla, simplemente no se pintan eventos
@@ -90,13 +106,16 @@ export default function MiCalendarioPage() {
 
   async function loadMonthDots(monthDate: Date) {
     const token = localStorage.getItem('token');
-    if (!token || !trainerId) return;
+    if (!token || !userId) return;
 
     const start = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
     const end = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0, 23, 59, 59);
 
     try {
-      const data = await getBookings(token, trainerId, start.toISOString(), end.toISOString());
+      const params = isTrainerView
+        ? { trainer: userId, from: start.toISOString(), to: end.toISOString() }
+        : { client: userId, from: start.toISOString(), to: end.toISOString() };
+      const data = await getBookings(token, params);
       const keys = new Set<string>(data.map((b: any) => dayKey(new Date(b.startTime))));
       setDaysWithBookings(keys);
     } catch {
@@ -110,7 +129,7 @@ export default function MiCalendarioPage() {
   }
 
   useEffect(() => {
-    if (trainerId && calendarRef.current) {
+    if (userId && roleReady && calendarRef.current) {
       const api = calendarRef.current.getApi();
       loadBookings(
         api.view.activeStart.toISOString(),
@@ -119,7 +138,7 @@ export default function MiCalendarioPage() {
       loadMonthDots(selectedDate);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trainerId]);
+  }, [userId, roleReady]);
 
   function handleMiniDateChange(date: Date | null) {
     if (!date) return;
@@ -132,6 +151,7 @@ export default function MiCalendarioPage() {
   }
 
   function openCreateModal(start: Date) {
+    if (!isTrainerView) return;
     setModal({ mode: 'create', start });
     setSelectedClientIds([]);
     setNotes('');
@@ -141,6 +161,7 @@ export default function MiCalendarioPage() {
   }
 
   function openEditModal(raw: any) {
+    if (!isTrainerView) return;
     const start = new Date(raw.startTime);
     const end = new Date(raw.endTime);
     const diff = minutesBetween(start, end);
@@ -198,11 +219,6 @@ export default function MiCalendarioPage() {
     }
   }
 
-  function handleStartTimeChange(date: Date | null) {
-    if (!modal || !date) return;
-    setModal({ ...modal, start: date } as ModalState);
-  }
-
   function toggleClient(id: string) {
     setSelectedClientIds((prev) =>
       prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id],
@@ -213,6 +229,11 @@ export default function MiCalendarioPage() {
     if (durationOption === '40') return 40;
     if (durationOption === '60') return 60;
     return customMinutes;
+  }
+
+  function handleStartTimeChange(date: Date | null) {
+    if (!modal || !date) return;
+    setModal({ ...modal, start: date } as ModalState);
   }
 
   async function handleSaveModal() {
@@ -240,7 +261,7 @@ export default function MiCalendarioPage() {
     try {
       if (modal.mode === 'create') {
         await createBooking(token, {
-          trainer: trainerId,
+          trainer: userId,
           clients: selectedClientIds,
           startTime: start.toISOString(),
           endTime: end.toISOString(),
@@ -288,6 +309,8 @@ export default function MiCalendarioPage() {
     }
   }
 
+  if (!roleReady) return null;
+
   return (
     <div className="flex h-[calc(100vh-130px)] gap-5">
       {/* Mini calendario lateral */}
@@ -314,8 +337,8 @@ export default function MiCalendarioPage() {
           slotMinTime="07:00:00"
           slotMaxTime="22:00:00"
           height="100%"
-          selectable
-          editable
+          selectable={isTrainerView}
+          editable={isTrainerView}
           select={handleSelect}
           eventClick={handleEventClick}
           eventDrop={handleEventDrop}
@@ -351,7 +374,7 @@ export default function MiCalendarioPage() {
         />
       </div>
 
-      {/* Modal crear/editar sesión */}
+      {/* Modal crear/editar sesión (solo entrenador) */}
       {modal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">

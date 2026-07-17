@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:3001';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 
 async function handleResponse(res: Response) {
   if (res.status === 401) {
@@ -114,9 +114,17 @@ export async function rejectUser(token: string, id: string) {
 
 // --- Bookings ---
 
-export async function getBookings(token: string, trainerId: string, from: string, to: string) {
-  const params = new URLSearchParams({ trainer: trainerId, from, to });
-  const res = await fetch(`${API_URL}/bookings?${params}`, {
+export async function getBookings(
+  token: string,
+  params: { trainer?: string; client?: string; from: string; to: string },
+) {
+  const query = new URLSearchParams();
+  if (params.trainer) query.set('trainer', params.trainer);
+  if (params.client) query.set('client', params.client);
+  query.set('from', params.from);
+  query.set('to', params.to);
+
+  const res = await fetch(`${API_URL}/bookings?${query}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return handleResponse(res);

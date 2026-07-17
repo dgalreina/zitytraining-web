@@ -32,6 +32,8 @@ export default function DashboardLayout({
   const [userName, setUserName] = useState('');
   const [initials, setInitials] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isTrainer, setIsTrainer] = useState(false);
+  const [isClient, setIsClient] = useState(false);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -44,20 +46,32 @@ export default function DashboardLayout({
     }
 
     let admin = false;
+    let trainer = false;
+    let client = false;
 
     if (storedUser) {
       const parsed = JSON.parse(storedUser);
       setUserName(`${parsed.firstName} ${parsed.lastName}`);
       setInitials(`${parsed.firstName?.[0] ?? ''}${parsed.lastName?.[0] ?? ''}`);
       admin = parsed.roles?.includes('admin') ?? false;
+      trainer = parsed.roles?.includes('trainer') ?? false;
+      client = parsed.roles?.includes('client') ?? false;
       setIsAdmin(admin);
+      setIsTrainer(trainer);
+      setIsClient(client);
     }
 
-    const isBlockedRoute = ADMIN_ONLY_PREFIXES.some((prefix) =>
+    const isAdminOnlyRoute = ADMIN_ONLY_PREFIXES.some((prefix) =>
       pathname.startsWith(prefix),
     );
+    const isMiCalendarioRoute = pathname.startsWith('/dashboard/mi-calendario');
 
-    if (!admin && isBlockedRoute) {
+    if (!admin && isAdminOnlyRoute) {
+      router.push('/dashboard');
+      return;
+    }
+
+    if (isMiCalendarioRoute && !trainer && !client) {
       router.push('/dashboard');
       return;
     }
@@ -73,7 +87,9 @@ export default function DashboardLayout({
 
   const navItems = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { href: '/dashboard/mi-calendario', label: 'Mi Calendario', icon: CalendarClock },
+    ...(isTrainer || isClient
+      ? [{ href: '/dashboard/mi-calendario', label: 'Mi Calendario', icon: CalendarClock }]
+      : []),
     ...(isAdmin
       ? [
           { href: '/dashboard/calendario', label: 'Calendario', icon: CalendarDays },
