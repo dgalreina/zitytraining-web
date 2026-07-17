@@ -157,7 +157,7 @@ export default function EntrenadoresPage() {
         <StatusFilterDropdown value={statusFilter} onChange={setStatusFilter} />
       </div>
 
-      <div className="overflow-hidden rounded-xl bg-white">
+      <div className="hidden overflow-hidden rounded-xl bg-white md:block">
         {loading ? (
           <p className="p-6 text-sm text-gray-400">Cargando...</p>
         ) : filtered.length === 0 ? (
@@ -200,6 +200,44 @@ export default function EntrenadoresPage() {
               ))}
             </tbody>
           </table>
+        )}
+      </div>
+
+      {/* Tarjetas para móvil */}
+      <div className="md:hidden">
+        {loading ? (
+          <p className="p-4 text-sm text-gray-400">Cargando...</p>
+        ) : filtered.length === 0 ? (
+          <p className="p-4 text-sm text-gray-400">No se encontraron entrenadores.</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {filtered.map((trainer) => (
+              <div
+                key={trainer._id}
+                onClick={() => router.push(`/dashboard/entrenadores/${trainer._id}`)}
+                className="cursor-pointer rounded-lg border border-gray-100 bg-white p-4 shadow-sm transition active:bg-gray-50"
+              >
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="font-semibold text-[#2b2b2a]">
+                    {trainer.firstName} {trainer.lastName}
+                  </span>
+                  {statusBadge(trainer.status)}
+                </div>
+                <div className="flex flex-col gap-0.5 text-xs text-[#868585]">
+                  <span>{trainer.email}</span>
+                  <span>{trainer.phone}</span>
+                  {trainer.roles?.includes('admin') ? (
+                    <span className="flex items-center gap-1 font-semibold text-[#4b7a1f]">
+                      <ShieldCheck size={12} />
+                      Administrador
+                    </span>
+                  ) : (
+                    <span>Entrenador</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>

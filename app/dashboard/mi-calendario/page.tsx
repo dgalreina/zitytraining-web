@@ -48,6 +48,8 @@ export default function MiCalendarioPage() {
   const [userId, setUserId] = useState('');
   const [isTrainerView, setIsTrainerView] = useState(true);
   const [roleReady, setRoleReady] = useState(false);
+  const [viewTitle, setViewTitle] = useState('');
+  const [viewType, setViewType] = useState('timeGridWeek');
   const calendarRef = useRef<FullCalendar>(null);
   const router = useRouter();
 
@@ -126,6 +128,8 @@ export default function MiCalendarioPage() {
   function handleDatesSet(info: any) {
     loadBookings(info.startStr, info.endStr);
     setSelectedDate(info.view.currentStart);
+    setViewTitle(info.view.title);
+    setViewType(info.view.type);
   }
 
   useEffect(() => {
@@ -313,8 +317,8 @@ export default function MiCalendarioPage() {
 
   return (
     <div className="flex h-[calc(100vh-130px)] gap-5">
-      {/* Mini calendario lateral */}
-      <div className="w-64 shrink-0 overflow-y-auto rounded-xl bg-white p-4">
+      {/* Mini calendario lateral: solo en pantallas medianas o más grandes */}
+      <div className="hidden w-64 shrink-0 overflow-y-auto rounded-xl bg-white p-4 md:block">
         <MiniCalendar
           selected={selectedDate}
           onChange={handleMiniDateChange}
@@ -324,13 +328,21 @@ export default function MiCalendarioPage() {
       </div>
 
       {/* Calendario grande del día/semana */}
-      <div className="min-w-0 flex-1 overflow-hidden rounded-xl bg-white p-4">
+      <div
+        className={`min-w-0 flex-1 overflow-hidden rounded-xl bg-white p-4 ${
+          viewType === 'timeGridWeek' ? 'ziti-week-view' : ''
+        }`}
+      >
+        <p className="ziti-calendar-title mb-2 text-center font-[family-name:var(--font-work-sans)] text-sm font-bold capitalize text-[#2b2b2a] sm:text-left">
+          {viewTitle}
+        </p>
         <FullCalendar
           ref={calendarRef}
           plugins={[timeGridPlugin, interactionPlugin]}
           initialView="timeGridWeek"
           firstDay={1}
-          headerToolbar={{ left: 'prev,next today', center: 'title', right: 'timeGridDay,timeGridWeek' }}
+          headerToolbar={{ left: 'prev,next today', center: '', right: 'timeGridDay,timeGridWeek' }}
+          dayHeaderFormat={{ weekday: 'short', day: 'numeric' }}
           buttonText={{ today: 'Hoy', day: 'Día', week: 'Semana' }}
           locale="es"
           allDaySlot={false}

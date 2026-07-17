@@ -167,7 +167,7 @@ export default function ClientesPage() {
         <StatusFilterDropdown value={statusFilter} onChange={setStatusFilter} />
       </div>
 
-      <div className="overflow-hidden rounded-xl bg-white">
+      <div className="hidden overflow-hidden rounded-xl bg-white md:block">
         {loading ? (
           <p className="p-6 text-sm text-gray-400">Cargando...</p>
         ) : filtered.length === 0 ? (
@@ -205,6 +205,39 @@ export default function ClientesPage() {
               ))}
             </tbody>
           </table>
+        )}
+      </div>
+
+      {/* Tarjetas para móvil */}
+      <div className="md:hidden">
+        {loading ? (
+          <p className="p-4 text-sm text-gray-400">Cargando...</p>
+        ) : filtered.length === 0 ? (
+          <p className="p-4 text-sm text-gray-400">No se encontraron clientes.</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {filtered.map((client) => (
+              <div
+                key={client._id}
+                onClick={() => router.push(`/dashboard/clientes/${client._id}`)}
+                className="cursor-pointer rounded-lg border border-gray-100 bg-white p-4 shadow-sm transition active:bg-gray-50"
+              >
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="font-semibold text-[#2b2b2a]">
+                    {client.firstName} {client.lastName}
+                  </span>
+                  {statusBadge(client.status)}
+                </div>
+                <div className="flex flex-col gap-0.5 text-xs text-[#868585]">
+                  <span>Nº socio: {client.membershipNumber || '—'}</span>
+                  <span>{client.email}</span>
+                  <span>
+                    Edad: {client.dateOfBirth ? calculateAge(client.dateOfBirth) : '—'}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>

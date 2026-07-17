@@ -13,6 +13,8 @@ import {
   BarChart3,
   Settings,
   LogOut,
+  Menu,
+  X,
 } from 'lucide-react';
 
 const ADMIN_ONLY_PREFIXES = [
@@ -35,6 +37,7 @@ export default function DashboardLayout({
   const [isTrainer, setIsTrainer] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const [ready, setReady] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -79,6 +82,10 @@ export default function DashboardLayout({
     setReady(true);
   }, [router, pathname]);
 
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
+
   function handleLogout() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -104,9 +111,21 @@ export default function DashboardLayout({
 
   return (
     <div className="flex min-h-screen bg-[#f7f7f5] font-[family-name:var(--font-inter)]">
-      {/* Sidebar */}
-      <aside className="flex w-56 flex-col border-r border-gray-200 bg-white px-3 py-5">
-        <div className="mb-6 px-2">
+      {/* Fondo oscuro tras el panel, solo móvil, solo cuando está abierto */}
+      {sidebarOpen && (
+        <div
+          onClick={() => setSidebarOpen(false)}
+          className="fixed inset-0 z-30 bg-black/40 md:hidden"
+        />
+      )}
+
+      {/* Sidebar: fijo en desktop, panel deslizante en móvil */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 -translate-x-full flex-col border-r border-gray-200 bg-white px-3 py-5 transition-transform duration-300 md:static md:w-56 md:translate-x-0 ${
+          sidebarOpen ? 'translate-x-0' : ''
+        }`}
+      >
+        <div className="mb-6 flex items-center justify-between px-2">
           <Image
             src="/logo-color.png"
             alt="Zitytraining"
@@ -114,6 +133,12 @@ export default function DashboardLayout({
             height={45}
             priority
           />
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="text-gray-400 hover:text-gray-600 md:hidden"
+          >
+            <X size={20} />
+          </button>
         </div>
 
         <nav className="flex flex-1 flex-col gap-1">
@@ -156,25 +181,33 @@ export default function DashboardLayout({
       </aside>
 
       {/* Contenido principal */}
-      <div className="flex-1 px-8 py-6">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-[#868585]">
-              {new Date().toLocaleDateString('es-ES', {
-                weekday: 'long',
-                day: 'numeric',
-                month: 'long',
-                year: 'numeric',
-              })}
-            </p>
-            <h1 className="font-[family-name:var(--font-work-sans)] text-xl font-bold text-[#2b2b2a]">
-              Hola, {userName.split(' ')[0]}
-            </h1>
+      <div className="flex-1 px-4 py-6 sm:px-6 md:px-8">
+        <div className="mb-6 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="text-[#2b2b2a] md:hidden"
+            >
+              <Menu size={24} />
+            </button>
+            <div>
+              <p className="text-xs font-semibold text-[#868585]">
+                {new Date().toLocaleDateString('es-ES', {
+                  weekday: 'long',
+                  day: 'numeric',
+                  month: 'long',
+                  year: 'numeric',
+                })}
+              </p>
+              <h1 className="font-[family-name:var(--font-work-sans)] text-lg font-bold text-[#2b2b2a] sm:text-xl">
+                Hola, {userName.split(' ')[0]}
+              </h1>
+            </div>
           </div>
           <Link
             href="/dashboard/perfil"
             title="Ver mi perfil"
-            className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-[#a2c037] to-[#6aa842] text-lg font-bold text-white transition hover:opacity-90"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#a2c037] to-[#6aa842] text-base font-bold text-white transition hover:opacity-90 sm:h-14 sm:w-14 sm:text-lg"
           >
             {initials}
           </Link>

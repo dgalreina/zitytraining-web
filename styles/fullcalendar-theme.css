@@ -9,6 +9,34 @@
   color: #2b2b2a;
 }
 
+.fc .fc-toolbar {
+  flex-wrap: nowrap !important;
+  gap: 6px;
+}
+
+@media (max-width: 640px) {
+  .fc .fc-button {
+    padding: 4px 8px !important;
+    font-size: 0.72rem !important;
+  }
+
+  .fc .fc-toolbar-chunk {
+    display: flex;
+    gap: 4px;
+  }
+}
+
+/* Deja que la semana se desplace en horizontal, en vez de aplastar las columnas.
+   Solo aplica en vista semana: en vista día (una sola columna) no debe haber scroll.
+   Sin media query: si el contenedor es ancho de sobra, el navegador no mostrará scrollbar. */
+.ziti-week-view .fc-view-harness {
+  overflow-x: auto !important;
+}
+
+.ziti-week-view .fc .fc-scrollgrid {
+  min-width: 640px;
+}
+
 .fc .fc-button-primary {
   background-color: white !important;
   border: 1px solid #e5e7eb !important;
