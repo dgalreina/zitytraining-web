@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Work_Sans, Inter } from "next/font/google";
 import "./globals.css";
 
@@ -16,6 +16,13 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Zitytraining",
   description: "Entrenamiento personal y pilates",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({

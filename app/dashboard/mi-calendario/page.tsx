@@ -316,7 +316,7 @@ export default function MiCalendarioPage() {
   if (!roleReady) return null;
 
   return (
-    <div className="flex h-[calc(100vh-130px)] gap-5">
+    <div className="flex h-[calc(100dvh-130px)] gap-5">
       {/* Mini calendario lateral: solo en pantallas medianas o más grandes */}
       <div className="hidden w-64 shrink-0 overflow-y-auto rounded-xl bg-white p-4 md:block">
         <MiniCalendar
@@ -350,7 +350,8 @@ export default function MiCalendarioPage() {
           slotMaxTime="22:00:00"
           height="100%"
           selectable={isTrainerView}
-          editable={isTrainerView}
+          eventStartEditable={isTrainerView}
+          eventDurationEditable={false}
           select={handleSelect}
           eventClick={handleEventClick}
           eventDrop={handleEventDrop}

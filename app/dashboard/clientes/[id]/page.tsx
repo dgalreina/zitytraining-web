@@ -139,7 +139,7 @@ export default function DetalleClientePage() {
   if (!form) return <p className="text-sm text-red-600">{error}</p>;
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-2xl mx-auto">
       <Link
         href="/dashboard/clientes"
         className="mb-4 flex items-center gap-1.5 text-sm font-medium text-[#868585] hover:text-[#2b2b2a]"
@@ -149,11 +149,11 @@ export default function DetalleClientePage() {
       </Link>
 
       <div className="rounded-xl bg-white p-6">
-        <div className="mb-5 flex items-center justify-between">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-[family-name:var(--font-work-sans)] text-lg font-bold text-[#2b2b2a]">
             {form.firstName} {form.lastName}
           </h2>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {statusBadge(form.status)}
 
             {form.status === 'pending' && (

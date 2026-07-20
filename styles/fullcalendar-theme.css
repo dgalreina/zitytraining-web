@@ -33,8 +33,11 @@
   overflow-x: auto !important;
 }
 
-.ziti-week-view .fc .fc-scrollgrid {
-  min-width: 640px;
+.ziti-week-view .fc-scrollgrid,
+.ziti-week-view .fc-scrollgrid-sync-table,
+.ziti-week-view table.fc-scrollgrid {
+  min-width: 640px !important;
+  width: 640px !important;
 }
 
 .fc .fc-button-primary {
@@ -73,6 +76,18 @@
 /* Oculta el scrollbar fantasma que a veces aparece en la fila de cabecera de días */
 .fc-scrollgrid-section-header .fc-scroller {
   overflow: hidden !important;
+}
+
+/* Bug conocido de iOS Safari: position:sticky dentro de un scroller con momentum
+   puede dejar un hueco en blanco al hacer scroll. translateZ(0) fuerza aceleración
+   por hardware y evita el glitch de renderizado. */
+.fc-scrollgrid-section-header {
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
+}
+
+.fc-scroller {
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Texto y filas más compactas para que quepan más horas sin scroll */

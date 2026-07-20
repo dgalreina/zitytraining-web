@@ -175,7 +175,7 @@ export default function DetalleEntrenadorPage() {
   const isAdmin = form.roles.includes('admin');
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-2xl mx-auto">
       <Link
         href="/dashboard/entrenadores"
         className="mb-4 flex items-center gap-1.5 text-sm font-medium text-[#868585] hover:text-[#2b2b2a]"
@@ -185,11 +185,11 @@ export default function DetalleEntrenadorPage() {
       </Link>
 
       <div className="rounded-xl bg-white p-6">
-        <div className="mb-5 flex items-center justify-between">
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-[family-name:var(--font-work-sans)] text-lg font-bold text-[#2b2b2a]">
             {form.firstName} {form.lastName}
           </h2>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {roleBadge(isAdmin)}
             {statusBadge(form.status)}
 
