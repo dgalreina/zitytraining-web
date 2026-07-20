@@ -350,6 +350,7 @@ export default function MiCalendarioPage() {
           slotMaxTime="22:00:00"
           height="100%"
           selectable={isTrainerView}
+          selectLongPressDelay={200}
           eventStartEditable={isTrainerView}
           eventDurationEditable={false}
           select={handleSelect}

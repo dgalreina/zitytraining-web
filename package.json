@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@floating-ui/dom": "^1.8.0",
     "@fullcalendar/daygrid": "^6.1.21",
     "@fullcalendar/interaction": "^6.1.21",
     "@fullcalendar/react": "^6.1.21",

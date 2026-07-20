@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import DatePicker, { registerLocale } from 'react-datepicker';
 import { es } from 'date-fns/locale';
 import { ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
+import { shift, flip } from '@floating-ui/dom';
 import 'react-datepicker/dist/react-datepicker.css';
 import '@/styles/datepicker-theme.css';
 
@@ -92,6 +93,8 @@ export default function DateOfBirthPicker({ value, onChange, disabled }: DateOfB
         wrapperClassName="w-full"
         disabled={disabled}
         required
+        popperPlacement="bottom-start"
+        popperModifiers={[shift({ padding: 8 }), flip({ padding: 8 })]}
         renderCustomHeader={({
           date,
           changeYear,
