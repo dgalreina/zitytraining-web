@@ -10,9 +10,10 @@ import { es } from 'date-fns/locale';
 import 'react-datepicker/dist/react-datepicker.css';
 import '@/styles/datepicker-theme.css';
 import '@/styles/fullcalendar-theme.css';
-import { X, Trash2 } from 'lucide-react';
+import { X, Trash2, ChevronDown, Check } from 'lucide-react';
 import MiniCalendar, { dayKey } from '@/components/MiniCalendar';
 import {
+  getUsers,
   getActiveClients,
   getBookings,
   createBooking,
@@ -33,7 +34,78 @@ function minutesBetween(start: Date, end: Date) {
   return Math.round((end.getTime() - start.getTime()) / 60000);
 }
 
-export default function MiCalendarioPage() {
+function TrainerSelect({
+  trainers,
+  value,
+  onChange,
+}: {
+  trainers: any[];
+  value: string;
+  onChange: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const selected = trainers.find((t) => t._id === value);
+
+  return (
+    <div ref={ref} className="relative mb-4 w-full sm:w-64">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-[#2b2b2a]"
+      >
+        {selected ? `${selected.firstName} ${selected.lastName}` : 'Elige un entrenador'}
+        <ChevronDown
+          size={15}
+          className={`text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+
+      {open && (
+        <div className="absolute left-0 z-10 mt-1.5 w-full rounded-lg border border-gray-200 bg-white p-1 shadow-lg">
+          {trainers.map((t) => (
+            <button
+              key={t._id}
+              type="button"
+              onClick={() => {
+                onChange(t._id);
+                setOpen(false);
+              }}
+              className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition ${
+                t._id === value
+                  ? 'bg-[#a2c037]/10 font-semibold text-[#4b7a1f]'
+                  : 'text-[#2b2b2a] hover:bg-gray-50'
+              }`}
+            >
+              {t.firstName} {t.lastName}
+              {t._id === value && <Check size={14} />}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function CalendarioPage() {
+  const [userId, setUserId] = useState('');
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isTrainer, setIsTrainer] = useState(false);
+  const [roleReady, setRoleReady] = useState(false);
+
+  const [trainers, setTrainers] = useState<any[]>([]);
+  const [selectedTrainerId, setSelectedTrainerId] = useState('');
+  const [loadingTrainers, setLoadingTrainers] = useState(false);
+
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [events, setEvents] = useState<any[]>([]);
   const [daysWithBookings, setDaysWithBookings] = useState<Set<string>>(new Set());
@@ -45,13 +117,18 @@ export default function MiCalendarioPage() {
   const [customMinutes, setCustomMinutes] = useState(60);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [userId, setUserId] = useState('');
-  const [isTrainerView, setIsTrainerView] = useState(true);
-  const [roleReady, setRoleReady] = useState(false);
   const [viewTitle, setViewTitle] = useState('');
   const [viewType, setViewType] = useState('timeGridWeek');
   const calendarRef = useRef<FullCalendar>(null);
   const router = useRouter();
+
+  // "Vista de entrenador" = puedes crear/mover sesiones y ves nombres de clientes.
+  // Se activa si eres admin (gestionas cualquier entrenador) o si eres entrenador tú mismo.
+  const isTrainerPerspective = isAdmin || isTrainer;
+
+  // El id sobre el que se consultan/crean sesiones: el entrenador elegido (admin),
+  // o tu propio id (entrenador o cliente).
+  const targetId = isAdmin ? selectedTrainerId : userId;
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -63,20 +140,41 @@ export default function MiCalendarioPage() {
     const { id, roles } = JSON.parse(storedUser);
     setUserId(id);
 
-    const trainerView = roles?.includes('trainer') ?? false;
-    setIsTrainerView(trainerView);
-    setRoleReady(true);
+    const admin = roles?.includes('admin') ?? false;
+    const trainer = roles?.includes('trainer') ?? false;
+    setIsAdmin(admin);
+    setIsTrainer(trainer);
 
-    if (trainerView) {
+    if (admin) {
+      setLoadingTrainers(true);
+      getUsers(token)
+        .then((users) => {
+          const activeTrainers = users.filter(
+            (u: any) => u.roles?.includes('trainer') && u.status === 'active',
+          );
+          setTrainers(activeTrainers);
+          // Si el admin es también entrenador, se preselecciona a sí mismo
+          if (trainer && activeTrainers.some((t: any) => t._id === id)) {
+            setSelectedTrainerId(id);
+          } else if (activeTrainers.length > 0) {
+            setSelectedTrainerId(activeTrainers[0]._id);
+          }
+        })
+        .finally(() => setLoadingTrainers(false));
+    }
+
+    if (admin || trainer) {
       getActiveClients(token)
         .then(setClients)
         .catch(() => {});
     }
+
+    setRoleReady(true);
   }, [router]);
 
   function bookingToEvent(b: any) {
     let label = '';
-    if (isTrainerView) {
+    if (isTrainerPerspective) {
       label = (b.clients || [])
         .map((c: any) => `${c.firstName} ${c.lastName?.[0] ?? ''}.`)
         .join(', ');
@@ -94,29 +192,29 @@ export default function MiCalendarioPage() {
 
   async function loadBookings(fromStr: string, toStr: string) {
     const token = localStorage.getItem('token');
-    if (!token || !userId) return;
+    if (!token || !targetId) return;
     try {
-      const params = isTrainerView
-        ? { trainer: userId, from: fromStr, to: toStr }
-        : { client: userId, from: fromStr, to: toStr };
+      const params = isTrainerPerspective
+        ? { trainer: targetId, from: fromStr, to: toStr }
+        : { client: targetId, from: fromStr, to: toStr };
       const data = await getBookings(token, params);
       setEvents(data.map(bookingToEvent));
     } catch {
-      // silencioso: si falla, simplemente no se pintan eventos
+      // silencioso
     }
   }
 
   async function loadMonthDots(monthDate: Date) {
     const token = localStorage.getItem('token');
-    if (!token || !userId) return;
+    if (!token || !targetId) return;
 
     const start = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
     const end = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0, 23, 59, 59);
 
     try {
-      const params = isTrainerView
-        ? { trainer: userId, from: start.toISOString(), to: end.toISOString() }
-        : { client: userId, from: start.toISOString(), to: end.toISOString() };
+      const params = isTrainerPerspective
+        ? { trainer: targetId, from: start.toISOString(), to: end.toISOString() }
+        : { client: targetId, from: start.toISOString(), to: end.toISOString() };
       const data = await getBookings(token, params);
       const keys = new Set<string>(data.map((b: any) => dayKey(new Date(b.startTime))));
       setDaysWithBookings(keys);
@@ -133,16 +231,13 @@ export default function MiCalendarioPage() {
   }
 
   useEffect(() => {
-    if (userId && roleReady && calendarRef.current) {
+    if (targetId && roleReady && calendarRef.current) {
       const api = calendarRef.current.getApi();
-      loadBookings(
-        api.view.activeStart.toISOString(),
-        api.view.activeEnd.toISOString(),
-      );
+      loadBookings(api.view.activeStart.toISOString(), api.view.activeEnd.toISOString());
       loadMonthDots(selectedDate);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, roleReady]);
+  }, [targetId, roleReady]);
 
   function handleMiniDateChange(date: Date | null) {
     if (!date) return;
@@ -155,7 +250,7 @@ export default function MiCalendarioPage() {
   }
 
   function openCreateModal(start: Date) {
-    if (!isTrainerView) return;
+    if (!isTrainerPerspective) return;
     setModal({ mode: 'create', start });
     setSelectedClientIds([]);
     setNotes('');
@@ -165,7 +260,7 @@ export default function MiCalendarioPage() {
   }
 
   function openEditModal(raw: any) {
-    if (!isTrainerView) return;
+    if (!isTrainerPerspective) return;
     const start = new Date(raw.startTime);
     const end = new Date(raw.endTime);
     const diff = minutesBetween(start, end);
@@ -205,20 +300,6 @@ export default function MiCalendarioPage() {
       loadMonthDots(selectedDate);
     } catch (err: any) {
       alert(err.message || 'No se pudo mover la sesión');
-      info.revert();
-    }
-  }
-
-  async function handleEventResize(info: any) {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-    try {
-      await updateBooking(token, info.event.id, {
-        startTime: info.event.start.toISOString(),
-        endTime: info.event.end.toISOString(),
-      });
-    } catch (err: any) {
-      alert(err.message || 'No se pudo redimensionar la sesión');
       info.revert();
     }
   }
@@ -265,7 +346,7 @@ export default function MiCalendarioPage() {
     try {
       if (modal.mode === 'create') {
         await createBooking(token, {
-          trainer: userId,
+          trainer: targetId,
           clients: selectedClientIds,
           startTime: start.toISOString(),
           endTime: end.toISOString(),
@@ -313,82 +394,104 @@ export default function MiCalendarioPage() {
     }
   }
 
-  if (!roleReady) return null;
+  if (!roleReady || loadingTrainers) {
+    return <p className="text-sm text-gray-400">Cargando...</p>;
+  }
+
+  if (isAdmin && trainers.length === 0) {
+    return (
+      <div className="rounded-xl bg-white p-6">
+        <p className="text-sm text-gray-400">
+          No hay entrenadores activos todavía. Crea uno desde "Entrenadores" para poder ver su
+          calendario aquí.
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex h-[calc(100dvh-130px)] gap-5">
-      {/* Mini calendario lateral: solo en pantallas medianas o más grandes */}
-      <div className="hidden w-64 shrink-0 overflow-y-auto rounded-xl bg-white p-4 md:block">
-        <MiniCalendar
-          selected={selectedDate}
-          onChange={handleMiniDateChange}
-          onMonthChange={handleMiniMonthChange}
-          daysWithBookings={daysWithBookings}
+    <div>
+      {isAdmin && (
+        <TrainerSelect
+          trainers={trainers}
+          value={selectedTrainerId}
+          onChange={setSelectedTrainerId}
         />
+      )}
+
+      <div className="flex h-[calc(100dvh-190px)] gap-5">
+        {/* Mini calendario lateral: solo en pantallas medianas o más grandes */}
+        <div className="hidden w-64 shrink-0 overflow-y-auto rounded-xl bg-white p-4 md:block">
+          <MiniCalendar
+            selected={selectedDate}
+            onChange={handleMiniDateChange}
+            onMonthChange={handleMiniMonthChange}
+            daysWithBookings={daysWithBookings}
+          />
+        </div>
+
+        {/* Calendario grande del día/semana */}
+        <div
+          className={`min-w-0 flex-1 overflow-hidden rounded-xl bg-white p-4 ${
+            viewType === 'timeGridWeek' ? 'ziti-week-view' : ''
+          }`}
+        >
+          <p className="ziti-calendar-title mb-2 text-center font-[family-name:var(--font-work-sans)] text-sm font-bold capitalize text-[#2b2b2a] sm:text-left">
+            {viewTitle}
+          </p>
+          <FullCalendar
+            ref={calendarRef}
+            plugins={[timeGridPlugin, interactionPlugin]}
+            initialView="timeGridWeek"
+            firstDay={1}
+            headerToolbar={{ left: 'prev,next today', center: '', right: 'timeGridDay,timeGridWeek' }}
+            dayHeaderFormat={{ weekday: 'short', day: 'numeric' }}
+            buttonText={{ today: 'Hoy', day: 'Día', week: 'Semana' }}
+            locale="es"
+            allDaySlot={false}
+            slotMinTime="07:00:00"
+            slotMaxTime="22:00:00"
+            height="100%"
+            selectable={isTrainerPerspective}
+            selectLongPressDelay={200}
+            eventStartEditable={isTrainerPerspective}
+            eventDurationEditable={false}
+            select={handleSelect}
+            eventClick={handleEventClick}
+            eventDrop={handleEventDrop}
+            datesSet={handleDatesSet}
+            events={events}
+            eventColor="#6aa842"
+            slotDuration="00:30:00"
+            snapDuration="00:05:00"
+            displayEventTime={false}
+            eventContent={(arg) => {
+              const raw = arg.event.extendedProps.raw;
+              const start = arg.event.start;
+              const end = arg.event.end;
+              const timeStr =
+                start && end
+                  ? `${start.toLocaleTimeString('es-ES', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}–${end.toLocaleTimeString('es-ES', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}`
+                  : '';
+              return (
+                <div className="ziti-event-box">
+                  <div className="ziti-event-time">{timeStr}</div>
+                  <div className="ziti-event-name">{arg.event.title}</div>
+                  {raw?.notes && <div className="ziti-event-tooltip">{raw.notes}</div>}
+                </div>
+              );
+            }}
+          />
+        </div>
       </div>
 
-      {/* Calendario grande del día/semana */}
-      <div
-        className={`min-w-0 flex-1 overflow-hidden rounded-xl bg-white p-4 ${
-          viewType === 'timeGridWeek' ? 'ziti-week-view' : ''
-        }`}
-      >
-        <p className="ziti-calendar-title mb-2 text-center font-[family-name:var(--font-work-sans)] text-sm font-bold capitalize text-[#2b2b2a] sm:text-left">
-          {viewTitle}
-        </p>
-        <FullCalendar
-          ref={calendarRef}
-          plugins={[timeGridPlugin, interactionPlugin]}
-          initialView="timeGridWeek"
-          firstDay={1}
-          headerToolbar={{ left: 'prev,next today', center: '', right: 'timeGridDay,timeGridWeek' }}
-          dayHeaderFormat={{ weekday: 'short', day: 'numeric' }}
-          buttonText={{ today: 'Hoy', day: 'Día', week: 'Semana' }}
-          locale="es"
-          allDaySlot={false}
-          slotMinTime="07:00:00"
-          slotMaxTime="22:00:00"
-          height="100%"
-          selectable={isTrainerView}
-          selectLongPressDelay={200}
-          eventStartEditable={isTrainerView}
-          eventDurationEditable={false}
-          select={handleSelect}
-          eventClick={handleEventClick}
-          eventDrop={handleEventDrop}
-          eventResize={handleEventResize}
-          datesSet={handleDatesSet}
-          events={events}
-          eventColor="#6aa842"
-          slotDuration="00:30:00"
-          snapDuration="00:05:00"
-          displayEventTime={false}
-          eventContent={(arg) => {
-            const raw = arg.event.extendedProps.raw;
-            const start = arg.event.start;
-            const end = arg.event.end;
-            const timeStr =
-              start && end
-                ? `${start.toLocaleTimeString('es-ES', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}–${end.toLocaleTimeString('es-ES', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}`
-                : '';
-            return (
-              <div className="ziti-event-box">
-                <div className="ziti-event-time">{timeStr}</div>
-                <div className="ziti-event-name">{arg.event.title}</div>
-                {raw?.notes && <div className="ziti-event-tooltip">{raw.notes}</div>}
-              </div>
-            );
-          }}
-        />
-      </div>
-
-      {/* Modal crear/editar sesión (solo entrenador) */}
+      {/* Modal crear/editar sesión (solo perspectiva entrenador) */}
       {modal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">

@@ -6,7 +6,6 @@ import Link from 'next/link';
 import Image from 'next/image';
 import {
   LayoutDashboard,
-  CalendarDays,
   CalendarClock,
   Users,
   Dumbbell,
@@ -18,7 +17,6 @@ import {
 } from 'lucide-react';
 
 const ADMIN_ONLY_PREFIXES = [
-  '/dashboard/calendario',
   '/dashboard/clientes',
   '/dashboard/entrenadores',
   '/dashboard/estadisticas',
@@ -67,14 +65,8 @@ export default function DashboardLayout({
     const isAdminOnlyRoute = ADMIN_ONLY_PREFIXES.some((prefix) =>
       pathname.startsWith(prefix),
     );
-    const isMiCalendarioRoute = pathname.startsWith('/dashboard/mi-calendario');
 
     if (!admin && isAdminOnlyRoute) {
-      router.push('/dashboard');
-      return;
-    }
-
-    if (isMiCalendarioRoute && !trainer && !client) {
       router.push('/dashboard');
       return;
     }
@@ -94,12 +86,9 @@ export default function DashboardLayout({
 
   const navItems = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    ...(isTrainer || isClient
-      ? [{ href: '/dashboard/mi-calendario', label: 'Mi Calendario', icon: CalendarClock }]
-      : []),
+    { href: '/dashboard/calendario', label: 'Calendario', icon: CalendarClock },
     ...(isAdmin
       ? [
-          { href: '/dashboard/calendario', label: 'Calendario', icon: CalendarDays },
           { href: '/dashboard/clientes', label: 'Clientes', icon: Users },
           { href: '/dashboard/entrenadores', label: 'Entrenadores', icon: Dumbbell },
           { href: '/dashboard/estadisticas', label: 'Estadísticas', icon: BarChart3 },

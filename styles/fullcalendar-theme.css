@@ -37,7 +37,6 @@
 .ziti-week-view .fc-scrollgrid-sync-table,
 .ziti-week-view table.fc-scrollgrid {
   min-width: 640px !important;
-  width: 640px !important;
 }
 
 .fc .fc-button-primary {
@@ -88,6 +87,12 @@
 
 .fc-scroller {
   -webkit-overflow-scrolling: touch;
+}
+
+/* Oculta el punto de redimensionar, por si el navegador lo sigue pintando
+   pese a eventDurationEditable={false} */
+.fc-event-resizer {
+  display: none !important;
 }
 
 /* Texto y filas más compactas para que quepan más horas sin scroll */
