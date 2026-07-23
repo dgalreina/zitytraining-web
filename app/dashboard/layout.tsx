@@ -18,10 +18,11 @@ import {
 } from 'lucide-react';
 
 const ADMIN_ONLY_PREFIXES = [
-  '/dashboard/clientes',
   '/dashboard/entrenadores',
   '/dashboard/estadisticas',
 ];
+
+const ADMIN_OR_TRAINER_PREFIXES = ['/dashboard/clientes'];
 
 export default function DashboardLayout({
   children,
@@ -66,8 +67,16 @@ export default function DashboardLayout({
     const isAdminOnlyRoute = ADMIN_ONLY_PREFIXES.some((prefix) =>
       pathname.startsWith(prefix),
     );
+    const isAdminOrTrainerRoute = ADMIN_OR_TRAINER_PREFIXES.some((prefix) =>
+      pathname.startsWith(prefix),
+    );
 
     if (!admin && isAdminOnlyRoute) {
+      router.push('/dashboard');
+      return;
+    }
+
+    if (!admin && !trainer && isAdminOrTrainerRoute) {
       router.push('/dashboard');
       return;
     }
@@ -91,9 +100,11 @@ export default function DashboardLayout({
     ...(isClient
       ? [{ href: '/dashboard/pagos', label: 'Planes', icon: Tag }]
       : []),
+    ...(isAdmin || isTrainer
+      ? [{ href: '/dashboard/clientes', label: 'Clientes', icon: Users }]
+      : []),
     ...(isAdmin
       ? [
-          { href: '/dashboard/clientes', label: 'Clientes', icon: Users },
           { href: '/dashboard/entrenadores', label: 'Entrenadores', icon: Dumbbell },
           { href: '/dashboard/estadisticas', label: 'Estadísticas', icon: BarChart3 },
         ]
@@ -103,7 +114,7 @@ export default function DashboardLayout({
   if (!ready) return null;
 
   return (
-    <div className="flex min-h-screen bg-[#f7f7f5] font-[family-name:var(--font-inter)]">
+    <div className="flex h-screen overflow-hidden bg-[#f7f7f5] font-[family-name:var(--font-inter)]">
       {/* Fondo oscuro tras el panel, solo móvil, solo cuando está abierto */}
       {sidebarOpen && (
         <div
@@ -174,7 +185,7 @@ export default function DashboardLayout({
       </aside>
 
       {/* Contenido principal */}
-      <div className="flex-1 px-4 py-6 sm:px-6 md:px-8">
+      <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 md:px-8">
         <div className="mb-6 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <button

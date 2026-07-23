@@ -184,3 +184,10 @@ export async function getMyPurchases(token: string) {
   });
   return handleResponse(res);
 }
+
+export async function getClientPurchases(token: string, clientId: string) {
+  const res = await fetch(`${API_URL}/purchases/client/${clientId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res);
+}

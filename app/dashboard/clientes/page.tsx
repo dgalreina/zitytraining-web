@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Search, Plus, ChevronDown, Check } from 'lucide-react';
-import { getUsers } from '@/lib/api';
+import { getUsers, getActiveClients } from '@/lib/api';
 
 type StatusFilter = 'all' | 'pending' | 'active' | 'rejected';
 
@@ -106,20 +106,32 @@ export default function ClientesPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     const token = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('user');
     if (!token) {
       router.push('/login');
       return;
     }
 
-    getUsers(token)
-      .then((users) => {
-        setClients(users.filter((u: any) => u.roles?.includes('client')));
-      })
-      .finally(() => setLoading(false));
+    const admin = storedUser ? JSON.parse(storedUser).roles?.includes('admin') : false;
+    setIsAdmin(admin);
+
+    if (admin) {
+      getUsers(token)
+        .then((users) => {
+          setClients(users.filter((u: any) => u.roles?.includes('client')));
+        })
+        .finally(() => setLoading(false));
+    } else {
+      // Entrenador: solo puede ver clientes activos, sin datos de aprobación
+      getActiveClients(token)
+        .then(setClients)
+        .finally(() => setLoading(false));
+    }
   }, [router]);
 
   const filtered = useMemo(() => {
@@ -200,7 +212,7 @@ export default function ClientesPage() {
                   <td className="px-5 py-3 text-[#868585]">
                     {client.dateOfBirth ? calculateAge(client.dateOfBirth) : '—'}
                   </td>
-                  <td className="px-5 py-3">{statusBadge(client.status)}</td>
+                  <td className="px-5 py-3">{statusBadge(client.status || 'active')}</td>
                 </tr>
               ))}
             </tbody>
@@ -226,7 +238,7 @@ export default function ClientesPage() {
                   <span className="font-semibold text-[#2b2b2a]">
                     {client.firstName} {client.lastName}
                   </span>
-                  {statusBadge(client.status)}
+                  {statusBadge(client.status || 'active')}
                 </div>
                 <div className="flex flex-col gap-0.5 text-xs text-[#868585]">
                   <span>Nº socio: {client.membershipNumber || '—'}</span>
