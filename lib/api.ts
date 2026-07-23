@@ -163,3 +163,24 @@ export async function deleteBooking(token: string, id: string) {
   if (!res.ok) throw new Error(`Error ${res.status}`);
   return true;
 }
+
+// --- Purchases ---
+
+export async function createPurchase(token: string, data: any) {
+  const res = await fetch(`${API_URL}/purchases`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(res);
+}
+
+export async function getMyPurchases(token: string) {
+  const res = await fetch(`${API_URL}/purchases/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res);
+}

@@ -10,6 +10,7 @@ import {
   Users,
   Dumbbell,
   BarChart3,
+  Tag,
   Settings,
   LogOut,
   Menu,
@@ -87,6 +88,9 @@ export default function DashboardLayout({
   const navItems = [
     { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/dashboard/calendario', label: 'Calendario', icon: CalendarClock },
+    ...(isClient
+      ? [{ href: '/dashboard/pagos', label: 'Planes', icon: Tag }]
+      : []),
     ...(isAdmin
       ? [
           { href: '/dashboard/clientes', label: 'Clientes', icon: Users },
