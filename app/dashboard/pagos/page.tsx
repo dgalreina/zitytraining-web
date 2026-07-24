@@ -57,30 +57,39 @@ export default function PagosPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  function loadPurchases() {
+  function loadPurchases(onLoaded?: (data: any[]) => void) {
     const token = localStorage.getItem('token');
     if (!token) {
       router.push('/login');
       return;
     }
     getMyPurchases(token)
-      .then(setPurchases)
+      .then((data) => {
+        setPurchases(data);
+        onLoaded?.(data);
+      })
       .catch(() => setPurchases([]));
   }
 
   useEffect(() => {
-    loadPurchases();
-
     if (searchParams.get('success') === 'true') {
-      setBanner({
-        type: 'success',
-        message: 'Pago recibido. Tu plan se activará en unos instantes.',
-      });
       setTab('plan');
       router.replace('/dashboard/pagos');
+      loadPurchases((data) => {
+        const hasActive = data.some((p: any) => p.status === 'active');
+        setBanner({
+          type: 'success',
+          message: hasActive
+            ? '¡Pago confirmado! Tu plan ya está activo.'
+            : 'Pago recibido. Tu plan se activará en unos instantes.',
+        });
+      });
     } else if (searchParams.get('canceled') === 'true') {
       setBanner({ type: 'canceled', message: 'Pago cancelado, no se ha realizado ningún cargo.' });
       router.replace('/dashboard/pagos');
+      loadPurchases();
+    } else {
+      loadPurchases();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
