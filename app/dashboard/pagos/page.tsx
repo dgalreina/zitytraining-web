@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Check, Clock, X } from 'lucide-react';
 import {
   TRAINING_CATEGORIES,
@@ -10,7 +10,7 @@ import {
   TrainingPlan,
   RemoteService,
 } from '@/lib/pricing';
-import { createPurchase, getMyPurchases } from '@/lib/api';
+import { createPurchase, createCheckoutSession, getMyPurchases } from '@/lib/api';
 
 type Tab = 'plan' | 'contratar' | 'historial';
 type Selection = { type: 'plan'; item: TrainingPlan } | { type: 'service'; item: RemoteService };
@@ -53,8 +53,9 @@ export default function PagosPage() {
   const [purchases, setPurchases] = useState<any[] | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [successMessage, setSuccessMessage] = useState('');
+  const [banner, setBanner] = useState<{ type: 'success' | 'canceled'; message: string } | null>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   function loadPurchases() {
     const token = localStorage.getItem('token');
@@ -69,6 +70,18 @@ export default function PagosPage() {
 
   useEffect(() => {
     loadPurchases();
+
+    if (searchParams.get('success') === 'true') {
+      setBanner({
+        type: 'success',
+        message: 'Pago recibido. Tu plan se activará en unos instantes.',
+      });
+      setTab('plan');
+      router.replace('/dashboard/pagos');
+    } else if (searchParams.get('canceled') === 'true') {
+      setBanner({ type: 'canceled', message: 'Pago cancelado, no se ha realizado ningún cargo.' });
+      router.replace('/dashboard/pagos');
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -116,14 +129,20 @@ export default function PagosPage() {
               price: getModalPrice(),
             };
 
-      await createPurchase(token, payload);
-      setSelection(null);
-      setSuccessMessage('¡Solicitud registrada! Queda pendiente de confirmación de pago.');
-      loadPurchases();
-      setTimeout(() => setSuccessMessage(''), 4000);
+      const purchase = await createPurchase(token, payload);
+
+      if (payload.price === 0) {
+        // Servicio gratuito: no hace falta pasar por Stripe
+        setSelection(null);
+        setBanner({ type: 'success', message: '¡Listo! Se ha registrado tu solicitud gratuita.' });
+        loadPurchases();
+        return;
+      }
+
+      const { url } = await createCheckoutSession(token, purchase._id);
+      window.location.href = url;
     } catch (err: any) {
-      setError(err.message || 'No se pudo registrar la solicitud');
-    } finally {
+      setError(err.message || 'No se pudo iniciar el pago');
       setSaving(false);
     }
   }
@@ -148,9 +167,15 @@ export default function PagosPage() {
         ))}
       </div>
 
-      {successMessage && (
-        <div className="mb-4 rounded-lg bg-[#a2c037]/10 px-4 py-3 text-sm font-medium text-[#4b7a1f]">
-          {successMessage}
+      {banner && (
+        <div
+          className={`mb-4 rounded-lg px-4 py-3 text-sm font-medium ${
+            banner.type === 'success'
+              ? 'bg-[#a2c037]/10 text-[#4b7a1f]'
+              : 'bg-amber-50 text-amber-700'
+          }`}
+        >
+          {banner.message}
         </div>
       )}
 
@@ -376,8 +401,9 @@ export default function PagosPage() {
             </div>
 
             <p className="mb-4 text-xs text-[#868585]">
-              El pago con tarjeta se activará muy pronto. Por ahora tu solicitud queda registrada
-              como pendiente de confirmación.
+              {getModalPrice() === 0
+                ? 'Este servicio es gratuito, no se te pedirá ningún pago.'
+                : 'Se te redirigirá a una página segura de Stripe para completar el pago.'}
             </p>
 
             {error && <p className="mb-3 text-sm font-medium text-red-600">{error}</p>}
@@ -388,7 +414,7 @@ export default function PagosPage() {
               className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-[#a2c037] to-[#6aa842] py-2.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
             >
               <Check size={16} />
-              {saving ? 'Guardando...' : 'Confirmar solicitud'}
+              {saving ? 'Redirigiendo...' : 'Confirmar y pagar'}
             </button>
           </div>
         </div>

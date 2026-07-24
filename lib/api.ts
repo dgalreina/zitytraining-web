@@ -178,6 +178,14 @@ export async function createPurchase(token: string, data: any) {
   return handleResponse(res);
 }
 
+export async function createCheckoutSession(token: string, purchaseId: string) {
+  const res = await fetch(`${API_URL}/purchases/${purchaseId}/checkout`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res);
+}
+
 export async function getMyPurchases(token: string) {
   const res = await fetch(`${API_URL}/purchases/me`, {
     headers: { Authorization: `Bearer ${token}` },
