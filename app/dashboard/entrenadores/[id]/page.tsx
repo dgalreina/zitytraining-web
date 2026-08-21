@@ -3,13 +3,25 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Pencil, ShieldAlert } from 'lucide-react';
+import { ArrowLeft, Pencil, ShieldAlert, Check } from 'lucide-react';
 import DateOfBirthPicker from '@/components/DateOfBirthPicker';
 import { getUser, updateUser } from '@/lib/api';
+import { DEFAULT_TRAINER_COLOR, getAvatarGradient } from '@/lib/colors';
 
 const inputClass =
   'w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none focus:ring-2 focus:ring-[#a2c037]/20 disabled:bg-gray-50 disabled:text-gray-500';
 const labelClass = 'mb-1 block text-xs font-semibold text-[#868585]';
+
+const COLOR_PALETTE = [
+  { name: 'Verde (marca)', value: '#6aa842' },
+  { name: 'Azul', value: '#3b82f6' },
+  { name: 'Morado', value: '#8b5cf6' },
+  { name: 'Rosa', value: '#ec4899' },
+  { name: 'Naranja', value: '#f97316' },
+  { name: 'Rojo', value: '#ef4444' },
+  { name: 'Turquesa', value: '#14b8a6' },
+  { name: 'Mostaza', value: '#ca8a04' },
+];
 
 function statusBadge(status: string) {
   const styles: Record<string, string> = {
@@ -97,6 +109,7 @@ export default function DetalleEntrenadorPage() {
           address: user.address,
           status: user.status,
           roles: user.roles as string[],
+          color: user.color || null,
         };
         setForm(data);
         setOriginal(data);
@@ -158,6 +171,7 @@ export default function DetalleEntrenadorPage() {
         address: updated.address,
         status: updated.status,
         roles: updated.roles,
+        color: updated.color || null,
       };
       setForm(data);
       setOriginal(data);
@@ -186,11 +200,20 @@ export default function DetalleEntrenadorPage() {
 
       <div className="rounded-xl bg-white p-6">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-[family-name:var(--font-work-sans)] text-lg font-bold text-[#2b2b2a]">
-            {form.firstName} {form.lastName}
-          </h2>
+          <div className="flex items-center gap-3">
+            <div
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
+              style={{ background: getAvatarGradient(form.color) }}
+            >
+              {form.firstName?.[0]}
+              {form.lastName?.[0]}
+            </div>
+            <h2 className="font-[family-name:var(--font-work-sans)] text-lg font-bold text-[#2b2b2a]">
+              {form.firstName} {form.lastName}
+            </h2>
+          </div>
           <div className="flex flex-wrap items-center gap-2">
-            {roleBadge(isAdmin)}
+            {isAdmin && roleBadge(isAdmin)}
             {statusBadge(form.status)}
 
             {!editing && (
@@ -273,6 +296,35 @@ export default function DetalleEntrenadorPage() {
               disabled={!editing}
               className={inputClass}
             />
+          </div>
+
+          <div>
+            <label className={labelClass}>Color en el calendario</label>
+            <div className="flex flex-wrap gap-2.5">
+              <button
+                type="button"
+                title="Sin asignar (gris)"
+                disabled={!editing}
+                onClick={() => setForm({ ...form, color: null })}
+                className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-dashed border-gray-300 transition disabled:cursor-not-allowed"
+                style={{ backgroundColor: DEFAULT_TRAINER_COLOR }}
+              >
+                {!form.color && <Check size={16} className="text-white" />}
+              </button>
+              {COLOR_PALETTE.map((c) => (
+                <button
+                  key={c.value}
+                  type="button"
+                  title={c.name}
+                  disabled={!editing}
+                  onClick={() => setForm({ ...form, color: c.value })}
+                  className="flex h-9 w-9 items-center justify-center rounded-full transition disabled:cursor-not-allowed"
+                  style={{ backgroundColor: c.value }}
+                >
+                  {form.color === c.value && <Check size={16} className="text-white" />}
+                </button>
+              ))}
+            </div>
           </div>
 
           {editing && (

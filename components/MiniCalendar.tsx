@@ -18,11 +18,21 @@ function capitalizeFirst(text: string) {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
+function isInWeekRange(date: Date, weekStart: Date) {
+  const start = new Date(weekStart);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  end.setHours(23, 59, 59, 999);
+  return date >= start && date <= end;
+}
+
 interface MiniCalendarProps {
   selected: Date;
   onChange: (date: Date | null) => void;
   onMonthChange?: (date: Date) => void;
   daysWithBookings?: Set<string>;
+  highlightWeek?: boolean;
 }
 
 export default function MiniCalendar({
@@ -30,6 +40,7 @@ export default function MiniCalendar({
   onChange,
   onMonthChange,
   daysWithBookings,
+  highlightWeek,
 }: MiniCalendarProps) {
   return (
     <DatePicker
@@ -39,11 +50,13 @@ export default function MiniCalendar({
       locale="es"
       calendarStartDay={1}
       inline
-      calendarClassName="ziti-mini-calendar"
+      disabledKeyboardNavigation
+      calendarClassName={`ziti-mini-calendar${highlightWeek ? ' ziti-week-mode' : ''}`}
       dayClassName={(date) => {
         const classes: string[] = [];
         if (daysWithBookings?.has(dayKey(date))) classes.push('ziti-has-booking');
         if (date.getDay() === 0 || date.getDay() === 6) classes.push('ziti-weekend');
+        if (highlightWeek && isInWeekRange(date, selected)) classes.push('ziti-week-highlight');
         return classes.join(' ');
       }}
       renderCustomHeader={({

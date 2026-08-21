@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Search, Plus, ShieldCheck, ChevronDown, Check } from 'lucide-react';
 import { getUsers } from '@/lib/api';
+import { DEFAULT_TRAINER_COLOR } from '@/lib/colors';
 
 type StatusFilter = 'all' | 'active' | 'inactive';
 
@@ -30,6 +31,15 @@ function statusBadge(status: string) {
   );
 }
 
+function ColorDot({ color }: { color?: string | null }) {
+  return (
+    <span
+      className="h-2.5 w-2.5 shrink-0 rounded-full"
+      style={{ backgroundColor: color || DEFAULT_TRAINER_COLOR }}
+    />
+  );
+}
+
 function StatusFilterDropdown({
   value,
   onChange,
@@ -42,9 +52,7 @@ function StatusFilterDropdown({
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     }
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -181,7 +189,10 @@ export default function EntrenadoresPage() {
                   className="cursor-pointer border-b border-gray-50 transition hover:bg-gray-50"
                 >
                   <td className="px-5 py-3 font-medium text-[#2b2b2a]">
-                    {trainer.firstName} {trainer.lastName}
+                    <span className="flex items-center gap-2">
+                      <ColorDot color={trainer.color} />
+                      {trainer.firstName} {trainer.lastName}
+                    </span>
                   </td>
                   <td className="px-5 py-3 text-[#868585]">{trainer.email}</td>
                   <td className="px-5 py-3 text-[#868585]">{trainer.phone}</td>
@@ -218,7 +229,8 @@ export default function EntrenadoresPage() {
                 className="cursor-pointer rounded-lg border border-gray-100 bg-white p-4 shadow-sm transition active:bg-gray-50"
               >
                 <div className="mb-2 flex items-center justify-between">
-                  <span className="font-semibold text-[#2b2b2a]">
+                  <span className="flex items-center gap-2 font-semibold text-[#2b2b2a]">
+                    <ColorDot color={trainer.color} />
                     {trainer.firstName} {trainer.lastName}
                   </span>
                   {statusBadge(trainer.status)}

@@ -63,12 +63,20 @@
   color: #d4d3cf;
 }
 
-.react-datepicker__day--selected,
-.react-datepicker__day--keyboard-selected {
+/* Solo el día realmente seleccionado se pinta en verde sólido.
+   "keyboard-selected" es un foco interno de navegación por teclado,
+   distinto de la selección real, y no debe competir visualmente con ella. */
+.react-datepicker__day--selected {
   background-color: #6aa842 !important;
   color: white !important;
   border-radius: 50% !important;
   font-weight: 700;
+}
+
+.react-datepicker__day--keyboard-selected {
+  background-color: transparent !important;
+  color: #2b2b2a !important;
+  font-weight: 400;
 }
 
 .react-datepicker__day:hover {
@@ -259,9 +267,43 @@
   background-color: #6aa842;
 }
 
-.ziti-mini-calendar .react-datepicker__day--selected.ziti-has-booking::after,
-.ziti-mini-calendar .react-datepicker__day--keyboard-selected.ziti-has-booking::after {
+.ziti-mini-calendar .react-datepicker__day--selected.ziti-has-booking::after {
   background-color: white;
+}
+
+/* Resalta toda la semana en vista semana, con un verde suave (no sólido).
+   El día seleccionado de verdad (el lunes) mantiene el círculo sólido de siempre,
+   gracias al !important de --selected, que gana pase lo que pase. */
+.ziti-mini-calendar .react-datepicker__day.ziti-week-highlight {
+  background-color: rgba(106, 168, 66, 0.15) !important;
+  border-radius: 50% !important;
+}
+
+/* En modo semana, el día "seleccionado" (el lunes) no debe verse distinto
+   al resto de la semana: se queda igual de suave que los demás. */
+.ziti-week-mode .react-datepicker__day--selected {
+  background-color: rgba(106, 168, 66, 0.15) !important;
+  color: #2b2b2a !important;
+  font-weight: 400 !important;
+  border-radius: 50% !important;
+}
+
+/* El hover debe ganar siempre al verde suave de fondo de la semana,
+   igual que ya gana en cualquier otro día del calendario. */
+.ziti-mini-calendar .react-datepicker__day.ziti-week-highlight:hover,
+.ziti-week-mode .react-datepicker__day--selected:hover {
+  background-color: #a2c037 !important;
+  color: white !important;
+}
+
+/* A prueba de balas: si el día resaltado de la semana coincide también
+   con el foco interno de teclado (keyboard-selected), esta combinación
+   de clases gana por tener más peso que cualquiera de las dos por separado. */
+.ziti-mini-calendar .react-datepicker__day.ziti-week-highlight.react-datepicker__day--keyboard-selected,
+.ziti-mini-calendar .react-datepicker__day--keyboard-selected.ziti-week-highlight {
+  background-color: rgba(106, 168, 66, 0.15) !important;
+  color: #2b2b2a !important;
+  font-weight: 400 !important;
 }
 
 /* Selector de "solo hora" (time picker) con la misma marca */

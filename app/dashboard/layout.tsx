@@ -16,6 +16,7 @@ import {
   Menu,
   X,
 } from 'lucide-react';
+import { getAvatarGradient } from '@/lib/colors';
 
 const ADMIN_ONLY_PREFIXES = [
   '/dashboard/entrenadores',
@@ -33,6 +34,7 @@ export default function DashboardLayout({
   const router = useRouter();
   const [userName, setUserName] = useState('');
   const [initials, setInitials] = useState('');
+  const [avatarColor, setAvatarColor] = useState<string | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [isTrainer, setIsTrainer] = useState(false);
   const [isClient, setIsClient] = useState(false);
@@ -56,6 +58,7 @@ export default function DashboardLayout({
       const parsed = JSON.parse(storedUser);
       setUserName(`${parsed.firstName} ${parsed.lastName}`);
       setInitials(`${parsed.firstName?.[0] ?? ''}${parsed.lastName?.[0] ?? ''}`);
+      setAvatarColor(parsed.color || null);
       admin = parsed.roles?.includes('admin') ?? false;
       trainer = parsed.roles?.includes('trainer') ?? false;
       client = parsed.roles?.includes('client') ?? false;
@@ -88,6 +91,20 @@ export default function DashboardLayout({
     setSidebarOpen(false);
   }, [pathname]);
 
+  useEffect(() => {
+    function handleUserUpdated() {
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        const parsed = JSON.parse(storedUser);
+        setUserName(`${parsed.firstName} ${parsed.lastName}`);
+        setInitials(`${parsed.firstName?.[0] ?? ''}${parsed.lastName?.[0] ?? ''}`);
+        setAvatarColor(parsed.color || null);
+      }
+    }
+    window.addEventListener('zity-user-updated', handleUserUpdated);
+    return () => window.removeEventListener('zity-user-updated', handleUserUpdated);
+  }, []);
+
   function handleLogout() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -115,7 +132,6 @@ export default function DashboardLayout({
 
   return (
     <div className="flex h-screen overflow-hidden bg-[#f7f7f5] font-[family-name:var(--font-inter)]">
-      {/* Fondo oscuro tras el panel, solo móvil, solo cuando está abierto */}
       {sidebarOpen && (
         <div
           onClick={() => setSidebarOpen(false)}
@@ -123,7 +139,6 @@ export default function DashboardLayout({
         />
       )}
 
-      {/* Sidebar: fijo en desktop, panel deslizante en móvil */}
       <aside
         className={`fixed inset-y-0 left-0 z-40 flex w-64 -translate-x-full flex-col border-r border-gray-200 bg-white px-3 py-5 transition-transform duration-300 md:static md:w-56 md:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : ''
@@ -184,7 +199,6 @@ export default function DashboardLayout({
         </div>
       </aside>
 
-      {/* Contenido principal */}
       <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 md:px-8">
         <div className="mb-6 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -211,7 +225,8 @@ export default function DashboardLayout({
           <Link
             href="/dashboard/perfil"
             title="Ver mi perfil"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#a2c037] to-[#6aa842] text-base font-bold text-white transition hover:opacity-90 sm:h-14 sm:w-14 sm:text-lg"
+            style={{ background: getAvatarGradient(avatarColor) }}
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-base font-bold text-white transition hover:opacity-90 sm:h-14 sm:w-14 sm:text-lg"
           >
             {initials}
           </Link>

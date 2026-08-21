@@ -14,31 +14,6 @@
   gap: 6px;
 }
 
-@media (max-width: 640px) {
-  .fc .fc-button {
-    padding: 4px 8px !important;
-    font-size: 0.72rem !important;
-  }
-
-  .fc .fc-toolbar-chunk {
-    display: flex;
-    gap: 4px;
-  }
-}
-
-/* Deja que la semana se desplace en horizontal, en vez de aplastar las columnas.
-   Solo aplica en vista semana: en vista día (una sola columna) no debe haber scroll.
-   Sin media query: si el contenedor es ancho de sobra, el navegador no mostrará scrollbar. */
-.ziti-week-view .fc-view-harness {
-  overflow-x: auto !important;
-}
-
-.ziti-week-view .fc-scrollgrid,
-.ziti-week-view .fc-scrollgrid-sync-table,
-.ziti-week-view table.fc-scrollgrid {
-  min-width: 640px !important;
-}
-
 .fc .fc-button-primary {
   background-color: white !important;
   border: 1px solid #e5e7eb !important;
@@ -65,11 +40,6 @@
 .fc .fc-button-primary:not(:disabled):active:focus {
   box-shadow: none !important;
   outline: none !important;
-}
-
-/* El "hoy" en un verde muy suave, en vez del amarillo por defecto de FullCalendar */
-.fc .fc-day-today {
-  background-color: rgba(162, 192, 55, 0.08) !important;
 }
 
 /* Oculta el scrollbar fantasma que a veces aparece en la fila de cabecera de días */
@@ -110,6 +80,31 @@
   height: 1.6em !important;
 }
 
+@media (max-width: 640px) {
+  .fc .fc-button {
+    padding: 4px 8px !important;
+    font-size: 0.72rem !important;
+  }
+
+  .fc .fc-toolbar-chunk {
+    display: flex;
+    gap: 4px;
+  }
+}
+
+/* Deja que la semana se desplace en horizontal, en vez de aplastar las columnas.
+   Solo aplica en vista semana: en vista día (una sola columna) no debe haber scroll.
+   Sin media query: si el contenedor es ancho de sobra, el navegador no mostrará scrollbar. */
+.ziti-week-view .fc-view-harness {
+  overflow-x: auto !important;
+}
+
+.ziti-week-view .fc-scrollgrid,
+.ziti-week-view .fc-scrollgrid-sync-table,
+.ziti-week-view table.fc-scrollgrid {
+  min-width: 640px !important;
+}
+
 /* Fin de semana en gris suave, pero seguimos permitiendo reservar */
 .fc .fc-timegrid-col.fc-day-sat,
 .fc .fc-timegrid-col.fc-day-sun {
@@ -133,6 +128,10 @@
 .fc .fc-timegrid-now-indicator-arrow {
   border-color: #6aa842;
   color: #6aa842;
+}
+
+.fc .fc-day-today {
+  background-color: rgba(162, 192, 55, 0.08) !important;
 }
 
 .fc-event {

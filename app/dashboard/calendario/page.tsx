@@ -14,6 +14,7 @@ import { X, Trash2, ChevronDown, Check } from 'lucide-react';
 import MiniCalendar, { dayKey } from '@/components/MiniCalendar';
 import {
   getUsers,
+  getMe,
   getActiveClients,
   getBookings,
   createBooking,
@@ -22,6 +23,8 @@ import {
 } from '@/lib/api';
 
 registerLocale('es', es);
+
+const FALLBACK_COLOR = '#868585';
 
 type ModalState =
   | { mode: 'create'; start: Date }
@@ -63,7 +66,15 @@ function TrainerSelect({
         onClick={() => setOpen(!open)}
         className="flex w-full items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-[#2b2b2a]"
       >
-        {selected ? `${selected.firstName} ${selected.lastName}` : 'Elige un entrenador'}
+        <span className="flex items-center gap-2">
+          {selected && (
+            <span
+              className="h-2.5 w-2.5 shrink-0 rounded-full"
+              style={{ backgroundColor: selected.color || FALLBACK_COLOR }}
+            />
+          )}
+          {selected ? `${selected.firstName} ${selected.lastName}` : 'Elige un entrenador'}
+        </span>
         <ChevronDown
           size={15}
           className={`text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}
@@ -86,7 +97,13 @@ function TrainerSelect({
                   : 'text-[#2b2b2a] hover:bg-gray-50'
               }`}
             >
-              {t.firstName} {t.lastName}
+              <span className="flex items-center gap-2">
+                <span
+                  className="h-2.5 w-2.5 shrink-0 rounded-full"
+                  style={{ backgroundColor: t.color || FALLBACK_COLOR }}
+                />
+                {t.firstName} {t.lastName}
+              </span>
               {t._id === value && <Check size={14} />}
             </button>
           ))}
@@ -100,6 +117,7 @@ export default function CalendarioPage() {
   const [userId, setUserId] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
   const [isTrainer, setIsTrainer] = useState(false);
+  const [ownColor, setOwnColor] = useState(FALLBACK_COLOR);
   const [roleReady, setRoleReady] = useState(false);
 
   const [trainers, setTrainers] = useState<any[]>([]);
@@ -122,13 +140,13 @@ export default function CalendarioPage() {
   const calendarRef = useRef<FullCalendar>(null);
   const router = useRouter();
 
-  // "Vista de entrenador" = puedes crear/mover sesiones y ves nombres de clientes.
-  // Se activa si eres admin (gestionas cualquier entrenador) o si eres entrenador tú mismo.
   const isTrainerPerspective = isAdmin || isTrainer;
-
-  // El id sobre el que se consultan/crean sesiones: el entrenador elegido (admin),
-  // o tu propio id (entrenador o cliente).
   const targetId = isAdmin ? selectedTrainerId : userId;
+
+  // Color a usar cuando estás viendo "desde el punto de vista de entrenador"
+  const currentTrainerColor = isAdmin
+    ? trainers.find((t) => t._id === selectedTrainerId)?.color || FALLBACK_COLOR
+    : ownColor;
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -153,7 +171,6 @@ export default function CalendarioPage() {
             (u: any) => u.roles?.includes('trainer') && u.status === 'active',
           );
           setTrainers(activeTrainers);
-          // Si el admin es también entrenador, se preselecciona a sí mismo
           if (trainer && activeTrainers.some((t: any) => t._id === id)) {
             setSelectedTrainerId(id);
           } else if (activeTrainers.length > 0) {
@@ -161,6 +178,11 @@ export default function CalendarioPage() {
           }
         })
         .finally(() => setLoadingTrainers(false));
+    } else if (trainer) {
+      // Entrenador no-admin: solo necesita su propio color
+      getMe(token)
+        .then((me) => setOwnColor(me.color || FALLBACK_COLOR))
+        .catch(() => {});
     }
 
     if (admin || trainer) {
@@ -174,18 +196,22 @@ export default function CalendarioPage() {
 
   function bookingToEvent(b: any) {
     let label = '';
+    let color = FALLBACK_COLOR;
     if (isTrainerPerspective) {
       label = (b.clients || [])
         .map((c: any) => `${c.firstName} ${c.lastName?.[0] ?? ''}.`)
         .join(', ');
+      color = currentTrainerColor;
     } else {
       label = b.trainer ? `${b.trainer.firstName} ${b.trainer.lastName}` : 'Entrenador';
+      color = b.trainer?.color || FALLBACK_COLOR;
     }
     return {
       id: b._id,
       title: label || 'Sesión',
       start: b.startTime,
       end: b.endTime,
+      color,
       extendedProps: { raw: b },
     };
   }
@@ -237,7 +263,7 @@ export default function CalendarioPage() {
       loadMonthDots(selectedDate);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [targetId, roleReady]);
+  }, [targetId, roleReady, ownColor]);
 
   function handleMiniDateChange(date: Date | null) {
     if (!date) return;
@@ -420,17 +446,16 @@ export default function CalendarioPage() {
       )}
 
       <div className="flex h-[calc(100dvh-190px)] gap-5">
-        {/* Mini calendario lateral: solo en pantallas medianas o más grandes */}
-        <div className="hidden w-64 shrink-0 overflow-y-auto rounded-xl bg-white p-4 md:block">
+        <div className="hidden w-64 shrink-0 self-start overflow-y-auto rounded-xl bg-white p-4 md:block">
           <MiniCalendar
             selected={selectedDate}
             onChange={handleMiniDateChange}
             onMonthChange={handleMiniMonthChange}
             daysWithBookings={daysWithBookings}
+            highlightWeek={viewType === 'timeGridWeek'}
           />
         </div>
 
-        {/* Calendario grande del día/semana */}
         <div
           className={`min-w-0 flex-1 overflow-hidden rounded-xl bg-white p-4 ${
             viewType === 'timeGridWeek' ? 'ziti-week-view' : ''
@@ -461,7 +486,7 @@ export default function CalendarioPage() {
             eventDrop={handleEventDrop}
             datesSet={handleDatesSet}
             events={events}
-            eventColor="#6aa842"
+            eventColor={FALLBACK_COLOR}
             slotDuration="00:30:00"
             snapDuration="00:05:00"
             displayEventTime={false}
@@ -491,7 +516,6 @@ export default function CalendarioPage() {
         </div>
       </div>
 
-      {/* Modal crear/editar sesión (solo perspectiva entrenador) */}
       {modal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
