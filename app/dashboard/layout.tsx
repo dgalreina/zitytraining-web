@@ -121,10 +121,7 @@ export default function DashboardLayout({
       ? [{ href: '/dashboard/clientes', label: 'Clientes', icon: Users }]
       : []),
     ...(isAdmin
-      ? [
-          { href: '/dashboard/entrenadores', label: 'Entrenadores', icon: Dumbbell },
-          { href: '/dashboard/estadisticas', label: 'Estadísticas', icon: BarChart3 },
-        ]
+      ? [{ href: '/dashboard/entrenadores', label: 'Entrenadores', icon: Dumbbell }]
       : []),
   ];
 
