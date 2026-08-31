@@ -16,6 +16,11 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Zitytraining",
   description: "Entrenamiento personal y pilates",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Zitytraining",
+  },
 };
 
 export const viewport: Viewport = {
@@ -23,6 +28,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  themeColor: "#6aa842",
 };
 
 export default function RootLayout({

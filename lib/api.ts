@@ -199,3 +199,11 @@ export async function getClientPurchases(token: string, clientId: string) {
   });
   return handleResponse(res);
 }
+
+export async function getAllBookings(token: string, from: string, to: string) {
+  const query = new URLSearchParams({ scope: 'all', from, to });
+  const res = await fetch(`${API_URL}/bookings?${query}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res);
+}

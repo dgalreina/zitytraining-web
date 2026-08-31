@@ -17,6 +17,7 @@ import {
   getMe,
   getActiveClients,
   getBookings,
+  getAllBookings,
   createBooking,
   updateBooking,
   deleteBooking,
@@ -124,6 +125,7 @@ export default function CalendarioPage() {
   const [selectedTrainerId, setSelectedTrainerId] = useState('');
   const [loadingTrainers, setLoadingTrainers] = useState(false);
 
+  const [showAllTrainers, setShowAllTrainers] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [events, setEvents] = useState<any[]>([]);
   const [daysWithBookings, setDaysWithBookings] = useState<Set<string>>(new Set());
@@ -197,7 +199,15 @@ export default function CalendarioPage() {
   function bookingToEvent(b: any) {
     let label = '';
     let color = FALLBACK_COLOR;
-    if (isTrainerPerspective) {
+
+    if (showAllTrainers) {
+      // Vista "todos los entrenadores a la vez": nombres de clientes,
+      // color del entrenador de esa sesión concreta.
+      label = (b.clients || [])
+        .map((c: any) => `${c.firstName} ${c.lastName?.[0] ?? ''}.`)
+        .join(', ');
+      color = b.trainer?.color || FALLBACK_COLOR;
+    } else if (isTrainerPerspective) {
       label = (b.clients || [])
         .map((c: any) => `${c.firstName} ${c.lastName?.[0] ?? ''}.`)
         .join(', ');
@@ -206,6 +216,7 @@ export default function CalendarioPage() {
       label = b.trainer ? `${b.trainer.firstName} ${b.trainer.lastName}` : 'Entrenador';
       color = b.trainer?.color || FALLBACK_COLOR;
     }
+
     return {
       id: b._id,
       title: label || 'Sesión',
@@ -218,7 +229,17 @@ export default function CalendarioPage() {
 
   async function loadBookings(fromStr: string, toStr: string) {
     const token = localStorage.getItem('token');
-    if (!token || !targetId) return;
+    if (!token) return;
+    if (showAllTrainers) {
+      try {
+        const data = await getAllBookings(token, fromStr, toStr);
+        setEvents(data.map(bookingToEvent));
+      } catch {
+        // silencioso
+      }
+      return;
+    }
+    if (!targetId) return;
     try {
       const params = isTrainerPerspective
         ? { trainer: targetId, from: fromStr, to: toStr }
@@ -257,13 +278,13 @@ export default function CalendarioPage() {
   }
 
   useEffect(() => {
-    if (targetId && roleReady && calendarRef.current) {
+    if (roleReady && calendarRef.current && (showAllTrainers || targetId)) {
       const api = calendarRef.current.getApi();
       loadBookings(api.view.activeStart.toISOString(), api.view.activeEnd.toISOString());
       loadMonthDots(selectedDate);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [targetId, roleReady, ownColor]);
+  }, [targetId, roleReady, ownColor, showAllTrainers]);
 
   function handleMiniDateChange(date: Date | null) {
     if (!date) return;
@@ -437,12 +458,31 @@ export default function CalendarioPage() {
 
   return (
     <div>
-      {isAdmin && (
-        <TrainerSelect
-          trainers={trainers}
-          value={selectedTrainerId}
-          onChange={setSelectedTrainerId}
-        />
+      {(isAdmin || isTrainer) && (
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          {isAdmin && !showAllTrainers && (
+            <TrainerSelect
+              trainers={trainers}
+              value={selectedTrainerId}
+              onChange={setSelectedTrainerId}
+            />
+          )}
+          <button
+            type="button"
+            onClick={() => setShowAllTrainers(!showAllTrainers)}
+            className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
+              showAllTrainers
+                ? 'bg-gradient-to-r from-[#a2c037] to-[#6aa842] text-white'
+                : 'border border-gray-200 bg-white text-[#868585] hover:bg-gray-50'
+            }`}
+          >
+            {showAllTrainers
+              ? isAdmin
+                ? 'Ver un entrenador'
+                : 'Mi calendario'
+              : 'Ver todos los entrenadores'}
+          </button>
+        </div>
       )}
 
       <div className="flex h-[calc(100dvh-190px)] gap-5">
@@ -477,9 +517,9 @@ export default function CalendarioPage() {
             slotMinTime="07:00:00"
             slotMaxTime="22:00:00"
             height="100%"
-            selectable={isTrainerPerspective}
+            selectable={isTrainerPerspective && !showAllTrainers}
             selectLongPressDelay={200}
-            eventStartEditable={isTrainerPerspective}
+            eventStartEditable={isTrainerPerspective && !showAllTrainers}
             eventDurationEditable={false}
             select={handleSelect}
             eventClick={handleEventClick}
