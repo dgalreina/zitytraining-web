@@ -128,7 +128,7 @@ export default function DashboardLayout({
   if (!ready) return null;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#f7f7f5] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] font-[family-name:var(--font-inter)]">
+    <div className="flex h-screen overflow-hidden bg-white pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] font-[family-name:var(--font-inter)]">
       {sidebarOpen && (
         <div
           onClick={() => setSidebarOpen(false)}
@@ -196,7 +196,7 @@ export default function DashboardLayout({
         </div>
       </aside>
 
-      <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 md:px-8">
+      <div className="flex-1 overflow-y-auto bg-[#f7f7f5] px-4 py-6 sm:px-6 md:px-8">
         <div className="mb-6 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <button
