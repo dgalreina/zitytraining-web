@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   description: "Entrenamiento personal y pilates",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "default",
+    statusBarStyle: "black-translucent",
     title: "Zitytraining",
   },
 };
@@ -28,6 +28,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  viewportFit: "cover",
   themeColor: "#6aa842",
 };
 

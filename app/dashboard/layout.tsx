@@ -128,7 +128,7 @@ export default function DashboardLayout({
   if (!ready) return null;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#f7f7f5] font-[family-name:var(--font-inter)]">
+    <div className="flex h-screen overflow-hidden bg-[#f7f7f5] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] font-[family-name:var(--font-inter)]">
       {sidebarOpen && (
         <div
           onClick={() => setSidebarOpen(false)}
@@ -137,7 +137,7 @@ export default function DashboardLayout({
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-64 -translate-x-full flex-col border-r border-gray-200 bg-white px-3 py-5 transition-transform duration-300 md:static md:w-56 md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 -translate-x-full flex-col border-r border-gray-200 bg-white px-3 pb-5 pt-[calc(env(safe-area-inset-top)+1.25rem)] transition-transform duration-300 md:static md:w-56 md:translate-x-0 md:pt-5 ${
           sidebarOpen ? 'translate-x-0' : ''
         }`}
       >
