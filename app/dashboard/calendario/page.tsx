@@ -700,11 +700,11 @@ export default function CalendarioPage() {
 
           {filtersOpen && (
             <div
-              className="fixed inset-0 z-50 flex items-end bg-black/40 sm:hidden"
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 sm:hidden"
               onClick={() => setFiltersOpen(false)}
             >
               <div
-                className="w-full rounded-t-2xl bg-white p-5"
+                className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl"
                 onClick={(e) => e.stopPropagation()}
               >
                 <div className="mb-4 flex items-center justify-between">
