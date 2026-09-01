@@ -13,13 +13,15 @@ const labelClass = 'mb-1 block text-xs font-semibold text-[#868585]';
 
 const COLOR_PALETTE = [
   { name: 'Verde (marca)', value: '#6aa842' },
-  { name: 'Azul', value: '#3b82f6' },
-  { name: 'Morado', value: '#8b5cf6' },
-  { name: 'Rosa', value: '#ec4899' },
-  { name: 'Naranja', value: '#f97316' },
-  { name: 'Rojo', value: '#ef4444' },
-  { name: 'Turquesa', value: '#14b8a6' },
-  { name: 'Mostaza', value: '#ca8a04' },
+  { name: 'Naranja', value: '#e8821e' },
+  { name: 'Marrón', value: '#a4796c' },
+  { name: 'Azul cielo', value: '#29abe2' },
+  { name: 'Mostaza', value: '#e4b443' },
+  { name: 'Turquesa', value: '#16a394' },
+  { name: 'Azul marino', value: '#2e5f8a' },
+  { name: 'Morado', value: '#7e57c2' },
+  { name: 'Beige', value: '#c2a878' },
+  { name: 'Gris pizarra', value: '#64748b' },
 ];
 
 export default function PerfilPage() {
@@ -223,16 +225,18 @@ export default function PerfilPage() {
             <div>
               <label className={labelClass}>Color en el calendario</label>
               <div className="flex flex-wrap gap-2.5">
-                <button
-                  type="button"
-                  title="Sin asignar (gris)"
-                  disabled={!editing}
-                  onClick={() => setForm({ ...form, color: null })}
-                  className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-dashed border-gray-300 transition disabled:cursor-not-allowed"
-                  style={{ backgroundColor: DEFAULT_TRAINER_COLOR }}
-                >
-                  {!form.color && <Check size={16} className="text-white" />}
-                </button>
+                {!form.color && (
+                  <button
+                    type="button"
+                    title="Sin asignar (gris)"
+                    disabled={!editing}
+                    onClick={() => setForm({ ...form, color: null })}
+                    className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-dashed border-gray-300 transition disabled:cursor-not-allowed"
+                    style={{ backgroundColor: DEFAULT_TRAINER_COLOR }}
+                  >
+                    <Check size={16} className="text-white" />
+                  </button>
+                )}
                 {COLOR_PALETTE.map((c) => (
                   <button
                     key={c.value}
