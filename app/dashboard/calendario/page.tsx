@@ -17,7 +17,7 @@ import {
   getMe,
   getActiveClients,
   getBookings,
-  getAllBookings,
+  getBookingsByTrainers,
   createBooking,
   updateBooking,
   deleteBooking,
@@ -34,8 +34,6 @@ type ModalState =
   | null;
 
 type DurationOption = '40' | '60' | 'custom';
-type FilterMode = 'all' | 'trainer' | 'client';
-
 function minutesBetween(start: Date, end: Date) {
   return Math.round((end.getTime() - start.getTime()) / 60000);
 }
@@ -123,6 +121,104 @@ function FilterDropdown({
   );
 }
 
+// Checklist de entrenadores: de ninguno a todos, no una sola opción
+function TrainerMultiSelect({
+  trainers,
+  selectedIds,
+  onChange,
+}: {
+  trainers: any[];
+  selectedIds: string[];
+  onChange: (ids: string[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const allSelected = trainers.length > 0 && selectedIds.length === trainers.length;
+  const noneSelected = selectedIds.length === 0;
+
+  function toggleOne(id: string) {
+    onChange(
+      selectedIds.includes(id) ? selectedIds.filter((i) => i !== id) : [...selectedIds, id],
+    );
+  }
+
+  let summary = 'Ningún entrenador';
+  if (allSelected) summary = 'Todos los entrenadores';
+  else if (!noneSelected) {
+    const names = trainers
+      .filter((t) => selectedIds.includes(t._id))
+      .map((t) => t.firstName);
+    summary = names.length <= 2 ? names.join(', ') : `${names.length} entrenadores`;
+  }
+
+  return (
+    <div ref={ref} className="relative w-full sm:w-56">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-[#2b2b2a]"
+      >
+        <span className="truncate">{summary}</span>
+        <ChevronDown
+          size={15}
+          className={`shrink-0 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+
+      {open && (
+        <div className="absolute left-0 z-10 mt-1.5 max-h-80 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white p-1 shadow-lg">
+          <div className="flex gap-1 border-b border-gray-100 px-2 py-1.5">
+            <button
+              type="button"
+              onClick={() => onChange(trainers.map((t) => t._id))}
+              className="text-xs font-semibold text-[#4b7a1f] hover:underline"
+            >
+              Todos
+            </button>
+            <span className="text-xs text-gray-300">·</span>
+            <button
+              type="button"
+              onClick={() => onChange([])}
+              className="text-xs font-semibold text-[#868585] hover:underline"
+            >
+              Ninguno
+            </button>
+          </div>
+          {trainers.map((t) => {
+            const isChecked = selectedIds.includes(t._id);
+            return (
+              <button
+                key={t._id}
+                type="button"
+                onClick={() => toggleOne(t._id)}
+                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-[#2b2b2a] hover:bg-gray-50"
+              >
+                <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded border border-gray-400 bg-white">
+                  {isChecked && <Check size={12} className="text-[#2b2b2a]" strokeWidth={3} />}
+                </span>
+                <span
+                  className="h-2.5 w-2.5 shrink-0 rounded-full"
+                  style={{ backgroundColor: t.color || FALLBACK_COLOR }}
+                />
+                {t.firstName} {t.lastName}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function CalendarioPage() {
   const [userId, setUserId] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
@@ -133,15 +229,17 @@ export default function CalendarioPage() {
   const [trainers, setTrainers] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
 
-  const [filterMode, setFilterMode] = useState<FilterMode>('all');
-  const [selectedTrainerId, setSelectedTrainerId] = useState('');
-  const [selectedClientId, setSelectedClientId] = useState('');
+  const [selectedTrainerIds, setSelectedTrainerIds] = useState<string[]>([]);
+  const [selectedClientId, setSelectedClientId] = useState(ALL_VALUE);
   const [loadingLists, setLoadingLists] = useState(false);
+
+  const isClientMode = selectedClientId !== ALL_VALUE;
 
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [events, setEvents] = useState<any[]>([]);
   const [daysWithBookings, setDaysWithBookings] = useState<Set<string>>(new Set());
   const [modal, setModal] = useState<ModalState>(null);
+  const [modalTrainerId, setModalTrainerId] = useState('');
   const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
   const [durationOption, setDurationOption] = useState<DurationOption>('60');
@@ -151,21 +249,19 @@ export default function CalendarioPage() {
   const [viewTitle, setViewTitle] = useState('');
   const [viewType, setViewType] = useState('timeGridWeek');
   const calendarRef = useRef<FullCalendar>(null);
+  const calendarWrapperRef = useRef<HTMLDivElement>(null);
+  const dragStateRef = useRef<{ eventId: string; start: Date; end: Date } | null>(null);
+  const edgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const edgeTriggeredRef = useRef(false);
   const router = useRouter();
 
   const isTrainerPerspective = isAdmin || isTrainer;
 
-  // El color a usar cuando estamos en modo "un entrenador concreto"
-  const currentTrainerColor =
-    filterMode === 'trainer'
-      ? trainers.find((t) => t._id === selectedTrainerId)?.color ||
-        (selectedTrainerId === userId ? ownColor : FALLBACK_COLOR)
-      : ownColor;
-
-  // Cualquier entrenador o admin puede crear/editar/borrar sesiones de
-  // CUALQUIER entrenador, siempre que estemos viendo el calendario de
-  // uno concreto (no en la vista combinada "todos" ni en la de cliente).
-  const canEdit = filterMode === 'trainer' && isTrainerPerspective;
+  // Se puede crear/editar/borrar mientras no estemos viendo el calendario
+  // por cliente (ahí se mantiene solo lectura). El modal siempre pregunta
+  // a qué entrenador pertenece cada sesión nueva, así que no hace falta
+  // tener exactamente uno marcado en el checklist para poder crear.
+  const canEdit = !isClientMode && isTrainerPerspective;
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -181,7 +277,6 @@ export default function CalendarioPage() {
     const trainer = roles?.includes('trainer') ?? false;
     setIsAdmin(admin);
     setIsTrainer(trainer);
-    setSelectedTrainerId(id);
 
     if (trainer) {
       getMe(token)
@@ -193,9 +288,12 @@ export default function CalendarioPage() {
       setLoadingLists(true);
       Promise.all([getUsers(token), getActiveClients(token)])
         .then(([users, activeClients]) => {
-          setTrainers(
-            users.filter((u: any) => u.roles?.includes('trainer') && u.status === 'active'),
+          const activeTrainers = users.filter(
+            (u: any) => u.roles?.includes('trainer') && u.status === 'active',
           );
+          setTrainers(activeTrainers);
+          // Por defecto, todos los entrenadores marcados
+          setSelectedTrainerIds(activeTrainers.map((t: any) => t._id));
           setClients(activeClients);
         })
         .finally(() => setLoadingLists(false));
@@ -208,18 +306,14 @@ export default function CalendarioPage() {
     let label = '';
     let color = FALLBACK_COLOR;
 
-    if (filterMode === 'client') {
+    if (isClientMode) {
       // Un cliente puede tener varios entrenadores: mostramos quién es
       // el entrenador de cada sesión, con su color.
       label = b.trainer ? `${b.trainer.firstName} ${b.trainer.lastName}` : 'Entrenador';
       color = b.trainer?.color || FALLBACK_COLOR;
-    } else if (filterMode === 'trainer') {
-      label = (b.clients || [])
-        .map((c: any) => `${c.firstName} ${c.lastName?.[0] ?? ''}.`)
-        .join(', ');
-      color = currentTrainerColor;
     } else {
-      // 'all': nombres de clientes, color del entrenador de esa sesión
+      // Nombres de clientes, color del entrenador de esa sesión concreta
+      // (funciona igual con 1, varios, o todos los entrenadores marcados)
       label = (b.clients || [])
         .map((c: any) => `${c.firstName} ${c.lastName?.[0] ?? ''}.`)
         .join(', ');
@@ -241,12 +335,10 @@ export default function CalendarioPage() {
     if (!token) return;
     try {
       let data: any[] = [];
-      if (filterMode === 'all') {
-        data = await getAllBookings(token, fromStr, toStr);
-      } else if (filterMode === 'client' && selectedClientId) {
+      if (isClientMode) {
         data = await getBookings(token, { client: selectedClientId, from: fromStr, to: toStr });
-      } else if (filterMode === 'trainer' && selectedTrainerId) {
-        data = await getBookings(token, { trainer: selectedTrainerId, from: fromStr, to: toStr });
+      } else if (selectedTrainerIds.length > 0) {
+        data = await getBookingsByTrainers(token, selectedTrainerIds, fromStr, toStr);
       }
       setEvents(data.map(bookingToEvent));
     } catch {
@@ -263,20 +355,19 @@ export default function CalendarioPage() {
 
     try {
       let data: any[] = [];
-      if (filterMode === 'all') {
-        data = await getAllBookings(token, start.toISOString(), end.toISOString());
-      } else if (filterMode === 'client' && selectedClientId) {
+      if (isClientMode) {
         data = await getBookings(token, {
           client: selectedClientId,
           from: start.toISOString(),
           to: end.toISOString(),
         });
-      } else if (filterMode === 'trainer' && selectedTrainerId) {
-        data = await getBookings(token, {
-          trainer: selectedTrainerId,
-          from: start.toISOString(),
-          to: end.toISOString(),
-        });
+      } else if (selectedTrainerIds.length > 0) {
+        data = await getBookingsByTrainers(
+          token,
+          selectedTrainerIds,
+          start.toISOString(),
+          end.toISOString(),
+        );
       }
       const keys = new Set<string>(data.map((b: any) => dayKey(new Date(b.startTime))));
       setDaysWithBookings(keys);
@@ -299,25 +390,7 @@ export default function CalendarioPage() {
       loadMonthDots(selectedDate);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [roleReady, filterMode, selectedTrainerId, selectedClientId]);
-
-  function handleTrainerFilterChange(value: string) {
-    if (value === ALL_VALUE) {
-      setFilterMode('all');
-    } else {
-      setFilterMode('trainer');
-      setSelectedTrainerId(value);
-    }
-  }
-
-  function handleClientFilterChange(value: string) {
-    if (value === ALL_VALUE) {
-      setFilterMode('all');
-    } else {
-      setFilterMode('client');
-      setSelectedClientId(value);
-    }
-  }
+  }, [roleReady, selectedTrainerIds, selectedClientId]);
 
   function handleMiniDateChange(date: Date | null) {
     if (!date) return;
@@ -337,6 +410,15 @@ export default function CalendarioPage() {
     setDurationOption('60');
     setCustomMinutes(60);
     setError('');
+
+    // Preseleccionamos tu propio usuario si eres entrenador, o el primero
+    // marcado en el checklist si eres admin puro; el selector del modal
+    // siempre se muestra, así que esto es solo un punto de partida cómodo.
+    if (isTrainer) {
+      setModalTrainerId(userId);
+    } else {
+      setModalTrainerId(selectedTrainerIds[0] || trainers[0]?._id || '');
+    }
   }
 
   function openEditModal(raw: any) {
@@ -346,6 +428,7 @@ export default function CalendarioPage() {
     const diff = minutesBetween(start, end);
 
     setModal({ mode: 'edit', booking: raw, start });
+    setModalTrainerId(raw.trainer?._id || raw.trainer || '');
     setSelectedClientIds(raw.clients.map((c: any) => c._id));
     setNotes(raw.notes || '');
 
@@ -384,6 +467,100 @@ export default function CalendarioPage() {
     }
   }
 
+  function clearEdgeTimer() {
+    if (edgeTimerRef.current) {
+      clearTimeout(edgeTimerRef.current);
+      edgeTimerRef.current = null;
+    }
+  }
+
+  async function advanceDraggedEventToNextDay() {
+    edgeTriggeredRef.current = true;
+    clearEdgeTimer();
+
+    const drag = dragStateRef.current;
+    const api = calendarRef.current?.getApi();
+    if (!drag || !api) return;
+
+    const newStart = new Date(drag.start);
+    newStart.setDate(newStart.getDate() + 1);
+    const newEnd = new Date(drag.end);
+    newEnd.setDate(newEnd.getDate() + 1);
+
+    // Avanza el calendario visualmente al día siguiente
+    api.next();
+    // Usamos la fecha real del calendario (no el estado "selectedDate",
+    // que aquí estaría congelado del primer render) por si el avance
+    // cruza también a un mes distinto.
+    const currentApiDate = api.getDate();
+
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    try {
+      await updateBooking(token, drag.eventId, {
+        startTime: newStart.toISOString(),
+        endTime: newEnd.toISOString(),
+      });
+      loadMonthDots(currentApiDate);
+    } catch (err: any) {
+      alert(err.message || 'No se pudo mover la sesión al día siguiente');
+    }
+  }
+
+  function handleDragPointerMoveLogic(e: PointerEvent) {
+    if (viewType !== 'timeGridDay') return;
+    if (!dragStateRef.current || edgeTriggeredRef.current) return;
+
+    const wrapper = calendarWrapperRef.current;
+    if (!wrapper) return;
+
+    const rect = wrapper.getBoundingClientRect();
+    const EDGE_PX = 36;
+    const nearRightEdge = e.clientX > rect.right - EDGE_PX && e.clientX <= rect.right + 15;
+
+    if (nearRightEdge) {
+      // Mantén el cursor ~600ms cerca del borde antes de avanzar, para que
+      // un simple roce al pasar por ahí no dispare el cambio de día sin querer.
+      if (!edgeTimerRef.current) {
+        edgeTimerRef.current = setTimeout(() => {
+          advanceDraggedEventToNextDay();
+        }, 600);
+      }
+    } else {
+      clearEdgeTimer();
+    }
+  }
+
+  // Patrón "última versión siempre fresca": guardamos la lógica de arriba
+  // (que sí depende de estado/props actuales) en una ref que se actualiza
+  // en cada render. El listener que de verdad se engancha a window es un
+  // envoltorio con identidad ESTABLE para siempre, que simplemente delega
+  // a lo que haya en la ref en ese momento — así addEventListener y
+  // removeEventListener siempre coinciden, y la lógica nunca queda obsoleta.
+  const latestPointerMoveRef = useRef(handleDragPointerMoveLogic);
+  useEffect(() => {
+    latestPointerMoveRef.current = handleDragPointerMoveLogic;
+  });
+  const stablePointerMoveHandler = useRef((e: PointerEvent) => {
+    latestPointerMoveRef.current(e);
+  }).current;
+
+  function handleEventDragStart(info: any) {
+    dragStateRef.current = {
+      eventId: info.event.id,
+      start: info.event.start,
+      end: info.event.end,
+    };
+    edgeTriggeredRef.current = false;
+    window.addEventListener('pointermove', stablePointerMoveHandler);
+  }
+
+  function handleEventDragStop() {
+    window.removeEventListener('pointermove', stablePointerMoveHandler);
+    clearEdgeTimer();
+    dragStateRef.current = null;
+  }
+
   function toggleClient(id: string) {
     setSelectedClientIds((prev) =>
       prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id],
@@ -403,6 +580,11 @@ export default function CalendarioPage() {
 
   async function handleSaveModal() {
     if (!modal) return;
+
+    if (!modalTrainerId) {
+      setError('Selecciona un entrenador');
+      return;
+    }
 
     if (selectedClientIds.length === 0) {
       setError('Selecciona al menos un cliente');
@@ -426,7 +608,7 @@ export default function CalendarioPage() {
     try {
       if (modal.mode === 'create') {
         await createBooking(token, {
-          trainer: selectedTrainerId,
+          trainer: modalTrainerId,
           clients: selectedClientIds,
           startTime: start.toISOString(),
           endTime: end.toISOString(),
@@ -434,6 +616,7 @@ export default function CalendarioPage() {
         });
       } else {
         await updateBooking(token, modal.booking._id, {
+          trainer: modalTrainerId,
           clients: selectedClientIds,
           startTime: start.toISOString(),
           endTime: end.toISOString(),
@@ -478,11 +661,6 @@ export default function CalendarioPage() {
     return <p className="text-sm text-gray-400">Cargando...</p>;
   }
 
-  const trainerOptions = [
-    { id: ALL_VALUE, name: 'Todos los entrenadores' },
-    ...trainers.map((t) => ({ id: t._id, name: `${t.firstName} ${t.lastName}`, color: t.color })),
-  ];
-
   const clientOptions = [
     { id: ALL_VALUE, name: 'Todos los clientes' },
     ...clients.map((c) => ({ id: c._id, name: `${c.firstName} ${c.lastName}` })),
@@ -492,18 +670,16 @@ export default function CalendarioPage() {
     <div>
       {(isAdmin || isTrainer) && (
         <div className="mb-4 flex flex-wrap gap-3">
-          <FilterDropdown
-            label="Entrenador"
-            options={trainerOptions}
-            value={filterMode === 'trainer' ? selectedTrainerId : ALL_VALUE}
-            onChange={handleTrainerFilterChange}
-            showColorDot
+          <TrainerMultiSelect
+            trainers={trainers}
+            selectedIds={selectedTrainerIds}
+            onChange={setSelectedTrainerIds}
           />
           <FilterDropdown
             label="Cliente"
             options={clientOptions}
-            value={filterMode === 'client' ? selectedClientId : ALL_VALUE}
-            onChange={handleClientFilterChange}
+            value={selectedClientId}
+            onChange={setSelectedClientId}
           />
         </div>
       )}
@@ -520,6 +696,7 @@ export default function CalendarioPage() {
         </div>
 
         <div
+          ref={calendarWrapperRef}
           className={`min-w-0 flex-1 overflow-hidden rounded-xl bg-white p-4 ${
             viewType === 'timeGridWeek' ? 'ziti-week-view' : ''
           }`}
@@ -547,6 +724,8 @@ export default function CalendarioPage() {
             select={handleSelect}
             eventClick={handleEventClick}
             eventDrop={handleEventDrop}
+            eventDragStart={handleEventDragStart}
+            eventDragStop={handleEventDragStop}
             datesSet={handleDatesSet}
             events={events}
             eventColor={FALLBACK_COLOR}
@@ -589,6 +768,23 @@ export default function CalendarioPage() {
               <button onClick={() => setModal(null)} className="text-gray-400 hover:text-gray-600">
                 <X size={18} />
               </button>
+            </div>
+
+            <div className="mb-3">
+              <label className="mb-1 block text-xs font-semibold text-[#868585]">
+                Entrenador
+              </label>
+              <FilterDropdown
+                label="Elige un entrenador"
+                options={trainers.map((t) => ({
+                  id: t._id,
+                  name: `${t.firstName} ${t.lastName}`,
+                  color: t.color,
+                }))}
+                value={modalTrainerId}
+                onChange={setModalTrainerId}
+                showColorDot
+              />
             </div>
 
             <label className="mb-1 block text-xs font-semibold text-[#868585]">

@@ -207,3 +207,16 @@ export async function getAllBookings(token: string, from: string, to: string) {
   });
   return handleResponse(res);
 }
+
+export async function getBookingsByTrainers(
+  token: string,
+  trainerIds: string[],
+  from: string,
+  to: string,
+) {
+  const query = new URLSearchParams({ trainers: trainerIds.join(','), from, to });
+  const res = await fetch(`${API_URL}/bookings?${query}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res);
+}
