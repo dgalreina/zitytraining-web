@@ -26,6 +26,7 @@ import {
 registerLocale('es', es);
 
 const FALLBACK_COLOR = '#868585';
+const ALL_VALUE = 'all';
 
 type ModalState =
   | { mode: 'create'; start: Date }
@@ -33,19 +34,25 @@ type ModalState =
   | null;
 
 type DurationOption = '40' | '60' | 'custom';
+type FilterMode = 'all' | 'trainer' | 'client';
 
 function minutesBetween(start: Date, end: Date) {
   return Math.round((end.getTime() - start.getTime()) / 60000);
 }
 
-function TrainerSelect({
-  trainers,
+// Desplegable genérico reutilizable para ambos filtros (entrenador / cliente)
+function FilterDropdown({
+  label,
+  options,
   value,
   onChange,
+  showColorDot,
 }: {
-  trainers: any[];
+  label: string;
+  options: { id: string; name: string; color?: string }[];
   value: string;
   onChange: (id: string) => void;
+  showColorDot?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -58,54 +65,56 @@ function TrainerSelect({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const selected = trainers.find((t) => t._id === value);
+  const selected = options.find((o) => o.id === value);
 
   return (
-    <div ref={ref} className="relative mb-4 w-full sm:w-64">
+    <div ref={ref} className="relative w-full sm:w-56">
       <button
         type="button"
         onClick={() => setOpen(!open)}
         className="flex w-full items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-[#2b2b2a]"
       >
-        <span className="flex items-center gap-2">
-          {selected && (
+        <span className="flex items-center gap-2 truncate">
+          {showColorDot && selected && selected.id !== ALL_VALUE && (
             <span
               className="h-2.5 w-2.5 shrink-0 rounded-full"
               style={{ backgroundColor: selected.color || FALLBACK_COLOR }}
             />
           )}
-          {selected ? `${selected.firstName} ${selected.lastName}` : 'Elige un entrenador'}
+          <span className="truncate">{selected ? selected.name : label}</span>
         </span>
         <ChevronDown
           size={15}
-          className={`text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}
+          className={`shrink-0 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}
         />
       </button>
 
       {open && (
-        <div className="absolute left-0 z-10 mt-1.5 w-full rounded-lg border border-gray-200 bg-white p-1 shadow-lg">
-          {trainers.map((t) => (
+        <div className="absolute left-0 z-10 mt-1.5 max-h-72 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white p-1 shadow-lg">
+          {options.map((o) => (
             <button
-              key={t._id}
+              key={o.id}
               type="button"
               onClick={() => {
-                onChange(t._id);
+                onChange(o.id);
                 setOpen(false);
               }}
               className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition ${
-                t._id === value
+                o.id === value
                   ? 'bg-[#a2c037]/10 font-semibold text-[#4b7a1f]'
                   : 'text-[#2b2b2a] hover:bg-gray-50'
               }`}
             >
-              <span className="flex items-center gap-2">
-                <span
-                  className="h-2.5 w-2.5 shrink-0 rounded-full"
-                  style={{ backgroundColor: t.color || FALLBACK_COLOR }}
-                />
-                {t.firstName} {t.lastName}
+              <span className="flex items-center gap-2 truncate">
+                {showColorDot && o.id !== ALL_VALUE && (
+                  <span
+                    className="h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: o.color || FALLBACK_COLOR }}
+                  />
+                )}
+                <span className="truncate">{o.name}</span>
               </span>
-              {t._id === value && <Check size={14} />}
+              {o.id === value && <Check size={14} className="shrink-0" />}
             </button>
           ))}
         </div>
@@ -122,14 +131,16 @@ export default function CalendarioPage() {
   const [roleReady, setRoleReady] = useState(false);
 
   const [trainers, setTrainers] = useState<any[]>([]);
-  const [selectedTrainerId, setSelectedTrainerId] = useState('');
-  const [loadingTrainers, setLoadingTrainers] = useState(false);
+  const [clients, setClients] = useState<any[]>([]);
 
-  const [showAllTrainers, setShowAllTrainers] = useState(true);
+  const [filterMode, setFilterMode] = useState<FilterMode>('all');
+  const [selectedTrainerId, setSelectedTrainerId] = useState('');
+  const [selectedClientId, setSelectedClientId] = useState('');
+  const [loadingLists, setLoadingLists] = useState(false);
+
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [events, setEvents] = useState<any[]>([]);
   const [daysWithBookings, setDaysWithBookings] = useState<Set<string>>(new Set());
-  const [clients, setClients] = useState<any[]>([]);
   const [modal, setModal] = useState<ModalState>(null);
   const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
   const [notes, setNotes] = useState('');
@@ -143,12 +154,18 @@ export default function CalendarioPage() {
   const router = useRouter();
 
   const isTrainerPerspective = isAdmin || isTrainer;
-  const targetId = isAdmin ? selectedTrainerId : userId;
 
-  // Color a usar cuando estás viendo "desde el punto de vista de entrenador"
-  const currentTrainerColor = isAdmin
-    ? trainers.find((t) => t._id === selectedTrainerId)?.color || FALLBACK_COLOR
-    : ownColor;
+  // El color a usar cuando estamos en modo "un entrenador concreto"
+  const currentTrainerColor =
+    filterMode === 'trainer'
+      ? trainers.find((t) => t._id === selectedTrainerId)?.color ||
+        (selectedTrainerId === userId ? ownColor : FALLBACK_COLOR)
+      : ownColor;
+
+  // Cualquier entrenador o admin puede crear/editar/borrar sesiones de
+  // CUALQUIER entrenador, siempre que estemos viendo el calendario de
+  // uno concreto (no en la vista combinada "todos" ni en la de cliente).
+  const canEdit = filterMode === 'trainer' && isTrainerPerspective;
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -164,33 +181,24 @@ export default function CalendarioPage() {
     const trainer = roles?.includes('trainer') ?? false;
     setIsAdmin(admin);
     setIsTrainer(trainer);
+    setSelectedTrainerId(id);
 
-    if (admin) {
-      setLoadingTrainers(true);
-      getUsers(token)
-        .then((users) => {
-          const activeTrainers = users.filter(
-            (u: any) => u.roles?.includes('trainer') && u.status === 'active',
-          );
-          setTrainers(activeTrainers);
-          if (trainer && activeTrainers.some((t: any) => t._id === id)) {
-            setSelectedTrainerId(id);
-          } else if (activeTrainers.length > 0) {
-            setSelectedTrainerId(activeTrainers[0]._id);
-          }
-        })
-        .finally(() => setLoadingTrainers(false));
-    } else if (trainer) {
-      // Entrenador no-admin: solo necesita su propio color
+    if (trainer) {
       getMe(token)
         .then((me) => setOwnColor(me.color || FALLBACK_COLOR))
         .catch(() => {});
     }
 
     if (admin || trainer) {
-      getActiveClients(token)
-        .then(setClients)
-        .catch(() => {});
+      setLoadingLists(true);
+      Promise.all([getUsers(token), getActiveClients(token)])
+        .then(([users, activeClients]) => {
+          setTrainers(
+            users.filter((u: any) => u.roles?.includes('trainer') && u.status === 'active'),
+          );
+          setClients(activeClients);
+        })
+        .finally(() => setLoadingLists(false));
     }
 
     setRoleReady(true);
@@ -200,20 +208,21 @@ export default function CalendarioPage() {
     let label = '';
     let color = FALLBACK_COLOR;
 
-    if (showAllTrainers) {
-      // Vista "todos los entrenadores a la vez": nombres de clientes,
-      // color del entrenador de esa sesión concreta.
-      label = (b.clients || [])
-        .map((c: any) => `${c.firstName} ${c.lastName?.[0] ?? ''}.`)
-        .join(', ');
+    if (filterMode === 'client') {
+      // Un cliente puede tener varios entrenadores: mostramos quién es
+      // el entrenador de cada sesión, con su color.
+      label = b.trainer ? `${b.trainer.firstName} ${b.trainer.lastName}` : 'Entrenador';
       color = b.trainer?.color || FALLBACK_COLOR;
-    } else if (isTrainerPerspective) {
+    } else if (filterMode === 'trainer') {
       label = (b.clients || [])
         .map((c: any) => `${c.firstName} ${c.lastName?.[0] ?? ''}.`)
         .join(', ');
       color = currentTrainerColor;
     } else {
-      label = b.trainer ? `${b.trainer.firstName} ${b.trainer.lastName}` : 'Entrenador';
+      // 'all': nombres de clientes, color del entrenador de esa sesión
+      label = (b.clients || [])
+        .map((c: any) => `${c.firstName} ${c.lastName?.[0] ?? ''}.`)
+        .join(', ');
       color = b.trainer?.color || FALLBACK_COLOR;
     }
 
@@ -230,21 +239,15 @@ export default function CalendarioPage() {
   async function loadBookings(fromStr: string, toStr: string) {
     const token = localStorage.getItem('token');
     if (!token) return;
-    if (showAllTrainers) {
-      try {
-        const data = await getAllBookings(token, fromStr, toStr);
-        setEvents(data.map(bookingToEvent));
-      } catch {
-        // silencioso
-      }
-      return;
-    }
-    if (!targetId) return;
     try {
-      const params = isTrainerPerspective
-        ? { trainer: targetId, from: fromStr, to: toStr }
-        : { client: targetId, from: fromStr, to: toStr };
-      const data = await getBookings(token, params);
+      let data: any[] = [];
+      if (filterMode === 'all') {
+        data = await getAllBookings(token, fromStr, toStr);
+      } else if (filterMode === 'client' && selectedClientId) {
+        data = await getBookings(token, { client: selectedClientId, from: fromStr, to: toStr });
+      } else if (filterMode === 'trainer' && selectedTrainerId) {
+        data = await getBookings(token, { trainer: selectedTrainerId, from: fromStr, to: toStr });
+      }
       setEvents(data.map(bookingToEvent));
     } catch {
       // silencioso
@@ -253,16 +256,28 @@ export default function CalendarioPage() {
 
   async function loadMonthDots(monthDate: Date) {
     const token = localStorage.getItem('token');
-    if (!token || !targetId) return;
+    if (!token) return;
 
     const start = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
     const end = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0, 23, 59, 59);
 
     try {
-      const params = isTrainerPerspective
-        ? { trainer: targetId, from: start.toISOString(), to: end.toISOString() }
-        : { client: targetId, from: start.toISOString(), to: end.toISOString() };
-      const data = await getBookings(token, params);
+      let data: any[] = [];
+      if (filterMode === 'all') {
+        data = await getAllBookings(token, start.toISOString(), end.toISOString());
+      } else if (filterMode === 'client' && selectedClientId) {
+        data = await getBookings(token, {
+          client: selectedClientId,
+          from: start.toISOString(),
+          to: end.toISOString(),
+        });
+      } else if (filterMode === 'trainer' && selectedTrainerId) {
+        data = await getBookings(token, {
+          trainer: selectedTrainerId,
+          from: start.toISOString(),
+          to: end.toISOString(),
+        });
+      }
       const keys = new Set<string>(data.map((b: any) => dayKey(new Date(b.startTime))));
       setDaysWithBookings(keys);
     } catch {
@@ -278,13 +293,31 @@ export default function CalendarioPage() {
   }
 
   useEffect(() => {
-    if (roleReady && calendarRef.current && (showAllTrainers || targetId)) {
+    if (roleReady && calendarRef.current) {
       const api = calendarRef.current.getApi();
       loadBookings(api.view.activeStart.toISOString(), api.view.activeEnd.toISOString());
       loadMonthDots(selectedDate);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [targetId, roleReady, ownColor, showAllTrainers]);
+  }, [roleReady, filterMode, selectedTrainerId, selectedClientId]);
+
+  function handleTrainerFilterChange(value: string) {
+    if (value === ALL_VALUE) {
+      setFilterMode('all');
+    } else {
+      setFilterMode('trainer');
+      setSelectedTrainerId(value);
+    }
+  }
+
+  function handleClientFilterChange(value: string) {
+    if (value === ALL_VALUE) {
+      setFilterMode('all');
+    } else {
+      setFilterMode('client');
+      setSelectedClientId(value);
+    }
+  }
 
   function handleMiniDateChange(date: Date | null) {
     if (!date) return;
@@ -297,7 +330,7 @@ export default function CalendarioPage() {
   }
 
   function openCreateModal(start: Date) {
-    if (!isTrainerPerspective) return;
+    if (!canEdit) return;
     setModal({ mode: 'create', start });
     setSelectedClientIds([]);
     setNotes('');
@@ -307,7 +340,7 @@ export default function CalendarioPage() {
   }
 
   function openEditModal(raw: any) {
-    if (!isTrainerPerspective) return;
+    if (!canEdit) return;
     const start = new Date(raw.startTime);
     const end = new Date(raw.endTime);
     const diff = minutesBetween(start, end);
@@ -393,7 +426,7 @@ export default function CalendarioPage() {
     try {
       if (modal.mode === 'create') {
         await createBooking(token, {
-          trainer: targetId,
+          trainer: selectedTrainerId,
           clients: selectedClientIds,
           startTime: start.toISOString(),
           endTime: end.toISOString(),
@@ -441,47 +474,37 @@ export default function CalendarioPage() {
     }
   }
 
-  if (!roleReady || loadingTrainers) {
+  if (!roleReady || loadingLists) {
     return <p className="text-sm text-gray-400">Cargando...</p>;
   }
 
-  if (isAdmin && trainers.length === 0) {
-    return (
-      <div className="rounded-xl bg-white p-6">
-        <p className="text-sm text-gray-400">
-          No hay entrenadores activos todavía. Crea uno desde "Entrenadores" para poder ver su
-          calendario aquí.
-        </p>
-      </div>
-    );
-  }
+  const trainerOptions = [
+    { id: ALL_VALUE, name: 'Todos los entrenadores' },
+    ...trainers.map((t) => ({ id: t._id, name: `${t.firstName} ${t.lastName}`, color: t.color })),
+  ];
+
+  const clientOptions = [
+    { id: ALL_VALUE, name: 'Todos los clientes' },
+    ...clients.map((c) => ({ id: c._id, name: `${c.firstName} ${c.lastName}` })),
+  ];
 
   return (
     <div>
       {(isAdmin || isTrainer) && (
-        <div className="mb-4 flex flex-wrap items-center gap-3">
-          {isAdmin && !showAllTrainers && (
-            <TrainerSelect
-              trainers={trainers}
-              value={selectedTrainerId}
-              onChange={setSelectedTrainerId}
-            />
-          )}
-          <button
-            type="button"
-            onClick={() => setShowAllTrainers(!showAllTrainers)}
-            className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
-              showAllTrainers
-                ? 'bg-gradient-to-r from-[#a2c037] to-[#6aa842] text-white'
-                : 'border border-gray-200 bg-white text-[#868585] hover:bg-gray-50'
-            }`}
-          >
-            {showAllTrainers
-              ? isAdmin
-                ? 'Ver un entrenador'
-                : 'Mi calendario'
-              : 'Ver todos los entrenadores'}
-          </button>
+        <div className="mb-4 flex flex-wrap gap-3">
+          <FilterDropdown
+            label="Entrenador"
+            options={trainerOptions}
+            value={filterMode === 'trainer' ? selectedTrainerId : ALL_VALUE}
+            onChange={handleTrainerFilterChange}
+            showColorDot
+          />
+          <FilterDropdown
+            label="Cliente"
+            options={clientOptions}
+            value={filterMode === 'client' ? selectedClientId : ALL_VALUE}
+            onChange={handleClientFilterChange}
+          />
         </div>
       )}
 
@@ -517,9 +540,9 @@ export default function CalendarioPage() {
             slotMinTime="07:00:00"
             slotMaxTime="22:00:00"
             height="100%"
-            selectable={isTrainerPerspective && !showAllTrainers}
+            selectable={canEdit}
             selectLongPressDelay={200}
-            eventStartEditable={isTrainerPerspective && !showAllTrainers}
+            eventStartEditable={canEdit}
             eventDurationEditable={false}
             select={handleSelect}
             eventClick={handleEventClick}
