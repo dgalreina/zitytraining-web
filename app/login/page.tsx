@@ -26,7 +26,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen font-[family-name:var(--font-inter)]">
+    <main className="flex min-h-screen pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] font-[family-name:var(--font-inter)]">
       <div className="relative hidden w-1/2 items-center justify-center overflow-hidden bg-gradient-to-br from-[#a2c037] to-[#6aa842] md:flex">
         <div className="absolute -left-32 -top-32 h-[420px] w-[420px] rounded-full border-[40px] border-white/10" />
         <div className="absolute -bottom-40 -right-20 h-[500px] w-[500px] rounded-full border-[50px] border-white/10" />
