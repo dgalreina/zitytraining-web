@@ -10,7 +10,7 @@ import { es } from 'date-fns/locale';
 import 'react-datepicker/dist/react-datepicker.css';
 import '@/styles/datepicker-theme.css';
 import '@/styles/fullcalendar-theme.css';
-import { X, Trash2, ChevronDown, Check } from 'lucide-react';
+import { X, Trash2, ChevronDown, Check, Filter } from 'lucide-react';
 import MiniCalendar, { dayKey } from '@/components/MiniCalendar';
 import {
   getUsers,
@@ -248,6 +248,7 @@ export default function CalendarioPage() {
   const [error, setError] = useState('');
   const [viewTitle, setViewTitle] = useState('');
   const [viewType, setViewType] = useState('timeGridWeek');
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const calendarRef = useRef<FullCalendar>(null);
   const calendarWrapperRef = useRef<HTMLDivElement>(null);
   const dragStateRef = useRef<{ eventId: string; start: Date; end: Date } | null>(null);
@@ -669,19 +670,71 @@ export default function CalendarioPage() {
   return (
     <div>
       {(isAdmin || isTrainer) && (
-        <div className="mb-4 flex flex-wrap gap-3">
-          <TrainerMultiSelect
-            trainers={trainers}
-            selectedIds={selectedTrainerIds}
-            onChange={setSelectedTrainerIds}
-          />
-          <FilterDropdown
-            label="Cliente"
-            options={clientOptions}
-            value={selectedClientId}
-            onChange={setSelectedClientId}
-          />
-        </div>
+        <>
+          {/* Escritorio: filtros siempre visibles */}
+          <div className="mb-4 hidden flex-wrap gap-3 sm:flex">
+            <TrainerMultiSelect
+              trainers={trainers}
+              selectedIds={selectedTrainerIds}
+              onChange={setSelectedTrainerIds}
+            />
+            <FilterDropdown
+              label="Cliente"
+              options={clientOptions}
+              value={selectedClientId}
+              onChange={setSelectedClientId}
+            />
+          </div>
+
+          {/* Móvil: botón compacto que abre los filtros en una hoja */}
+          <div className="mb-4 flex justify-end sm:hidden">
+            <button
+              type="button"
+              onClick={() => setFiltersOpen(true)}
+              className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-[#2b2b2a]"
+            >
+              <Filter size={15} />
+              Filtros
+            </button>
+          </div>
+
+          {filtersOpen && (
+            <div
+              className="fixed inset-0 z-50 flex items-end bg-black/40 sm:hidden"
+              onClick={() => setFiltersOpen(false)}
+            >
+              <div
+                className="w-full rounded-t-2xl bg-white p-5"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="mb-4 flex items-center justify-between">
+                  <h3 className="font-[family-name:var(--font-work-sans)] text-base font-bold text-[#2b2b2a]">
+                    Filtros
+                  </h3>
+                  <button
+                    onClick={() => setFiltersOpen(false)}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+                <div className="flex flex-col gap-3">
+                  <TrainerMultiSelect
+                    trainers={trainers}
+                    selectedIds={selectedTrainerIds}
+                    onChange={setSelectedTrainerIds}
+                  />
+                  <FilterDropdown
+                    label="Cliente"
+                    options={clientOptions}
+                    value={selectedClientId}
+                    onChange={setSelectedClientId}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       <div className="flex h-[calc(100dvh-190px)] gap-5">
