@@ -1,5 +1,11 @@
 .fc {
   font-family: var(--font-inter);
+  /* El título de la fecha vive fuera de FullCalendar, en el mismo
+     contenedor flex-col; sin esto, height="100%" se calcula sobre la
+     misma caja que también tiene que hacerle sitio a ese título, así
+     que siempre sobraba justo esa altura y se recortaba por overflow. */
+  min-height: 0;
+  flex: 1 1 auto;
 }
 
 .fc .fc-toolbar-title {

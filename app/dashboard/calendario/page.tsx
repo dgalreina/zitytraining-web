@@ -250,7 +250,7 @@ export default function CalendarioPage() {
   const [viewTitle, setViewTitle] = useState('');
   const [viewType, setViewType] = useState('timeGridWeek');
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [gridHeight, setGridHeight] = useState<number | null>(null);
+  const [topOffset, setTopOffset] = useState<number | null>(null);
   const calendarRef = useRef<FullCalendar>(null);
   const calendarWrapperRef = useRef<HTMLDivElement>(null);
   const gridRowRef = useRef<HTMLDivElement>(null);
@@ -472,20 +472,22 @@ export default function CalendarioPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roleReady, selectedTrainerIds, selectedClientId]);
 
-  // Alto del calendario calculado en tiempo real (en vez de un número mágico
-  // fijo tipo "100dvh - 190px") para que no dependa de cuánto ocupe lo que
-  // haya encima (saludo, filtros, etc.), que puede cambiar con el tiempo.
+  // El alto disponible se sigue calculando con 100dvh (fiable en móvil: sí
+  // tiene en cuenta la barra de direcciones dinámica, a diferencia de
+  // window.innerHeight). Lo único que medimos en JS es cuánto ocupa lo que
+  // hay encima del calendario, en vez de un número mágico fijo tipo "190px"
+  // que se desincroniza en cuanto cambia algo arriba (saludo, filtros...).
   useEffect(() => {
-    function recalcHeight() {
+    function recalcOffset() {
       const el = gridRowRef.current;
       if (!el) return;
       const top = el.getBoundingClientRect().top;
       const BOTTOM_GAP = 16; // un poco de aire debajo de la última franja
-      setGridHeight(Math.max(window.innerHeight - top - BOTTOM_GAP, 300));
+      setTopOffset(top + BOTTOM_GAP);
     }
-    recalcHeight();
-    window.addEventListener('resize', recalcHeight);
-    return () => window.removeEventListener('resize', recalcHeight);
+    recalcOffset();
+    window.addEventListener('resize', recalcOffset);
+    return () => window.removeEventListener('resize', recalcOffset);
   }, [roleReady]);
 
   function handleMiniDateChange(date: Date | null) {
@@ -837,7 +839,7 @@ export default function CalendarioPage() {
       <div
         ref={gridRowRef}
         className="flex h-[calc(100dvh-190px)] gap-5"
-        style={gridHeight !== null ? { height: gridHeight } : undefined}
+        style={topOffset !== null ? { height: `calc(100dvh - ${topOffset}px)` } : undefined}
       >
         <div className="hidden w-64 shrink-0 self-start overflow-y-auto rounded-xl bg-white p-4 md:block">
           <MiniCalendar
@@ -851,11 +853,11 @@ export default function CalendarioPage() {
 
         <div
           ref={calendarWrapperRef}
-          className={`min-w-0 flex-1 overflow-hidden rounded-xl bg-white p-4 ${
+          className={`flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl bg-white p-4 ${
             viewType === 'timeGridWeek' ? 'ziti-week-view' : ''
           }`}
         >
-          <p className="ziti-calendar-title mb-2 text-center font-[family-name:var(--font-work-sans)] text-sm font-bold capitalize text-[#2b2b2a] sm:text-left">
+          <p className="ziti-calendar-title mb-2 shrink-0 text-center font-[family-name:var(--font-work-sans)] text-sm font-bold capitalize text-[#2b2b2a] sm:text-left">
             {viewTitle}
           </p>
           <FullCalendar
