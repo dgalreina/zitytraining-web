@@ -5,7 +5,7 @@ import DatePicker, { registerLocale } from 'react-datepicker';
 import { es } from 'date-fns/locale';
 import 'react-datepicker/dist/react-datepicker.css';
 import '@/styles/datepicker-theme.css';
-import { X, Trash2 } from 'lucide-react';
+import { X, Trash2, ChevronLeft } from 'lucide-react';
 import FilterDropdown from '@/components/FilterDropdown';
 import { createBooking, updateBooking, deleteBooking } from '@/lib/api';
 
@@ -17,6 +17,7 @@ export type ModalState =
   | null;
 
 type DurationOption = '40' | '60' | 'custom';
+type ModalView = 'form' | 'notes' | 'training';
 
 function minutesBetween(start: Date, end: Date) {
   return Math.round((end.getTime() - start.getTime()) / 60000);
@@ -50,6 +51,7 @@ export default function BookingModal({
   const [customMinutes, setCustomMinutes] = useState(60);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [view, setView] = useState<ModalView>('form');
 
   // Cada vez que se abre (o cambia lo que se está editando), recarga el
   // formulario desde cero a partir de esa sesión, o de los valores por
@@ -59,6 +61,7 @@ export default function BookingModal({
     setStart(modal.start);
     setClientSearch('');
     setError('');
+    setView('form');
 
     if (modal.mode === 'edit') {
       const raw = modal.booking;
@@ -176,156 +179,204 @@ export default function BookingModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
       <div className="max-h-[85vh] w-full max-w-sm overflow-y-auto rounded-xl bg-white p-6 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
-          <h3 className="font-[family-name:var(--font-work-sans)] text-base font-bold text-[#2b2b2a]">
-            {modal.mode === 'create' ? 'Nueva sesión' : 'Editar sesión'}
-          </h3>
+          {view === 'form' ? (
+            <h3 className="font-[family-name:var(--font-work-sans)] text-base font-bold text-[#2b2b2a]">
+              {modal.mode === 'create' ? 'Nueva sesión' : 'Editar sesión'}
+            </h3>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setView('form')}
+              className="flex items-center gap-1 font-[family-name:var(--font-work-sans)] text-base font-bold text-[#2b2b2a]"
+            >
+              <ChevronLeft size={18} />
+              {view === 'notes' ? 'Notas' : 'Entrenamiento'}
+            </button>
+          )}
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <X size={18} />
           </button>
         </div>
 
-        <div className="mb-3">
-          <label className="mb-1 block text-xs font-semibold text-[#868585]">Entrenador</label>
-          <FilterDropdown
-            label="Elige un entrenador"
-            options={trainers.map((t) => ({
-              id: t._id,
-              name: `${t.firstName} ${t.lastName}`,
-              color: t.color,
-            }))}
-            value={modalTrainerId}
-            onChange={setModalTrainerId}
-            showColorDot
-          />
-        </div>
-
-        <label className="mb-1 block text-xs font-semibold text-[#868585]">Hora de inicio</label>
-        <DatePicker
-          selected={start}
-          onChange={handleStartTimeChange}
-          showTimeSelect
-          showTimeSelectOnly
-          timeIntervals={5}
-          timeCaption="Hora"
-          dateFormat="HH:mm"
-          locale="es"
-          className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#6aa842] focus:outline-none"
-          wrapperClassName="mb-3 w-full block"
-        />
-        <p className="mb-3 text-xs text-[#868585]">
-          {start.toLocaleDateString('es-ES', {
-            weekday: 'long',
-            day: 'numeric',
-            month: 'long',
-          })}
-        </p>
-
-        <label className="mb-1.5 block text-xs font-semibold text-[#868585]">Duración</label>
-        <div className="mb-3 flex gap-2">
-          <button
-            type="button"
-            onClick={() => setDurationOption('40')}
-            className={`flex-1 rounded-lg border py-1.5 text-sm font-semibold transition ${
-              durationOption === '40'
-                ? 'border-[#6aa842] bg-[#a2c037]/10 text-[#4b7a1f]'
-                : 'border-gray-200 text-[#868585] hover:bg-gray-50'
-            }`}
-          >
-            40 min
-          </button>
-          <button
-            type="button"
-            onClick={() => setDurationOption('60')}
-            className={`flex-1 rounded-lg border py-1.5 text-sm font-semibold transition ${
-              durationOption === '60'
-                ? 'border-[#6aa842] bg-[#a2c037]/10 text-[#4b7a1f]'
-                : 'border-gray-200 text-[#868585] hover:bg-gray-50'
-            }`}
-          >
-            1 hora
-          </button>
-          <button
-            type="button"
-            onClick={() => setDurationOption('custom')}
-            className={`flex-1 rounded-lg border py-1.5 text-sm font-semibold transition ${
-              durationOption === 'custom'
-                ? 'border-[#6aa842] bg-[#a2c037]/10 text-[#4b7a1f]'
-                : 'border-gray-200 text-[#868585] hover:bg-gray-50'
-            }`}
-          >
-            Otra
-          </button>
-        </div>
-
-        {durationOption === 'custom' && (
-          <div className="mb-3">
-            <label className="mb-1 block text-xs font-semibold text-[#868585]">Minutos</label>
-            <input
-              type="number"
-              min={5}
-              max={240}
-              step={5}
-              value={customMinutes}
-              onChange={(e) => setCustomMinutes(Number(e.target.value))}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#6aa842] focus:outline-none"
-            />
-          </div>
-        )}
-
-        <p className="mb-3 text-xs text-[#868585]">
-          Termina a las{' '}
-          {new Date(start.getTime() + getEffectiveDurationMinutes() * 60000).toLocaleTimeString(
-            'es-ES',
-            { hour: '2-digit', minute: '2-digit' },
-          )}
-        </p>
-
-        <label className="mb-1 block text-xs font-semibold text-[#868585]">Clientes</label>
-        {clients.length > 0 && (
-          <input
-            type="text"
-            value={clientSearch}
-            onChange={(e) => setClientSearch(e.target.value)}
-            placeholder="Buscar cliente..."
-            className="mb-1.5 w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-[#6aa842] focus:outline-none"
-          />
-        )}
-        <div className="mb-3 max-h-40 overflow-y-auto rounded-lg border border-gray-200 p-1">
-          {clients.length === 0 ? (
-            <p className="p-2 text-xs text-gray-400">No hay clientes activos.</p>
-          ) : filteredClients.length === 0 ? (
-            <p className="p-2 text-xs text-gray-400">Sin resultados.</p>
-          ) : (
-            <div className="grid grid-cols-2 gap-x-1">
-              {filteredClients.map((c) => (
-                <label
-                  key={c._id}
-                  className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-gray-50"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedClientIds.includes(c._id)}
-                    onChange={() => toggleClient(c._id)}
-                    className="shrink-0 accent-[#6aa842]"
-                  />
-                  <span className="truncate">
-                    {c.firstName} {c.lastName}
-                  </span>
-                </label>
-              ))}
+        {view === 'form' && (
+          <>
+            <div className="mb-3">
+              <label className="mb-1 block text-xs font-semibold text-[#868585]">
+                Entrenador
+              </label>
+              <FilterDropdown
+                label="Elige un entrenador"
+                options={trainers.map((t) => ({
+                  id: t._id,
+                  name: `${t.firstName} ${t.lastName}`,
+                  color: t.color,
+                }))}
+                value={modalTrainerId}
+                onChange={setModalTrainerId}
+                showColorDot
+              />
             </div>
-          )}
-        </div>
 
-        <label className="mb-1 block text-xs font-semibold text-[#868585]">
-          Notas (opcional)
-        </label>
-        <textarea
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          rows={2}
-          className="mb-3 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#6aa842] focus:outline-none"
-        />
+            <label className="mb-1 block text-xs font-semibold text-[#868585]">
+              Hora de inicio
+            </label>
+            <DatePicker
+              selected={start}
+              onChange={handleStartTimeChange}
+              showTimeSelect
+              showTimeSelectOnly
+              timeIntervals={5}
+              timeCaption="Hora"
+              dateFormat="HH:mm"
+              locale="es"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#6aa842] focus:outline-none"
+              wrapperClassName="mb-3 w-full block"
+            />
+            <p className="mb-3 text-xs text-[#868585]">
+              {start.toLocaleDateString('es-ES', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+              })}
+            </p>
+
+            <label className="mb-1.5 block text-xs font-semibold text-[#868585]">Duración</label>
+            <div className="mb-3 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setDurationOption('40')}
+                className={`flex-1 rounded-lg border py-1.5 text-sm font-semibold transition ${
+                  durationOption === '40'
+                    ? 'border-[#6aa842] bg-[#a2c037]/10 text-[#4b7a1f]'
+                    : 'border-gray-200 text-[#868585] hover:bg-gray-50'
+                }`}
+              >
+                40 min
+              </button>
+              <button
+                type="button"
+                onClick={() => setDurationOption('60')}
+                className={`flex-1 rounded-lg border py-1.5 text-sm font-semibold transition ${
+                  durationOption === '60'
+                    ? 'border-[#6aa842] bg-[#a2c037]/10 text-[#4b7a1f]'
+                    : 'border-gray-200 text-[#868585] hover:bg-gray-50'
+                }`}
+              >
+                1 hora
+              </button>
+              <button
+                type="button"
+                onClick={() => setDurationOption('custom')}
+                className={`flex-1 rounded-lg border py-1.5 text-sm font-semibold transition ${
+                  durationOption === 'custom'
+                    ? 'border-[#6aa842] bg-[#a2c037]/10 text-[#4b7a1f]'
+                    : 'border-gray-200 text-[#868585] hover:bg-gray-50'
+                }`}
+              >
+                Otra
+              </button>
+            </div>
+
+            {durationOption === 'custom' && (
+              <div className="mb-3">
+                <label className="mb-1 block text-xs font-semibold text-[#868585]">
+                  Minutos
+                </label>
+                <input
+                  type="number"
+                  min={5}
+                  max={240}
+                  step={5}
+                  value={customMinutes}
+                  onChange={(e) => setCustomMinutes(Number(e.target.value))}
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#6aa842] focus:outline-none"
+                />
+              </div>
+            )}
+
+            <p className="mb-3 text-xs text-[#868585]">
+              Termina a las{' '}
+              {new Date(
+                start.getTime() + getEffectiveDurationMinutes() * 60000,
+              ).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+            </p>
+
+            <label className="mb-1 block text-xs font-semibold text-[#868585]">Clientes</label>
+            {clients.length > 0 && (
+              <input
+                type="text"
+                value={clientSearch}
+                onChange={(e) => setClientSearch(e.target.value)}
+                placeholder="Buscar cliente..."
+                className="mb-1.5 w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-[#6aa842] focus:outline-none"
+              />
+            )}
+            <div className="mb-3 max-h-40 overflow-y-auto rounded-lg border border-gray-200 p-1">
+              {clients.length === 0 ? (
+                <p className="p-2 text-xs text-gray-400">No hay clientes activos.</p>
+              ) : filteredClients.length === 0 ? (
+                <p className="p-2 text-xs text-gray-400">Sin resultados.</p>
+              ) : (
+                <div className="grid grid-cols-2 gap-x-1">
+                  {filteredClients.map((c) => (
+                    <label
+                      key={c._id}
+                      className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-gray-50"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedClientIds.includes(c._id)}
+                        onChange={() => toggleClient(c._id)}
+                        className="shrink-0 accent-[#6aa842]"
+                      />
+                      <span className="truncate">
+                        {c.firstName} {c.lastName}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <label className="mb-1.5 block text-xs font-semibold text-[#868585]">Más</label>
+            <div className="mb-3 flex gap-2">
+              <button
+                type="button"
+                onClick={() => setView('notes')}
+                className="relative flex-1 rounded-lg border border-gray-200 py-1.5 text-sm font-semibold text-[#868585] transition hover:bg-gray-50"
+              >
+                Notas
+                {notes.trim() && (
+                  <span className="absolute right-2.5 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-[#6aa842]" />
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setView('training')}
+                className="flex-1 rounded-lg border border-gray-200 py-1.5 text-sm font-semibold text-[#868585] transition hover:bg-gray-50"
+              >
+                Entrenamiento
+              </button>
+            </div>
+          </>
+        )}
+
+        {view === 'notes' && (
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            rows={8}
+            autoFocus
+            placeholder="Escribe aquí cualquier detalle sobre la sesión..."
+            className="mb-3 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#6aa842] focus:outline-none"
+          />
+        )}
+
+        {view === 'training' && (
+          <p className="mb-3 text-sm text-gray-400">
+            Próximamente podrás añadir aquí el entrenamiento de la sesión.
+          </p>
+        )}
 
         {error && <p className="mb-3 text-sm font-medium text-red-600">{error}</p>}
 
