@@ -655,7 +655,9 @@ export default function CalendarioPage() {
     }
   }
 
-  // direction: 1 = día siguiente (borde derecho), -1 = día anterior (borde izquierdo)
+  // direction: 1 = siguiente (borde derecho), -1 = anterior (borde izquierdo).
+  // En vista "Semana" se desplaza 7 días (una semana entera) en vez de 1,
+  // para caer en el mismo día de la semana siguiente/anterior.
   async function advanceDraggedEventByDays(direction: 1 | -1) {
     edgeTriggeredRef.current = true;
     clearEdgeTimer();
@@ -664,10 +666,11 @@ export default function CalendarioPage() {
     const api = calendarRef.current?.getApi();
     if (!drag || !api) return;
 
+    const daysShift = viewType === 'timeGridWeek' ? 7 : 1;
     const newStart = new Date(drag.start);
-    newStart.setDate(newStart.getDate() + direction);
+    newStart.setDate(newStart.getDate() + direction * daysShift);
     const newEnd = new Date(drag.end);
-    newEnd.setDate(newEnd.getDate() + direction);
+    newEnd.setDate(newEnd.getDate() + direction * daysShift);
 
     // Avanza/retrocede el calendario visualmente, con el mismo deslizamiento
     // que usa el swipe.
@@ -688,13 +691,17 @@ export default function CalendarioPage() {
       });
       loadMonthDots(currentApiDate);
     } catch (err: any) {
-      const dayLabel = direction > 0 ? 'siguiente' : 'anterior';
-      alert(err.message || `No se pudo mover la sesión al día ${dayLabel}`);
+      const dirLabel = direction > 0 ? 'siguiente' : 'anterior';
+      const fallback =
+        viewType === 'timeGridWeek'
+          ? `No se pudo mover la sesión a la semana ${dirLabel}`
+          : `No se pudo mover la sesión al día ${dirLabel}`;
+      alert(err.message || fallback);
     }
   }
 
   function handleDragPointerMoveLogic(e: PointerEvent) {
-    if (viewType !== 'timeGridDay') return;
+    if (viewType !== 'timeGridDay' && viewType !== 'timeGridWeek') return;
     if (!dragStateRef.current || edgeTriggeredRef.current) return;
 
     const wrapper = calendarWrapperRef.current;
@@ -749,14 +756,15 @@ export default function CalendarioPage() {
     dragStateRef.current = null;
   }
 
-  // Swipe táctil para cambiar de día en la vista "Día" (como Google Calendar).
-  // Solo móvil: son eventos touch, un ratón no los dispara. Si el gesto no
-  // se decide como horizontal en los primeros ~180ms, lo soltamos sin tocar
-  // nada, para no interferir con el long-press que ya usa FullCalendar para
-  // seleccionar un hueco o arrastrar un evento.
+  // Swipe táctil para cambiar de día/semana (como Google Calendar), en las
+  // vistas "Día" y "Semana". Solo móvil: son eventos touch, un ratón no los
+  // dispara. Si el gesto no se decide como horizontal en los primeros
+  // ~180ms, lo soltamos sin tocar nada, para no interferir con el
+  // long-press que ya usa FullCalendar para seleccionar un hueco o
+  // arrastrar un evento.
   useEffect(() => {
     const el = calendarWrapperRef.current;
-    if (!el || viewType !== 'timeGridDay') return;
+    if (!el || (viewType !== 'timeGridDay' && viewType !== 'timeGridWeek')) return;
 
     const DIRECTION_THRESHOLD = 10; // px para empezar a decidir la dirección
     const DECIDE_TIME_LIMIT = 180; // ms; pasado esto, se lo dejamos a FullCalendar
