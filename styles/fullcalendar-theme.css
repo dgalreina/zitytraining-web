@@ -110,6 +110,13 @@
     display: flex;
     gap: 4px;
   }
+
+  /* En móvil ya se cambia de día/semana deslizando el dedo, así que estas
+     flechas sobran (se quedan solo en escritorio). */
+  .fc .fc-prev-button,
+  .fc .fc-next-button {
+    display: none;
+  }
 }
 
 /* Solo lunes a viernes (el gimnasio no trabaja fines de semana), así la
@@ -156,8 +163,11 @@
   font-weight: 600;
 }
 
+/* El modal de nueva sesión solo usa el punto donde se empezó a pulsar
+   (selectInfo.start); el rango que resaltaría FullCalendar al arrastrar
+   no representa nada real, así que lo dejamos invisible. */
 .fc-highlight {
-  background: rgba(162, 192, 55, 0.2) !important;
+  background: transparent !important;
 }
 
 .ziti-event-box {
