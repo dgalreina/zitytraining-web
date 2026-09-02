@@ -574,7 +574,8 @@ export default function CalendarioPage() {
     }
   }
 
-  async function advanceDraggedEventToNextDay() {
+  // direction: 1 = día siguiente (borde derecho), -1 = día anterior (borde izquierdo)
+  async function advanceDraggedEventByDays(direction: 1 | -1) {
     edgeTriggeredRef.current = true;
     clearEdgeTimer();
 
@@ -583,14 +584,15 @@ export default function CalendarioPage() {
     if (!drag || !api) return;
 
     const newStart = new Date(drag.start);
-    newStart.setDate(newStart.getDate() + 1);
+    newStart.setDate(newStart.getDate() + direction);
     const newEnd = new Date(drag.end);
-    newEnd.setDate(newEnd.getDate() + 1);
+    newEnd.setDate(newEnd.getDate() + direction);
 
-    // Avanza el calendario visualmente al día siguiente
-    api.next();
+    // Avanza/retrocede el calendario visualmente
+    if (direction > 0) api.next();
+    else api.prev();
     // Usamos la fecha real del calendario (no el estado "selectedDate",
-    // que aquí estaría congelado del primer render) por si el avance
+    // que aquí estaría congelado del primer render) por si el cambio
     // cruza también a un mes distinto.
     const currentApiDate = api.getDate();
 
@@ -603,7 +605,8 @@ export default function CalendarioPage() {
       });
       loadMonthDots(currentApiDate);
     } catch (err: any) {
-      alert(err.message || 'No se pudo mover la sesión al día siguiente');
+      const dayLabel = direction > 0 ? 'siguiente' : 'anterior';
+      alert(err.message || `No se pudo mover la sesión al día ${dayLabel}`);
     }
   }
 
@@ -617,13 +620,15 @@ export default function CalendarioPage() {
     const rect = wrapper.getBoundingClientRect();
     const EDGE_PX = 36;
     const nearRightEdge = e.clientX > rect.right - EDGE_PX && e.clientX <= rect.right + 15;
+    const nearLeftEdge = e.clientX < rect.left + EDGE_PX && e.clientX >= rect.left - 15;
 
-    if (nearRightEdge) {
-      // Mantén el cursor ~600ms cerca del borde antes de avanzar, para que
-      // un simple roce al pasar por ahí no dispare el cambio de día sin querer.
+    if (nearRightEdge || nearLeftEdge) {
+      // Mantén el cursor ~600ms cerca del borde antes de cambiar de día, para
+      // que un simple roce al pasar por ahí no lo dispare sin querer.
       if (!edgeTimerRef.current) {
+        const direction = nearRightEdge ? 1 : -1;
         edgeTimerRef.current = setTimeout(() => {
-          advanceDraggedEventToNextDay();
+          advanceDraggedEventByDays(direction);
         }, 600);
       }
     } else {
@@ -660,6 +665,75 @@ export default function CalendarioPage() {
     clearEdgeTimer();
     dragStateRef.current = null;
   }
+
+  // Swipe táctil para cambiar de día en la vista "Día" (como Google Calendar).
+  // Solo móvil: son eventos touch, un ratón no los dispara. Si el gesto no
+  // se decide como horizontal en los primeros ~180ms, lo soltamos sin tocar
+  // nada, para no interferir con el long-press que ya usa FullCalendar para
+  // seleccionar un hueco o arrastrar un evento.
+  useEffect(() => {
+    const el = calendarWrapperRef.current;
+    if (!el || viewType !== 'timeGridDay') return;
+
+    const DIRECTION_THRESHOLD = 10; // px para empezar a decidir la dirección
+    const DECIDE_TIME_LIMIT = 180; // ms; pasado esto, se lo dejamos a FullCalendar
+    const SWIPE_THRESHOLD = 60; // px para que cuente como swipe de verdad
+
+    let start: { x: number; y: number; time: number } | null = null;
+    let decided: 'horizontal' | 'vertical' | 'abandoned' | null = null;
+
+    function handleTouchStart(e: TouchEvent) {
+      if (e.touches.length !== 1) return;
+      start = { x: e.touches[0].clientX, y: e.touches[0].clientY, time: Date.now() };
+      decided = null;
+    }
+
+    function handleTouchMove(e: TouchEvent) {
+      if (!start || decided === 'abandoned') return;
+      const touch = e.touches[0];
+      const dx = touch.clientX - start.x;
+      const dy = touch.clientY - start.y;
+
+      if (!decided) {
+        if (Date.now() - start.time > DECIDE_TIME_LIMIT) {
+          decided = 'abandoned';
+          return;
+        }
+        if (Math.abs(dx) < DIRECTION_THRESHOLD && Math.abs(dy) < DIRECTION_THRESHOLD) return;
+        decided = Math.abs(dx) > Math.abs(dy) * 1.3 ? 'horizontal' : 'vertical';
+      }
+
+      if (decided === 'horizontal') {
+        e.preventDefault();
+      }
+    }
+
+    function handleTouchEnd(e: TouchEvent) {
+      const wasHorizontal = decided === 'horizontal';
+      const startPoint = start;
+      start = null;
+      decided = null;
+      if (!wasHorizontal || !startPoint) return;
+
+      const touch = e.changedTouches[0];
+      const dx = touch.clientX - startPoint.x;
+      if (Math.abs(dx) < SWIPE_THRESHOLD) return;
+
+      const api = calendarRef.current?.getApi();
+      if (dx < 0) api?.next();
+      else api?.prev();
+    }
+
+    el.addEventListener('touchstart', handleTouchStart, { passive: true });
+    el.addEventListener('touchmove', handleTouchMove, { passive: false });
+    el.addEventListener('touchend', handleTouchEnd, { passive: true });
+
+    return () => {
+      el.removeEventListener('touchstart', handleTouchStart);
+      el.removeEventListener('touchmove', handleTouchMove);
+      el.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [viewType]);
 
   function toggleClient(id: string) {
     setSelectedClientIds((prev) =>
