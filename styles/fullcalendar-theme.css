@@ -6,6 +6,20 @@
      que siempre sobraba justo esa altura y se recortaba por overflow. */
   min-height: 0;
   flex: 1 1 auto;
+  /* Punto de referencia para la copia (clon) que se superpone al deslizar
+     de día en la vista "Día" — necesita posicionarse dentro de .fc. */
+  position: relative;
+}
+
+/* Oculta la barra de scroll vertical de la rejilla horaria (queda rara
+   durante el deslizamiento de día); el scroll en sí sigue funcionando. */
+.fc-view-harness {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Edge/IE legacy */
+}
+
+.fc-view-harness::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Edge Chromium */
 }
 
 .fc .fc-toolbar-title {

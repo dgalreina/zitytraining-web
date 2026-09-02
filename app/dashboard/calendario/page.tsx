@@ -253,6 +253,8 @@ export default function CalendarioPage() {
   const [topOffset, setTopOffset] = useState<number | null>(null);
   const calendarRef = useRef<FullCalendar>(null);
   const calendarWrapperRef = useRef<HTMLDivElement>(null);
+  const pendingSlideDirectionRef = useRef<1 | -1 | null>(null);
+  const slideCloneRef = useRef<HTMLElement | null>(null);
   const gridRowRef = useRef<HTMLDivElement>(null);
   const dragStateRef = useRef<{ eventId: string; start: Date; end: Date } | null>(null);
   const edgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -461,6 +463,85 @@ export default function CalendarioPage() {
     setSelectedDate(info.view.currentStart);
     setViewTitle(info.view.title);
     setViewType(info.view.type);
+
+    // Si el cambio de fecha viene de un swipe, FullCalendar ya ha terminado
+    // de pintar el día nuevo en este punto: es el momento exacto de deslizar
+    // la copia congelada del día viejo hacia fuera y el día nuevo hacia dentro.
+    const direction = pendingSlideDirectionRef.current;
+    pendingSlideDirectionRef.current = null;
+    const clone = slideCloneRef.current;
+    slideCloneRef.current = null;
+    if (!direction || !clone) return;
+
+    const container = calendarWrapperRef.current;
+    const harness = container?.querySelector('.fc-view-harness') as HTMLElement | null;
+    if (!container || !harness) {
+      clone.remove();
+      return;
+    }
+
+    harness.style.transition = 'none';
+    harness.style.transform = `translateX(${direction > 0 ? '100%' : '-100%'})`;
+    void harness.offsetWidth; // fuerza reflow antes de animar
+    requestAnimationFrame(() => {
+      harness.style.transition = 'transform 260ms ease-out';
+      harness.style.transform = 'translateX(0)';
+      clone.style.transition = 'transform 260ms ease-out';
+      clone.style.transform = `translateX(${direction > 0 ? '-100%' : '100%'})`;
+    });
+    setTimeout(() => {
+      clone.remove();
+      harness.style.transition = '';
+      harness.style.transform = '';
+    }, 300);
+  }
+
+  // Deja preparada una copia congelada de la vista actual (para deslizarla
+  // fuera) y marca la dirección; la animación de verdad se dispara en
+  // handleDatesSet, una vez FullCalendar ya ha pintado el día nuevo. La usan
+  // tanto el swipe como el arrastre de un evento al borde. Devuelve si pudo
+  // prepararla (si no, el cambio de día sigue funcionando, solo sin animar).
+  function prepareDaySlide(direction: 1 | -1): boolean {
+    const container = calendarWrapperRef.current;
+    const harness = container?.querySelector('.fc-view-harness') as HTMLElement | null;
+    if (!container || !harness) return false;
+
+    // Importante: el clon tiene que quedar DENTRO de .fc (como hermano del
+    // .fc-view-harness real), no fuera. El CSS de FullCalendar usa
+    // selectores tipo ".fc .fc-timegrid-event-harness" que exigen un
+    // ancestro con clase "fc" — fuera de ahí pierde esas reglas y el
+    // navegador calcula mal la altura de los eventos (se ven enormes).
+    const fcRoot = harness.parentElement;
+    if (!fcRoot) return false;
+
+    const rect = harness.getBoundingClientRect();
+    const clone = harness.cloneNode(true) as HTMLElement;
+    clone.style.position = 'absolute';
+    clone.style.top = `${harness.offsetTop}px`;
+    clone.style.left = `${harness.offsetLeft}px`;
+    clone.style.width = `${rect.width}px`;
+    clone.style.height = `${rect.height}px`;
+    clone.style.margin = '0';
+    clone.style.zIndex = '20';
+    clone.style.pointerEvents = 'none';
+    clone.style.overflow = 'hidden';
+    clone.style.background = 'white';
+    // cloneNode no copia el scroll interno: si el usuario había bajado a
+    // ver horas más tardías, lo replicamos para que la copia coincida.
+    clone.scrollTop = harness.scrollTop;
+
+    fcRoot.appendChild(clone);
+    slideCloneRef.current = clone;
+    pendingSlideDirectionRef.current = direction;
+    return true;
+  }
+
+  function startDaySlide(direction: 1 | -1) {
+    const api = calendarRef.current?.getApi();
+    if (!api) return;
+    prepareDaySlide(direction);
+    if (direction > 0) api.next();
+    else api.prev();
   }
 
   useEffect(() => {
@@ -588,7 +669,9 @@ export default function CalendarioPage() {
     const newEnd = new Date(drag.end);
     newEnd.setDate(newEnd.getDate() + direction);
 
-    // Avanza/retrocede el calendario visualmente
+    // Avanza/retrocede el calendario visualmente, con el mismo deslizamiento
+    // que usa el swipe.
+    prepareDaySlide(direction);
     if (direction > 0) api.next();
     else api.prev();
     // Usamos la fecha real del calendario (no el estado "selectedDate",
@@ -719,9 +802,8 @@ export default function CalendarioPage() {
       const dx = touch.clientX - startPoint.x;
       if (Math.abs(dx) < SWIPE_THRESHOLD) return;
 
-      const api = calendarRef.current?.getApi();
-      if (dx < 0) api?.next();
-      else api?.prev();
+      const direction = dx < 0 ? 1 : -1;
+      startDaySlide(direction);
     }
 
     el.addEventListener('touchstart', handleTouchStart, { passive: true });
@@ -927,7 +1009,7 @@ export default function CalendarioPage() {
 
         <div
           ref={calendarWrapperRef}
-          className={`flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl bg-white p-4 ${
+          className={`relative flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl bg-white p-4 ${
             viewType === 'timeGridWeek' ? 'ziti-week-view' : ''
           }`}
         >
