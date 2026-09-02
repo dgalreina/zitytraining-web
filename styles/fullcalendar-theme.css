@@ -92,28 +92,11 @@
   }
 }
 
-/* Deja que la semana se desplace en horizontal, en vez de aplastar las columnas.
-   Solo aplica en vista semana: en vista día (una sola columna) no debe haber scroll.
-   Sin media query: si el contenedor es ancho de sobra, el navegador no mostrará scrollbar. */
+/* Solo lunes a viernes (el gimnasio no trabaja fines de semana), así la
+   semana entra sin scroll horizontal en la mayoría de móviles. Se deja
+   overflow-x como red de seguridad para pantallas muy estrechas. */
 .ziti-week-view .fc-view-harness {
   overflow-x: auto !important;
-}
-
-.ziti-week-view .fc-scrollgrid,
-.ziti-week-view .fc-scrollgrid-sync-table,
-.ziti-week-view table.fc-scrollgrid {
-  min-width: 640px !important;
-}
-
-/* Fin de semana en gris suave, pero seguimos permitiendo reservar */
-.fc .fc-timegrid-col.fc-day-sat,
-.fc .fc-timegrid-col.fc-day-sun {
-  background-color: #f4f4f2;
-}
-
-.fc .fc-col-header-cell.fc-day-sat,
-.fc .fc-col-header-cell.fc-day-sun {
-  background-color: #f4f4f2;
 }
 
 .fc .fc-timegrid-slot-label {

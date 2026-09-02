@@ -250,8 +250,10 @@ export default function CalendarioPage() {
   const [viewTitle, setViewTitle] = useState('');
   const [viewType, setViewType] = useState('timeGridWeek');
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [gridHeight, setGridHeight] = useState<number | null>(null);
   const calendarRef = useRef<FullCalendar>(null);
   const calendarWrapperRef = useRef<HTMLDivElement>(null);
+  const gridRowRef = useRef<HTMLDivElement>(null);
   const dragStateRef = useRef<{ eventId: string; start: Date; end: Date } | null>(null);
   const edgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const edgeTriggeredRef = useRef(false);
@@ -469,6 +471,22 @@ export default function CalendarioPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roleReady, selectedTrainerIds, selectedClientId]);
+
+  // Alto del calendario calculado en tiempo real (en vez de un número mágico
+  // fijo tipo "100dvh - 190px") para que no dependa de cuánto ocupe lo que
+  // haya encima (saludo, filtros, etc.), que puede cambiar con el tiempo.
+  useEffect(() => {
+    function recalcHeight() {
+      const el = gridRowRef.current;
+      if (!el) return;
+      const top = el.getBoundingClientRect().top;
+      const BOTTOM_GAP = 16; // un poco de aire debajo de la última franja
+      setGridHeight(Math.max(window.innerHeight - top - BOTTOM_GAP, 300));
+    }
+    recalcHeight();
+    window.addEventListener('resize', recalcHeight);
+    return () => window.removeEventListener('resize', recalcHeight);
+  }, [roleReady]);
 
   function handleMiniDateChange(date: Date | null) {
     if (!date) return;
@@ -816,7 +834,11 @@ export default function CalendarioPage() {
         </>
       )}
 
-      <div className="flex h-[calc(100dvh-190px)] gap-5">
+      <div
+        ref={gridRowRef}
+        className="flex h-[calc(100dvh-190px)] gap-5"
+        style={gridHeight !== null ? { height: gridHeight } : undefined}
+      >
         <div className="hidden w-64 shrink-0 self-start overflow-y-auto rounded-xl bg-white p-4 md:block">
           <MiniCalendar
             selected={selectedDate}
@@ -841,6 +863,7 @@ export default function CalendarioPage() {
             plugins={[timeGridPlugin, interactionPlugin]}
             initialView="timeGridWeek"
             firstDay={1}
+            weekends={false}
             headerToolbar={{ left: 'prev,next today', center: '', right: 'timeGridDay,timeGridWeek' }}
             dayHeaderFormat={{ weekday: 'short', day: 'numeric' }}
             buttonText={{ today: 'Hoy', day: 'Día', week: 'Semana' }}
