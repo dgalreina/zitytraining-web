@@ -5,7 +5,7 @@ import DatePicker, { registerLocale } from 'react-datepicker';
 import { es } from 'date-fns/locale';
 import 'react-datepicker/dist/react-datepicker.css';
 import '@/styles/datepicker-theme.css';
-import { X, Trash2, ChevronLeft } from 'lucide-react';
+import { X, Trash2, ChevronLeft, Ban, RotateCcw } from 'lucide-react';
 import FilterDropdown from '@/components/FilterDropdown';
 import { createBooking, updateBooking, deleteBooking } from '@/lib/api';
 
@@ -52,6 +52,7 @@ export default function BookingModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [view, setView] = useState<ModalView>('form');
+  const [status, setStatus] = useState<'active' | 'cancelled'>('active');
 
   // Cada vez que se abre (o cambia lo que se está editando), recarga el
   // formulario desde cero a partir de esa sesión, o de los valores por
@@ -69,6 +70,7 @@ export default function BookingModal({
       setModalTrainerId(raw.trainer?._id || raw.trainer || '');
       setSelectedClientIds(raw.clients.map((c: any) => c._id));
       setNotes(raw.notes || '');
+      setStatus(raw.status === 'cancelled' ? 'cancelled' : 'active');
       if (diff === 40) {
         setDurationOption('40');
       } else if (diff === 60) {
@@ -86,6 +88,7 @@ export default function BookingModal({
       setNotes('');
       setDurationOption('60');
       setCustomMinutes(60);
+      setStatus('active');
     }
   }, [modal, defaultTrainerId]);
 
@@ -157,6 +160,12 @@ export default function BookingModal({
 
   async function handleDelete() {
     if (modal!.mode !== 'edit') return;
+    // A diferencia de cancelar (que se puede deshacer reactivando), borrar
+    // es definitivo — y el botón está justo al lado del de cancelar, así
+    // que un toque equivocado no debería destruir nada sin confirmar.
+    if (!window.confirm('¿Seguro que quieres eliminar esta sesión? No se puede deshacer.')) {
+      return;
+    }
     setSaving(true);
     const token = localStorage.getItem('token');
     if (!token) return;
@@ -166,6 +175,27 @@ export default function BookingModal({
       onSaved();
     } catch (err: any) {
       setError(err.message || 'No se pudo eliminar la sesión');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // Cancelar es distinto de borrar: la sesión se queda (se ve en el
+  // calendario, en su color pero transparente, con "CANCELADA"), solo
+  // cambia de estado. Se puede revertir volviendo a marcarla como activa.
+  async function handleToggleCancelled() {
+    if (modal!.mode !== 'edit') return;
+    const nextStatus = status === 'cancelled' ? 'active' : 'cancelled';
+    setSaving(true);
+    setError('');
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+      await updateBooking(token, modal!.booking._id, { status: nextStatus });
+      onSaved();
+    } catch (err: any) {
+      setError(err.message || 'No se pudo actualizar la sesión');
     } finally {
       setSaving(false);
     }
@@ -187,9 +217,16 @@ export default function BookingModal({
       <div className="max-h-[85vh] w-full max-w-sm overflow-y-auto rounded-xl bg-white p-6 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
           {view === 'form' ? (
-            <h3 className="font-[family-name:var(--font-work-sans)] text-base font-bold text-[#2b2b2a]">
-              {modal.mode === 'create' ? 'Nueva sesión' : 'Editar sesión'}
-            </h3>
+            <div className="flex items-center gap-2">
+              <h3 className="font-[family-name:var(--font-work-sans)] text-base font-bold text-[#2b2b2a]">
+                {modal.mode === 'create' ? 'Nueva sesión' : 'Editar sesión'}
+              </h3>
+              {status === 'cancelled' && (
+                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700">
+                  Cancelada
+                </span>
+              )}
+            </div>
           ) : (
             <button
               type="button"
@@ -200,9 +237,11 @@ export default function BookingModal({
               {view === 'notes' ? 'Notas' : 'Entrenamiento'}
             </button>
           )}
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X size={18} />
-          </button>
+          {view === 'form' && (
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+              <X size={18} />
+            </button>
+          )}
         </div>
 
         {view === 'form' && (
@@ -371,14 +410,28 @@ export default function BookingModal({
         )}
 
         {view === 'notes' && (
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={8}
-            autoFocus
-            placeholder="Escribe aquí cualquier detalle sobre la sesión..."
-            className="mb-3 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#6aa842] focus:outline-none"
-          />
+          <>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={8}
+              autoFocus
+              placeholder="Escribe aquí cualquier detalle sobre la sesión..."
+              className="mb-3 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#6aa842] focus:outline-none"
+            />
+            {modal.mode === 'edit' && (
+              <div className="mb-3 flex justify-end">
+                <button
+                  onClick={handleDelete}
+                  disabled={saving}
+                  title="Eliminar sesión"
+                  className="rounded-lg bg-red-50 px-3 py-2 text-red-600 hover:bg-red-100"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            )}
+          </>
         )}
 
         {view === 'training' && (
@@ -399,6 +452,16 @@ export default function BookingModal({
               >
                 {saving ? 'Guardando...' : 'Guardar'}
               </button>
+              {modal.mode === 'edit' && (
+                <button
+                  onClick={handleToggleCancelled}
+                  disabled={saving}
+                  title={status === 'cancelled' ? 'Reactivar sesión' : 'Cancelar sesión'}
+                  className="rounded-lg bg-amber-50 px-3 py-2 text-amber-600 hover:bg-amber-100"
+                >
+                  {status === 'cancelled' ? <RotateCcw size={16} /> : <Ban size={16} />}
+                </button>
+              )}
               {modal.mode === 'edit' && (
                 <button
                   onClick={handleDelete}

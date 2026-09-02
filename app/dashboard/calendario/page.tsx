@@ -828,8 +828,12 @@ export default function CalendarioPage() {
             slotDuration="00:30:00"
             snapDuration="00:05:00"
             displayEventTime={false}
+            eventClassNames={(arg) =>
+              arg.event.extendedProps.raw?.status === 'cancelled' ? ['ziti-event-cancelled'] : []
+            }
             eventContent={(arg) => {
               const raw = arg.event.extendedProps.raw;
+              const isCancelled = raw?.status === 'cancelled';
               const start = arg.event.start;
               const end = arg.event.end;
               const timeStr =
@@ -846,6 +850,11 @@ export default function CalendarioPage() {
                 <div className="ziti-event-box">
                   <div className="ziti-event-time">{timeStr}</div>
                   <div className="ziti-event-name">{arg.event.title}</div>
+                  {isCancelled && (
+                    <span className="ziti-event-cancelled-label">
+                      {viewType === 'timeGridWeek' ? 'C' : 'Cancelada'}
+                    </span>
+                  )}
                   {raw?.notes && <div className="ziti-event-tooltip">{raw.notes}</div>}
                 </div>
               );

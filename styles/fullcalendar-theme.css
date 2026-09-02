@@ -161,6 +161,11 @@
 .fc-timegrid-event .fc-event-main {
   font-size: 0.75rem;
   font-weight: 600;
+  /* FullCalendar le pone 1px de padding por defecto; en eventos normales no
+     se nota (el fondo del elemento de fuera rellena ese hueco), pero en los
+     cancelados (fondo transparente, ver .ziti-event-cancelled) dejaba un
+     hueco blanco entre el borde rojo y el relleno. */
+  padding: 0 !important;
 }
 
 /* El modal de nueva sesión solo usa el punto donde se empezó a pulsar
@@ -191,6 +196,26 @@
   overflow: hidden;
   overflow-wrap: break-word;
   word-break: break-word;
+}
+
+/* Sesión cancelada (distinto de borrada): mismo color que siempre (para
+   saber de quién era), sin transparencia, con borde rojo simple y una
+   etiqueta pequeña abajo a la derecha. El !important es necesario para
+   ganarle a ".fc-event { border: none !important }" de más arriba. */
+.fc-event.ziti-event-cancelled {
+  border: 2px solid #ef4444 !important;
+}
+
+.ziti-event-cancelled-label {
+  position: absolute;
+  bottom: 2px;
+  right: 4px;
+  font-size: 0.55rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  color: white;
+  text-transform: uppercase;
 }
 
 .ziti-event-tooltip {
