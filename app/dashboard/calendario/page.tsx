@@ -5,121 +5,15 @@ import { useRouter } from 'next/navigation';
 import FullCalendar from '@fullcalendar/react';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
-import DatePicker, { registerLocale } from 'react-datepicker';
-import { es } from 'date-fns/locale';
-import 'react-datepicker/dist/react-datepicker.css';
-import '@/styles/datepicker-theme.css';
 import '@/styles/fullcalendar-theme.css';
-import { X, Trash2, ChevronDown, Check, Filter } from 'lucide-react';
+import { X, ChevronDown, Check, Filter } from 'lucide-react';
 import MiniCalendar, { dayKey } from '@/components/MiniCalendar';
-import {
-  getUsers,
-  getMe,
-  getActiveClients,
-  getBookings,
-  getBookingsByTrainers,
-  createBooking,
-  updateBooking,
-  deleteBooking,
-} from '@/lib/api';
-
-registerLocale('es', es);
+import FilterDropdown from '@/components/FilterDropdown';
+import BookingModal, { ModalState } from './BookingModal';
+import { getUsers, getMe, getActiveClients, getBookings, getBookingsByTrainers, updateBooking } from '@/lib/api';
 
 const FALLBACK_COLOR = '#868585';
 const ALL_VALUE = 'all';
-
-type ModalState =
-  | { mode: 'create'; start: Date }
-  | { mode: 'edit'; booking: any; start: Date }
-  | null;
-
-type DurationOption = '40' | '60' | 'custom';
-function minutesBetween(start: Date, end: Date) {
-  return Math.round((end.getTime() - start.getTime()) / 60000);
-}
-
-// Desplegable genérico reutilizable para ambos filtros (entrenador / cliente)
-function FilterDropdown({
-  label,
-  options,
-  value,
-  onChange,
-  showColorDot,
-}: {
-  label: string;
-  options: { id: string; name: string; color?: string }[];
-  value: string;
-  onChange: (id: string) => void;
-  showColorDot?: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const selected = options.find((o) => o.id === value);
-
-  return (
-    <div ref={ref} className="relative w-full sm:w-56">
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className="flex w-full items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-[#2b2b2a]"
-      >
-        <span className="flex items-center gap-2 truncate">
-          {showColorDot && selected && selected.id !== ALL_VALUE && (
-            <span
-              className="h-2.5 w-2.5 shrink-0 rounded-full"
-              style={{ backgroundColor: selected.color || FALLBACK_COLOR }}
-            />
-          )}
-          <span className="truncate">{selected ? selected.name : label}</span>
-        </span>
-        <ChevronDown
-          size={15}
-          className={`shrink-0 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}
-        />
-      </button>
-
-      {open && (
-        <div className="absolute left-0 z-10 mt-1.5 max-h-72 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white p-1 shadow-lg">
-          {options.map((o) => (
-            <button
-              key={o.id}
-              type="button"
-              onClick={() => {
-                onChange(o.id);
-                setOpen(false);
-              }}
-              className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition ${
-                o.id === value
-                  ? 'bg-[#a2c037]/10 font-semibold text-[#4b7a1f]'
-                  : 'text-[#2b2b2a] hover:bg-gray-50'
-              }`}
-            >
-              <span className="flex items-center gap-2 truncate">
-                {showColorDot && o.id !== ALL_VALUE && (
-                  <span
-                    className="h-2.5 w-2.5 shrink-0 rounded-full"
-                    style={{ backgroundColor: o.color || FALLBACK_COLOR }}
-                  />
-                )}
-                <span className="truncate">{o.name}</span>
-              </span>
-              {o.id === value && <Check size={14} className="shrink-0" />}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 // Checklist de entrenadores: de ninguno a todos, no una sola opción
 function TrainerMultiSelect({
@@ -239,14 +133,6 @@ export default function CalendarioPage() {
   const [events, setEvents] = useState<any[]>([]);
   const [daysWithBookings, setDaysWithBookings] = useState<Set<string>>(new Set());
   const [modal, setModal] = useState<ModalState>(null);
-  const [modalTrainerId, setModalTrainerId] = useState('');
-  const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
-  const [clientSearch, setClientSearch] = useState('');
-  const [notes, setNotes] = useState('');
-  const [durationOption, setDurationOption] = useState<DurationOption>('60');
-  const [customMinutes, setCustomMinutes] = useState(60);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
   const [viewTitle, setViewTitle] = useState('');
   const [viewType, setViewType] = useState('timeGridWeek');
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -584,44 +470,11 @@ export default function CalendarioPage() {
   function openCreateModal(start: Date) {
     if (!canEdit) return;
     setModal({ mode: 'create', start });
-    setSelectedClientIds([]);
-    setClientSearch('');
-    setNotes('');
-    setDurationOption('60');
-    setCustomMinutes(60);
-    setError('');
-
-    // Preseleccionamos tu propio usuario si eres entrenador, o el primero
-    // marcado en el checklist si eres admin puro; el selector del modal
-    // siempre se muestra, así que esto es solo un punto de partida cómodo.
-    if (isTrainer) {
-      setModalTrainerId(userId);
-    } else {
-      setModalTrainerId(selectedTrainerIds[0] || trainers[0]?._id || '');
-    }
   }
 
   function openEditModal(raw: any) {
     if (!canEdit) return;
-    const start = new Date(raw.startTime);
-    const end = new Date(raw.endTime);
-    const diff = minutesBetween(start, end);
-
-    setModal({ mode: 'edit', booking: raw, start });
-    setModalTrainerId(raw.trainer?._id || raw.trainer || '');
-    setSelectedClientIds(raw.clients.map((c: any) => c._id));
-    setClientSearch('');
-    setNotes(raw.notes || '');
-
-    if (diff === 40) {
-      setDurationOption('40');
-    } else if (diff === 60) {
-      setDurationOption('60');
-    } else {
-      setDurationOption('custom');
-      setCustomMinutes(diff);
-    }
-    setError('');
+    setModal({ mode: 'edit', booking: raw, start: new Date(raw.startTime) });
   }
 
   function handleSelect(selectInfo: any) {
@@ -825,100 +678,15 @@ export default function CalendarioPage() {
     };
   }, [viewType]);
 
-  function toggleClient(id: string) {
-    setSelectedClientIds((prev) =>
-      prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id],
-    );
-  }
-
-  function getEffectiveDurationMinutes() {
-    if (durationOption === '40') return 40;
-    if (durationOption === '60') return 60;
-    return customMinutes;
-  }
-
-  function handleStartTimeChange(date: Date | null) {
-    if (!modal || !date) return;
-    setModal({ ...modal, start: date } as ModalState);
-  }
-
-  async function handleSaveModal() {
-    if (!modal) return;
-
-    if (!modalTrainerId) {
-      setError('Selecciona un entrenador');
-      return;
+  // El modal se encarga de crear/editar/borrar por su cuenta; solo nos
+  // avisa cuando ha terminado con éxito, para cerrarlo y recargar.
+  function handleModalSaved() {
+    setModal(null);
+    const api = calendarRef.current?.getApi();
+    if (api) {
+      loadBookings(api.view.activeStart.toISOString(), api.view.activeEnd.toISOString());
     }
-
-    if (selectedClientIds.length === 0) {
-      setError('Selecciona al menos un cliente');
-      return;
-    }
-
-    const duration = getEffectiveDurationMinutes();
-    if (!duration || duration < 5) {
-      setError('La duración debe ser de al menos 5 minutos');
-      return;
-    }
-
-    const start = modal.start;
-    const end = new Date(start.getTime() + duration * 60000);
-
-    setSaving(true);
-    setError('');
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
-    try {
-      if (modal.mode === 'create') {
-        await createBooking(token, {
-          trainer: modalTrainerId,
-          clients: selectedClientIds,
-          startTime: start.toISOString(),
-          endTime: end.toISOString(),
-          notes: notes || undefined,
-        });
-      } else {
-        await updateBooking(token, modal.booking._id, {
-          trainer: modalTrainerId,
-          clients: selectedClientIds,
-          startTime: start.toISOString(),
-          endTime: end.toISOString(),
-          notes: notes || undefined,
-        });
-      }
-      setModal(null);
-      const api = calendarRef.current?.getApi();
-      if (api) {
-        loadBookings(api.view.activeStart.toISOString(), api.view.activeEnd.toISOString());
-      }
-      loadMonthDots(selectedDate);
-    } catch (err: any) {
-      setError(err.message || 'No se pudo guardar la sesión');
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleDeleteModal() {
-    if (modal?.mode !== 'edit') return;
-    setSaving(true);
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
-    try {
-      await deleteBooking(token, modal.booking._id);
-      setModal(null);
-      const api = calendarRef.current?.getApi();
-      if (api) {
-        loadBookings(api.view.activeStart.toISOString(), api.view.activeEnd.toISOString());
-      }
-      loadMonthDots(selectedDate);
-    } catch (err: any) {
-      setError(err.message || 'No se pudo eliminar la sesión');
-    } finally {
-      setSaving(false);
-    }
+    loadMonthDots(selectedDate);
   }
 
   if (!roleReady || loadingLists) {
@@ -929,6 +697,10 @@ export default function CalendarioPage() {
     { id: ALL_VALUE, name: 'Todos los clientes' },
     ...clients.map((c) => ({ id: c._id, name: `${c.firstName} ${c.lastName}` })),
   ];
+
+  // Punto de partida cómodo para "nueva sesión": tu propio usuario si eres
+  // entrenador, o el primero marcado en el checklist si eres admin puro.
+  const defaultTrainerId = isTrainer ? userId : selectedTrainerIds[0] || trainers[0]?._id || '';
 
   return (
     <div>
@@ -1082,200 +854,14 @@ export default function CalendarioPage() {
         </div>
       </div>
 
-      {modal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="max-h-[85vh] w-full max-w-sm overflow-y-auto rounded-xl bg-white p-6 shadow-xl">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="font-[family-name:var(--font-work-sans)] text-base font-bold text-[#2b2b2a]">
-                {modal.mode === 'create' ? 'Nueva sesión' : 'Editar sesión'}
-              </h3>
-              <button onClick={() => setModal(null)} className="text-gray-400 hover:text-gray-600">
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="mb-3">
-              <label className="mb-1 block text-xs font-semibold text-[#868585]">
-                Entrenador
-              </label>
-              <FilterDropdown
-                label="Elige un entrenador"
-                options={trainers.map((t) => ({
-                  id: t._id,
-                  name: `${t.firstName} ${t.lastName}`,
-                  color: t.color,
-                }))}
-                value={modalTrainerId}
-                onChange={setModalTrainerId}
-                showColorDot
-              />
-            </div>
-
-            <label className="mb-1 block text-xs font-semibold text-[#868585]">
-              Hora de inicio
-            </label>
-            <DatePicker
-              selected={modal.start}
-              onChange={handleStartTimeChange}
-              showTimeSelect
-              showTimeSelectOnly
-              timeIntervals={5}
-              timeCaption="Hora"
-              dateFormat="HH:mm"
-              locale="es"
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#6aa842] focus:outline-none"
-              wrapperClassName="mb-3 w-full block"
-            />
-            <p className="mb-3 text-xs text-[#868585]">
-              {modal.start.toLocaleDateString('es-ES', {
-                weekday: 'long',
-                day: 'numeric',
-                month: 'long',
-              })}
-            </p>
-
-            <label className="mb-1.5 block text-xs font-semibold text-[#868585]">Duración</label>
-            <div className="mb-3 flex gap-2">
-              <button
-                type="button"
-                onClick={() => setDurationOption('40')}
-                className={`flex-1 rounded-lg border py-1.5 text-sm font-semibold transition ${
-                  durationOption === '40'
-                    ? 'border-[#6aa842] bg-[#a2c037]/10 text-[#4b7a1f]'
-                    : 'border-gray-200 text-[#868585] hover:bg-gray-50'
-                }`}
-              >
-                40 min
-              </button>
-              <button
-                type="button"
-                onClick={() => setDurationOption('60')}
-                className={`flex-1 rounded-lg border py-1.5 text-sm font-semibold transition ${
-                  durationOption === '60'
-                    ? 'border-[#6aa842] bg-[#a2c037]/10 text-[#4b7a1f]'
-                    : 'border-gray-200 text-[#868585] hover:bg-gray-50'
-                }`}
-              >
-                1 hora
-              </button>
-              <button
-                type="button"
-                onClick={() => setDurationOption('custom')}
-                className={`flex-1 rounded-lg border py-1.5 text-sm font-semibold transition ${
-                  durationOption === 'custom'
-                    ? 'border-[#6aa842] bg-[#a2c037]/10 text-[#4b7a1f]'
-                    : 'border-gray-200 text-[#868585] hover:bg-gray-50'
-                }`}
-              >
-                Otra
-              </button>
-            </div>
-
-            {durationOption === 'custom' && (
-              <div className="mb-3">
-                <label className="mb-1 block text-xs font-semibold text-[#868585]">
-                  Minutos
-                </label>
-                <input
-                  type="number"
-                  min={5}
-                  max={240}
-                  step={5}
-                  value={customMinutes}
-                  onChange={(e) => setCustomMinutes(Number(e.target.value))}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#6aa842] focus:outline-none"
-                />
-              </div>
-            )}
-
-            <p className="mb-3 text-xs text-[#868585]">
-              Termina a las{' '}
-              {new Date(modal.start.getTime() + getEffectiveDurationMinutes() * 60000).toLocaleTimeString(
-                'es-ES',
-                { hour: '2-digit', minute: '2-digit' },
-              )}
-            </p>
-
-            <label className="mb-1 block text-xs font-semibold text-[#868585]">Clientes</label>
-            {clients.length > 0 && (
-              <input
-                type="text"
-                value={clientSearch}
-                onChange={(e) => setClientSearch(e.target.value)}
-                placeholder="Buscar cliente..."
-                className="mb-1.5 w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-[#6aa842] focus:outline-none"
-              />
-            )}
-            <div className="mb-3 max-h-40 overflow-y-auto rounded-lg border border-gray-200 p-1">
-              {(() => {
-                const filteredClients = clients.filter((c) =>
-                  `${c.firstName} ${c.lastName}`
-                    .toLowerCase()
-                    .includes(clientSearch.trim().toLowerCase()),
-                );
-                if (clients.length === 0) {
-                  return <p className="p-2 text-xs text-gray-400">No hay clientes activos.</p>;
-                }
-                if (filteredClients.length === 0) {
-                  return <p className="p-2 text-xs text-gray-400">Sin resultados.</p>;
-                }
-                return (
-                  <div className="grid grid-cols-2 gap-x-1">
-                    {filteredClients.map((c) => (
-                      <label
-                        key={c._id}
-                        className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-gray-50"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedClientIds.includes(c._id)}
-                          onChange={() => toggleClient(c._id)}
-                          className="shrink-0 accent-[#6aa842]"
-                        />
-                        <span className="truncate">
-                          {c.firstName} {c.lastName}
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                );
-              })()}
-            </div>
-
-            <label className="mb-1 block text-xs font-semibold text-[#868585]">
-              Notas (opcional)
-            </label>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={2}
-              className="mb-3 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#6aa842] focus:outline-none"
-            />
-
-            {error && <p className="mb-3 text-sm font-medium text-red-600">{error}</p>}
-
-            <div className="flex gap-2">
-              <button
-                onClick={handleSaveModal}
-                disabled={saving}
-                className="flex-1 rounded-lg bg-gradient-to-r from-[#a2c037] to-[#6aa842] py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
-              >
-                {saving ? 'Guardando...' : 'Guardar'}
-              </button>
-              {modal.mode === 'edit' && (
-                <button
-                  onClick={handleDeleteModal}
-                  disabled={saving}
-                  title="Eliminar sesión"
-                  className="rounded-lg bg-red-50 px-3 py-2 text-red-600 hover:bg-red-100"
-                >
-                  <Trash2 size={16} />
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <BookingModal
+        modal={modal}
+        trainers={trainers}
+        clients={clients}
+        defaultTrainerId={defaultTrainerId}
+        onClose={() => setModal(null)}
+        onSaved={handleModalSaved}
+      />
     </div>
   );
 }
