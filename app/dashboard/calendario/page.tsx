@@ -304,31 +304,104 @@ export default function CalendarioPage() {
   }, [router]);
 
   function bookingToEvent(b: any) {
-    let label = '';
+    // De más a menos detallado: se usa el primero que quepa entero (partido
+    // en líneas si hace falta); si ninguno cabe, se muestra el más corto
+    // aunque se corte, pero el nombre nunca desaparece.
+    let candidates: string[] = [];
     let color = FALLBACK_COLOR;
 
     if (isClientMode) {
       // Un cliente puede tener varios entrenadores: mostramos quién es
       // el entrenador de cada sesión, con su color.
-      label = b.trainer ? `${b.trainer.firstName} ${b.trainer.lastName}` : 'Entrenador';
+      const full = b.trainer ? `${b.trainer.firstName} ${b.trainer.lastName}` : 'Entrenador';
+      const short = b.trainer?.firstName || 'Entrenador';
+      candidates = [full, short];
       color = b.trainer?.color || FALLBACK_COLOR;
     } else {
       // Nombres de clientes, color del entrenador de esa sesión concreta
       // (funciona igual con 1, varios, o todos los entrenadores marcados)
-      label = (b.clients || [])
+      const clients = b.clients || [];
+      const full = clients.map((c: any) => `${c.firstName} ${c.lastName}`).join(', ');
+      const initials = clients
         .map((c: any) => `${c.firstName} ${c.lastName?.[0] ?? ''}.`)
         .join(', ');
+      const short = clients.map((c: any) => c.firstName).join(', ');
+      candidates = [full, initials, short];
       color = b.trainer?.color || FALLBACK_COLOR;
     }
 
+    candidates = candidates.filter(Boolean);
+    if (candidates.length === 0) candidates = ['Sesión'];
+
     return {
       id: b._id,
-      title: label || 'Sesión',
+      title: candidates[0],
       start: b.startTime,
       end: b.endTime,
       color,
-      extendedProps: { raw: b },
+      extendedProps: { raw: b, candidates },
     };
+  }
+
+  // Recorta el contenido de un evento del calendario según el espacio real
+  // disponible: nombre completo -> solo nombre, dejando que el texto se
+  // parta en varias líneas si hace falta (nunca desaparece del todo, como
+  // mucho se corta a medias si de verdad no cabe ni en alto); hora -> se
+  // oculta si no cabe.
+  function fitEventText(el: HTMLElement, event: any) {
+    const boxEl = el.querySelector('.ziti-event-box') as HTMLElement | null;
+    const nameEl = el.querySelector('.ziti-event-name') as HTMLElement | null;
+    const timeEl = el.querySelector('.ziti-event-time') as HTMLElement | null;
+    if (!boxEl || !nameEl) return;
+
+    const candidates: string[] = event.extendedProps?.candidates?.length
+      ? event.extendedProps.candidates
+      : [event.title];
+
+    // El propio texto nunca desborda de sí mismo (crece a su contenido), así
+    // que hay que medir el desbordamiento contra la caja real (que sí tiene
+    // alto fijo y overflow:hidden), no contra el texto.
+    function tryFitName(): boolean {
+      for (const candidate of candidates) {
+        nameEl!.textContent = candidate;
+        if (boxEl!.scrollHeight <= boxEl!.clientHeight) return true;
+      }
+      return false;
+    }
+
+    // Hora: si no cabe de ancho, se quita directamente.
+    if (timeEl) {
+      timeEl.style.display = '';
+      if (timeEl.scrollWidth > timeEl.clientWidth) {
+        timeEl.style.display = 'none';
+      }
+    }
+
+    let fits = tryFitName();
+
+    // Si ni el nombre más corto cabe con la hora todavía visible, la
+    // quitamos: el nombre importa más y necesita todo el alto disponible.
+    if (!fits && timeEl && timeEl.style.display !== 'none') {
+      timeEl.style.display = 'none';
+      fits = tryFitName();
+    }
+
+    // Aun así no cabe entero (caja diminuta): nos quedamos con el más corto,
+    // aunque se corte, para que el nombre nunca desaparezca del todo.
+    if (!fits) {
+      nameEl.textContent = candidates[candidates.length - 1];
+    }
+  }
+
+  function handleEventDidMount(info: any) {
+    fitEventText(info.el, info.event);
+    const ro = new ResizeObserver(() => fitEventText(info.el, info.event));
+    ro.observe(info.el);
+    (info.el as any).__zitiResizeObserver = ro;
+  }
+
+  function handleEventWillUnmount(info: any) {
+    (info.el as any).__zitiResizeObserver?.disconnect();
   }
 
   async function loadBookings(fromStr: string, toStr: string) {
@@ -779,9 +852,12 @@ export default function CalendarioPage() {
             eventDrop={handleEventDrop}
             eventDragStart={handleEventDragStart}
             eventDragStop={handleEventDragStop}
+            eventDidMount={handleEventDidMount}
+            eventWillUnmount={handleEventWillUnmount}
             datesSet={handleDatesSet}
             events={events}
             eventColor={FALLBACK_COLOR}
+            slotEventOverlap={false}
             slotDuration="00:30:00"
             snapDuration="00:05:00"
             displayEventTime={false}

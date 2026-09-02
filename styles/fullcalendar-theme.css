@@ -169,16 +169,15 @@
   line-height: 1.2;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .ziti-event-name {
   font-size: 0.68rem;
   font-weight: 600;
   line-height: 1.25;
-  white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: break-word;
+  word-break: break-word;
 }
 
 .ziti-event-tooltip {
