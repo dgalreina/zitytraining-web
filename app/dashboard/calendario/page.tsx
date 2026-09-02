@@ -241,6 +241,7 @@ export default function CalendarioPage() {
   const [modal, setModal] = useState<ModalState>(null);
   const [modalTrainerId, setModalTrainerId] = useState('');
   const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
+  const [clientSearch, setClientSearch] = useState('');
   const [notes, setNotes] = useState('');
   const [durationOption, setDurationOption] = useState<DurationOption>('60');
   const [customMinutes, setCustomMinutes] = useState(60);
@@ -295,7 +296,10 @@ export default function CalendarioPage() {
           setTrainers(activeTrainers);
           // Por defecto, todos los entrenadores marcados
           setSelectedTrainerIds(activeTrainers.map((t: any) => t._id));
-          setClients(activeClients);
+          const sortedClients = [...activeClients].sort((a: any, b: any) =>
+            `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, 'es'),
+          );
+          setClients(sortedClients);
         })
         .finally(() => setLoadingLists(false));
     }
@@ -480,6 +484,7 @@ export default function CalendarioPage() {
     if (!canEdit) return;
     setModal({ mode: 'create', start });
     setSelectedClientIds([]);
+    setClientSearch('');
     setNotes('');
     setDurationOption('60');
     setCustomMinutes(60);
@@ -504,6 +509,7 @@ export default function CalendarioPage() {
     setModal({ mode: 'edit', booking: raw, start });
     setModalTrainerId(raw.trainer?._id || raw.trainer || '');
     setSelectedClientIds(raw.clients.map((c: any) => c._id));
+    setClientSearch('');
     setNotes(raw.notes || '');
 
     if (diff === 40) {
@@ -1002,25 +1008,49 @@ export default function CalendarioPage() {
             </p>
 
             <label className="mb-1 block text-xs font-semibold text-[#868585]">Clientes</label>
+            {clients.length > 0 && (
+              <input
+                type="text"
+                value={clientSearch}
+                onChange={(e) => setClientSearch(e.target.value)}
+                placeholder="Buscar cliente..."
+                className="mb-1.5 w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-[#6aa842] focus:outline-none"
+              />
+            )}
             <div className="mb-3 max-h-40 overflow-y-auto rounded-lg border border-gray-200 p-1">
-              {clients.length === 0 ? (
-                <p className="p-2 text-xs text-gray-400">No hay clientes activos.</p>
-              ) : (
-                clients.map((c) => (
-                  <label
-                    key={c._id}
-                    className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-gray-50"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedClientIds.includes(c._id)}
-                      onChange={() => toggleClient(c._id)}
-                      className="accent-[#6aa842]"
-                    />
-                    {c.firstName} {c.lastName}
-                  </label>
-                ))
-              )}
+              {(() => {
+                const filteredClients = clients.filter((c) =>
+                  `${c.firstName} ${c.lastName}`
+                    .toLowerCase()
+                    .includes(clientSearch.trim().toLowerCase()),
+                );
+                if (clients.length === 0) {
+                  return <p className="p-2 text-xs text-gray-400">No hay clientes activos.</p>;
+                }
+                if (filteredClients.length === 0) {
+                  return <p className="p-2 text-xs text-gray-400">Sin resultados.</p>;
+                }
+                return (
+                  <div className="grid grid-cols-2 gap-x-1">
+                    {filteredClients.map((c) => (
+                      <label
+                        key={c._id}
+                        className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-gray-50"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedClientIds.includes(c._id)}
+                          onChange={() => toggleClient(c._id)}
+                          className="shrink-0 accent-[#6aa842]"
+                        />
+                        <span className="truncate">
+                          {c.firstName} {c.lastName}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
 
             <label className="mb-1 block text-xs font-semibold text-[#868585]">
