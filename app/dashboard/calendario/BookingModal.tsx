@@ -175,6 +175,13 @@ export default function BookingModal({
     `${c.firstName} ${c.lastName}`.toLowerCase().includes(clientSearch.trim().toLowerCase()),
   );
 
+  // El centro cierra a las 22:00; 21:20 es la última hora de inicio que deja
+  // sitio a la sesión más corta (40 min) antes del cierre.
+  const minStartTime = new Date(start);
+  minStartTime.setHours(7, 0, 0, 0);
+  const maxStartTime = new Date(start);
+  maxStartTime.setHours(21, 20, 0, 0);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
       <div className="max-h-[85vh] w-full max-w-sm overflow-y-auto rounded-xl bg-white p-6 shadow-xl">
@@ -229,6 +236,8 @@ export default function BookingModal({
               timeCaption="Hora"
               dateFormat="HH:mm"
               locale="es"
+              minTime={minStartTime}
+              maxTime={maxStartTime}
               className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#6aa842] focus:outline-none"
               wrapperClassName="mb-3 w-full block"
             />
@@ -378,27 +387,31 @@ export default function BookingModal({
           </p>
         )}
 
-        {error && <p className="mb-3 text-sm font-medium text-red-600">{error}</p>}
+        {view === 'form' && (
+          <>
+            {error && <p className="mb-3 text-sm font-medium text-red-600">{error}</p>}
 
-        <div className="flex gap-2">
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="flex-1 rounded-lg bg-gradient-to-r from-[#a2c037] to-[#6aa842] py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
-          >
-            {saving ? 'Guardando...' : 'Guardar'}
-          </button>
-          {modal.mode === 'edit' && (
-            <button
-              onClick={handleDelete}
-              disabled={saving}
-              title="Eliminar sesión"
-              className="rounded-lg bg-red-50 px-3 py-2 text-red-600 hover:bg-red-100"
-            >
-              <Trash2 size={16} />
-            </button>
-          )}
-        </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="flex-1 rounded-lg bg-gradient-to-r from-[#a2c037] to-[#6aa842] py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
+              >
+                {saving ? 'Guardando...' : 'Guardar'}
+              </button>
+              {modal.mode === 'edit' && (
+                <button
+                  onClick={handleDelete}
+                  disabled={saving}
+                  title="Eliminar sesión"
+                  className="rounded-lg bg-red-50 px-3 py-2 text-red-600 hover:bg-red-100"
+                >
+                  <Trash2 size={16} />
+                </button>
+              )}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
