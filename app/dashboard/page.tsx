@@ -89,13 +89,20 @@ export default function DashboardHome() {
                 key={b._id}
                 className="rounded-lg border border-gray-100 bg-white p-4 shadow-sm transition hover:shadow-md"
               >
-                <div className="mb-1 flex items-center justify-between">
+                <div className="mb-1 flex items-center gap-2">
                   <span className="text-sm font-semibold text-[#2b2b2a]">{timeStr}</span>
                   <span className="rounded-full bg-[#a2c037]/10 px-2.5 py-1 text-xs font-semibold text-[#4b7a1f]">
                     {counterpart}
                   </span>
                 </div>
-                {b.notes && <p className="text-xs text-[#868585]">{b.notes}</p>}
+                {b.notes && (
+                  <div className="mt-2 rounded-lg bg-gray-50 px-3 py-2">
+                    <p className="mb-0.5 text-xs font-semibold text-[#868585]">Nota</p>
+                    <p className="whitespace-pre-wrap break-words text-xs text-[#2b2b2a]">
+                      {b.notes}
+                    </p>
+                  </div>
+                )}
               </div>
             );
           })}
