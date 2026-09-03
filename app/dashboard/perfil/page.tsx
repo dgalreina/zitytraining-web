@@ -284,7 +284,7 @@ export default function PerfilPage() {
         <div className="mt-5 border-t border-gray-100 pt-4">
           <Link
             href="/dashboard/perfil/contrasena"
-            className="flex items-center gap-1.5 text-sm font-semibold text-[#868585] hover:text-[#2b2b2a]"
+            className="flex items-center gap-1.5 text-sm font-semibold text-[#2b2b2a] hover:underline"
           >
             <KeyRound size={14} />
             Cambiar contraseña
