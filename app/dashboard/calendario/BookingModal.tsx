@@ -23,6 +23,25 @@ function minutesBetween(start: Date, end: Date) {
   return Math.round((end.getTime() - start.getTime()) / 60000);
 }
 
+function Switch({ checked, onChange }: { checked: boolean; onChange: () => void }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      onClick={onChange}
+      className="relative h-4.5 w-8 shrink-0 rounded-full transition-colors duration-300"
+      style={{ backgroundColor: checked ? '#fa8072' : '#d1d5db' }}
+    >
+      <span
+        className={`absolute top-0.5 h-3.5 w-3.5 rounded-full bg-white shadow transition-all duration-300 ${
+          checked ? 'left-4' : 'left-0.5'
+        }`}
+      />
+    </button>
+  );
+}
+
 // Modal de crear/editar sesión. Todo el estado del formulario vive aquí
 // dentro; el padre solo decide QUÉ se está editando (o "nueva sesión" a
 // partir de qué hora) a través de la prop `modal`, y se entera de cuándo
@@ -53,6 +72,7 @@ export default function BookingModal({
   const [error, setError] = useState('');
   const [view, setView] = useState<ModalView>('form');
   const [status, setStatus] = useState<'active' | 'cancelled'>('active');
+  const [isPrivate, setIsPrivate] = useState(false);
 
   // Cada vez que se abre (o cambia lo que se está editando), recarga el
   // formulario desde cero a partir de esa sesión, o de los valores por
@@ -71,6 +91,7 @@ export default function BookingModal({
       setSelectedClientIds(raw.clients.map((c: any) => c._id));
       setNotes(raw.notes || '');
       setStatus(raw.status === 'cancelled' ? 'cancelled' : 'active');
+      setIsPrivate(!!raw.isPrivate);
       if (diff === 40) {
         setDurationOption('40');
       } else if (diff === 60) {
@@ -89,6 +110,7 @@ export default function BookingModal({
       setDurationOption('60');
       setCustomMinutes(60);
       setStatus('active');
+      setIsPrivate(false);
     }
   }, [modal, defaultTrainerId]);
 
@@ -116,7 +138,8 @@ export default function BookingModal({
       setError('Selecciona un entrenador');
       return;
     }
-    if (selectedClientIds.length === 0) {
+    // Una privada es solo tuya: no lleva clientes.
+    if (!isPrivate && selectedClientIds.length === 0) {
       setError('Selecciona al menos un cliente');
       return;
     }
@@ -136,15 +159,16 @@ export default function BookingModal({
       if (modal!.mode === 'create') {
         await createBooking(token, {
           trainer: modalTrainerId,
-          clients: selectedClientIds,
+          clients: isPrivate ? [] : selectedClientIds,
           startTime: start.toISOString(),
           endTime: end.toISOString(),
           notes: notes || undefined,
+          isPrivate,
         });
       } else {
         await updateBooking(token, (modal as { mode: 'edit'; booking: any }).booking._id, {
           trainer: modalTrainerId,
-          clients: selectedClientIds,
+          clients: isPrivate ? [] : selectedClientIds,
           startTime: start.toISOString(),
           endTime: end.toISOString(),
           notes: notes || undefined,
@@ -219,12 +243,24 @@ export default function BookingModal({
           {view === 'form' ? (
             <div className="flex items-center gap-2">
               <h3 className="font-[family-name:var(--font-work-sans)] text-base font-bold text-[#2b2b2a]">
-                {modal.mode === 'create' ? 'Nueva sesión' : 'Editar sesión'}
+                {modal.mode === 'create'
+                  ? isPrivate
+                    ? 'Sesión privada'
+                    : 'Nueva sesión'
+                  : isPrivate
+                    ? 'Editar sesión privada'
+                    : 'Editar sesión'}
               </h3>
               {status === 'cancelled' && (
                 <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700">
                   Cancelada
                 </span>
+              )}
+              {modal.mode === 'create' && (
+                <label className="ml-1 flex cursor-pointer items-center gap-1.5">
+                  <Switch checked={isPrivate} onChange={() => setIsPrivate((p) => !p)} />
+                  <span className="text-[11px] font-semibold text-[#868585]">Privada</span>
+                </label>
               )}
             </div>
           ) : (
@@ -246,22 +282,24 @@ export default function BookingModal({
 
         {view === 'form' && (
           <>
-            <div className="mb-3">
-              <label className="mb-1 block text-xs font-semibold text-[#868585]">
-                Entrenador
-              </label>
-              <FilterDropdown
-                label="Elige un entrenador"
-                options={trainers.map((t) => ({
-                  id: t._id,
-                  name: `${t.firstName} ${t.lastName}`,
-                  color: t.color,
-                }))}
-                value={modalTrainerId}
-                onChange={setModalTrainerId}
-                showColorDot
-              />
-            </div>
+            {!isPrivate && (
+              <div className="mb-3">
+                <label className="mb-1 block text-xs font-semibold text-[#868585]">
+                  Entrenador
+                </label>
+                <FilterDropdown
+                  label="Elige un entrenador"
+                  options={trainers.map((t) => ({
+                    id: t._id,
+                    name: `${t.firstName} ${t.lastName}`,
+                    color: t.color,
+                  }))}
+                  value={modalTrainerId}
+                  onChange={setModalTrainerId}
+                  showColorDot
+                />
+              </div>
+            )}
 
             <label className="mb-1 block text-xs font-semibold text-[#868585]">
               Hora de inicio
@@ -349,63 +387,78 @@ export default function BookingModal({
               ).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
             </p>
 
-            <label className="mb-1 block text-xs font-semibold text-[#868585]">Clientes</label>
-            {clients.length > 0 && (
-              <input
-                type="text"
-                value={clientSearch}
-                onChange={(e) => setClientSearch(e.target.value)}
-                placeholder="Buscar cliente..."
-                className="mb-1.5 w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-[#6aa842] focus:outline-none"
-              />
-            )}
-            <div className="mb-3 max-h-40 overflow-y-auto rounded-lg border border-gray-200 p-1">
-              {clients.length === 0 ? (
-                <p className="p-2 text-xs text-gray-400">No hay clientes activos.</p>
-              ) : filteredClients.length === 0 ? (
-                <p className="p-2 text-xs text-gray-400">Sin resultados.</p>
-              ) : (
-                <div className="grid grid-cols-2 gap-x-1">
-                  {filteredClients.map((c) => (
-                    <label
-                      key={c._id}
-                      className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-gray-50"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={selectedClientIds.includes(c._id)}
-                        onChange={() => toggleClient(c._id)}
-                        className="shrink-0 accent-[#6aa842]"
-                      />
-                      <span className="truncate">
-                        {c.firstName} {c.lastName}
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <label className="mb-1.5 block text-xs font-semibold text-[#868585]">Más</label>
-            <div className="mb-3 flex gap-2">
-              <button
-                type="button"
-                onClick={() => setView('notes')}
-                className="relative flex-1 rounded-lg border border-gray-200 py-1.5 text-sm font-semibold text-[#868585] transition hover:bg-gray-50"
-              >
-                Notas
-                {notes.trim() && (
-                  <span className="absolute right-2.5 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-[#6aa842]" />
+            {isPrivate ? (
+              <>
+                <label className="mb-1 block text-xs font-semibold text-[#868585]">Nota</label>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  rows={5}
+                  placeholder="Escribe aquí lo que quieras recordar..."
+                  className="mb-3 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#6aa842] focus:outline-none"
+                />
+              </>
+            ) : (
+              <>
+                <label className="mb-1 block text-xs font-semibold text-[#868585]">Clientes</label>
+                {clients.length > 0 && (
+                  <input
+                    type="text"
+                    value={clientSearch}
+                    onChange={(e) => setClientSearch(e.target.value)}
+                    placeholder="Buscar cliente..."
+                    className="mb-1.5 w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-[#6aa842] focus:outline-none"
+                  />
                 )}
-              </button>
-              <button
-                type="button"
-                onClick={() => setView('training')}
-                className="flex-1 rounded-lg border border-gray-200 py-1.5 text-sm font-semibold text-[#868585] transition hover:bg-gray-50"
-              >
-                Entrenamiento
-              </button>
-            </div>
+                <div className="mb-3 max-h-40 overflow-y-auto rounded-lg border border-gray-200 p-1">
+                  {clients.length === 0 ? (
+                    <p className="p-2 text-xs text-gray-400">No hay clientes activos.</p>
+                  ) : filteredClients.length === 0 ? (
+                    <p className="p-2 text-xs text-gray-400">Sin resultados.</p>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-x-1">
+                      {filteredClients.map((c) => (
+                        <label
+                          key={c._id}
+                          className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-gray-50"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedClientIds.includes(c._id)}
+                            onChange={() => toggleClient(c._id)}
+                            className="shrink-0 accent-[#6aa842]"
+                          />
+                          <span className="truncate">
+                            {c.firstName} {c.lastName}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <label className="mb-1.5 block text-xs font-semibold text-[#868585]">Más</label>
+                <div className="mb-3 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setView('notes')}
+                    className="relative flex-1 rounded-lg border border-gray-200 py-1.5 text-sm font-semibold text-[#868585] transition hover:bg-gray-50"
+                  >
+                    Notas
+                    {notes.trim() && (
+                      <span className="absolute right-2.5 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-[#6aa842]" />
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setView('training')}
+                    className="flex-1 rounded-lg border border-gray-200 py-1.5 text-sm font-semibold text-[#868585] transition hover:bg-gray-50"
+                  >
+                    Entrenamiento
+                  </button>
+                </div>
+              </>
+            )}
           </>
         )}
 
@@ -452,7 +505,7 @@ export default function BookingModal({
               >
                 {saving ? 'Guardando...' : 'Guardar'}
               </button>
-              {modal.mode === 'edit' && (
+              {modal.mode === 'edit' && !isPrivate && (
                 <button
                   onClick={handleToggleCancelled}
                   disabled={saving}

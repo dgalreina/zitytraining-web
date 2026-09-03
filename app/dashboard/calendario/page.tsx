@@ -13,6 +13,7 @@ import BookingModal, { ModalState } from './BookingModal';
 import { getUsers, getMe, getActiveClients, getBookings, getBookingsByTrainers, updateBooking } from '@/lib/api';
 
 const FALLBACK_COLOR = '#868585';
+const PRIVATE_COLOR = '#fa8072';
 const ALL_VALUE = 'all';
 
 // Checklist de entrenadores: de ninguno a todos, no una sola opción
@@ -204,7 +205,13 @@ export default function CalendarioPage() {
     let candidates: string[] = [];
     let color = FALLBACK_COLOR;
 
-    if (isClientMode) {
+    if (b.isPrivate) {
+      // Sesión personal del entrenador: no lleva clientes, siempre en
+      // salmón (independiente del color que tenga asignado el entrenador),
+      // para que se distinga a simple vista de una sesión normal.
+      candidates = ['Privada'];
+      color = PRIVATE_COLOR;
+    } else if (isClientMode) {
       // Un cliente puede tener varios entrenadores: mostramos quién es
       // el entrenador de cada sesión, con su color.
       const full = b.trainer ? `${b.trainer.firstName} ${b.trainer.lastName}` : 'Entrenador';
