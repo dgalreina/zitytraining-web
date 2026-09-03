@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
 import { changeMyPassword } from '@/lib/api';
+import PasswordInput from '@/components/PasswordInput';
 
 const inputClass =
   'w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none focus:ring-2 focus:ring-[#a2c037]/20';
@@ -85,8 +86,7 @@ export default function CambiarContrasenaPage() {
           <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
             <div>
               <label className={labelClass}>Contraseña actual</label>
-              <input
-                type="password"
+              <PasswordInput
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 required
@@ -95,8 +95,7 @@ export default function CambiarContrasenaPage() {
             </div>
             <div>
               <label className={labelClass}>Nueva contraseña</label>
-              <input
-                type="password"
+              <PasswordInput
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 required
@@ -109,8 +108,7 @@ export default function CambiarContrasenaPage() {
             </div>
             <div>
               <label className={labelClass}>Repite la nueva contraseña</label>
-              <input
-                type="password"
+              <PasswordInput
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required

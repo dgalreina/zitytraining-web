@@ -5,11 +5,16 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import DateOfBirthPicker from '@/components/DateOfBirthPicker';
+import PasswordInput from '@/components/PasswordInput';
 import { createUserByAdmin } from '@/lib/api';
 
 const inputClass =
   'w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none focus:ring-2 focus:ring-[#a2c037]/20';
 const labelClass = 'mb-1 block text-xs font-semibold text-[#868585]';
+
+const STRONG_PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+const STRONG_PASSWORD_HINT =
+  'Al menos 8 caracteres, con mayúsculas, minúsculas, números y algún símbolo.';
 
 export default function NuevoEntrenadorPage() {
   const [form, setForm] = useState({
@@ -32,8 +37,24 @@ export default function NuevoEntrenadorPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
-    setSaving(true);
 
+    if (
+      !form.firstName ||
+      !form.lastName ||
+      !form.dateOfBirth ||
+      !form.email ||
+      !form.phone ||
+      !form.address
+    ) {
+      setError('Rellena todos los campos');
+      return;
+    }
+    if (!STRONG_PASSWORD_REGEX.test(form.password)) {
+      setError(STRONG_PASSWORD_HINT);
+      return;
+    }
+
+    setSaving(true);
     const token = localStorage.getItem('token');
     if (!token) {
       router.push('/login');
@@ -68,7 +89,7 @@ export default function NuevoEntrenadorPage() {
           Nuevo entrenador
         </h2>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>Nombre</label>
@@ -134,8 +155,7 @@ export default function NuevoEntrenadorPage() {
 
           <div>
             <label className={labelClass}>Contraseña inicial</label>
-            <input
-              type="password"
+            <PasswordInput
               name="password"
               value={form.password}
               onChange={handleChange}
