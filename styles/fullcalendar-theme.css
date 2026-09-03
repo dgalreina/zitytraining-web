@@ -96,8 +96,11 @@
   font-size: 0.7rem;
 }
 
+/* min-height (no height): si el calendario entero cabe en la ventana, las
+   franjas se reparten el alto sobrante (expandRows en el componente); si
+   no cabe, se quedan en este mínimo compacto y hace scroll. */
 .fc-timegrid-slot {
-  height: 1.6em !important;
+  min-height: 1.6em !important;
 }
 
 @media (max-width: 640px) {
@@ -123,14 +126,6 @@
      red de seguridad para que se pueda deslizar en vez de recortarse. */
   .fc .fc-toolbar {
     overflow-x: auto;
-  }
-}
-
-/* El botón "Filtros" del toolbar (entre Hoy y Día/Semana) es solo para
-   móvil; en escritorio los filtros ya están siempre visibles aparte. */
-@media (min-width: 640px) {
-  .fc .fc-filtros-button {
-    display: none;
   }
 }
 

@@ -721,24 +721,11 @@ export default function CalendarioPage() {
     <div>
       {(isAdmin || isTrainer) && (
         <>
-          {/* Escritorio: filtros siempre visibles */}
-          <div className="mb-4 hidden flex-wrap gap-3 sm:flex">
-            <TrainerMultiSelect
-              trainers={trainers}
-              selectedIds={selectedTrainerIds}
-              onChange={setSelectedTrainerIds}
-            />
-            <FilterDropdown
-              label="Cliente"
-              options={clientOptions}
-              value={selectedClientId}
-              onChange={setSelectedClientId}
-            />
-          </div>
-
+          {/* El botón "Filtros" vive en el toolbar del calendario (tanto en
+              móvil como en escritorio); esto solo es la hoja que abre. */}
           {filtersOpen && (
             <div
-              className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 sm:hidden"
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
               onClick={() => setFiltersOpen(false)}
             >
               <div
@@ -811,9 +798,7 @@ export default function CalendarioPage() {
               right: 'timeGridDay,timeGridWeek',
             }}
             customButtons={{
-              // En escritorio los filtros ya están siempre visibles aparte
-              // (ver más abajo); este botón del toolbar solo se ve en
-              // móvil, vía CSS (.fc-filtros-button en fullcalendar-theme.css).
+              // Mismo botón y misma hoja de filtros en móvil y escritorio.
               filtros: {
                 text: 'Filtros',
                 click: () => setFiltersOpen(true),
@@ -830,6 +815,7 @@ export default function CalendarioPage() {
             slotMinTime="07:00:00"
             slotMaxTime="22:00:00"
             height="100%"
+            expandRows
             selectable={canEdit}
             selectLongPressDelay={200}
             eventStartEditable={canEdit}
