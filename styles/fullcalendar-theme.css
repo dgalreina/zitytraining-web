@@ -117,6 +117,21 @@
   .fc .fc-next-button {
     display: none;
   }
+
+  /* Con "Filtros" metido en el toolbar, en los móviles más estrechos (o
+     con "Esta semana" de texto largo) puede llegar a no caber del todo;
+     red de seguridad para que se pueda deslizar en vez de recortarse. */
+  .fc .fc-toolbar {
+    overflow-x: auto;
+  }
+}
+
+/* El botón "Filtros" del toolbar (entre Hoy y Día/Semana) es solo para
+   móvil; en escritorio los filtros ya están siempre visibles aparte. */
+@media (min-width: 640px) {
+  .fc .fc-filtros-button {
+    display: none;
+  }
 }
 
 /* Solo lunes a viernes (el gimnasio no trabaja fines de semana), así la

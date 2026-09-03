@@ -6,7 +6,7 @@ import FullCalendar from '@fullcalendar/react';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import '@/styles/fullcalendar-theme.css';
-import { X, ChevronDown, Check, Filter } from 'lucide-react';
+import { X, ChevronDown, Check } from 'lucide-react';
 import MiniCalendar, { dayKey } from '@/components/MiniCalendar';
 import FilterDropdown from '@/components/FilterDropdown';
 import BookingModal, { ModalState } from './BookingModal';
@@ -736,18 +736,6 @@ export default function CalendarioPage() {
             />
           </div>
 
-          {/* Móvil: botón compacto que abre los filtros en una hoja */}
-          <div className="mb-4 flex justify-end sm:hidden">
-            <button
-              type="button"
-              onClick={() => setFiltersOpen(true)}
-              className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-[#2b2b2a]"
-            >
-              <Filter size={15} />
-              Filtros
-            </button>
-          </div>
-
           {filtersOpen && (
             <div
               className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 sm:hidden"
@@ -817,7 +805,20 @@ export default function CalendarioPage() {
             initialView={isAdmin ? 'timeGridDay' : 'timeGridWeek'}
             firstDay={1}
             weekends={false}
-            headerToolbar={{ left: 'prev,next today', center: '', right: 'timeGridDay,timeGridWeek' }}
+            headerToolbar={{
+              left: 'prev,next today',
+              center: isTrainerPerspective ? 'filtros' : '',
+              right: 'timeGridDay,timeGridWeek',
+            }}
+            customButtons={{
+              // En escritorio los filtros ya están siempre visibles aparte
+              // (ver más abajo); este botón del toolbar solo se ve en
+              // móvil, vía CSS (.fc-filtros-button en fullcalendar-theme.css).
+              filtros: {
+                text: 'Filtros',
+                click: () => setFiltersOpen(true),
+              },
+            }}
             dayHeaderFormat={{ weekday: 'short', day: 'numeric' }}
             buttonText={{
               today: viewType === 'timeGridWeek' ? 'Esta semana' : 'Hoy',
