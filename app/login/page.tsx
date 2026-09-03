@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { X } from 'lucide-react';
 import { login } from '@/lib/api';
 import PasswordInput from '@/components/PasswordInput';
 
@@ -10,7 +11,24 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotSent, setForgotSent] = useState(false);
   const router = useRouter();
+
+  function closeForgotModal() {
+    setForgotOpen(false);
+    setForgotEmail('');
+    setForgotSent(false);
+  }
+
+  // Todavía no hay backend que mande el email de verdad; esto solo
+  // recoge la dirección y lo confirma. El envío real es el siguiente
+  // paso, pendiente de decidir cómo (proveedor de email, plantilla, etc.).
+  function handleForgotSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setForgotSent(true);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -91,6 +109,13 @@ export default function LoginPage() {
                   required
                   className="w-full rounded-lg border border-gray-200 px-4 py-3 text-[#2b2b2a] transition focus:border-[#6aa842] focus:outline-none focus:ring-2 focus:ring-[#a2c037]/20"
                 />
+                <button
+                  type="button"
+                  onClick={() => setForgotOpen(true)}
+                  className="mt-1.5 text-sm font-medium text-[#6aa842] hover:underline"
+                >
+                  ¿Olvidaste tu contraseña?
+                </button>
               </div>
 
               <button
@@ -107,6 +132,56 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
+
+      {forgotOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+          onClick={closeForgotModal}
+        >
+          <div
+            className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="font-[family-name:var(--font-work-sans)] text-base font-bold text-[#2b2b2a]">
+                Recuperar contraseña
+              </h3>
+              <button onClick={closeForgotModal} className="text-gray-400 hover:text-gray-600">
+                <X size={18} />
+              </button>
+            </div>
+
+            {forgotSent ? (
+              <p className="text-sm font-medium text-[#4b7a1f]">
+                Si ese email está registrado, te enviaremos instrucciones para recuperar tu
+                contraseña.
+              </p>
+            ) : (
+              <form onSubmit={handleForgotSubmit} className="flex flex-col gap-4">
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-[#868585]">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="tu@email.com"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    required
+                    className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none focus:ring-2 focus:ring-[#a2c037]/20"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  className="rounded-lg bg-gradient-to-r from-[#a2c037] to-[#6aa842] py-2.5 font-semibold text-white transition hover:opacity-90"
+                >
+                  Enviar
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
     </main>
   );
 }
