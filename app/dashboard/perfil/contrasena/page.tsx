@@ -38,6 +38,10 @@ export default function CambiarContrasenaPage() {
       setError(STRONG_PASSWORD_HINT);
       return;
     }
+    if (newPassword === currentPassword) {
+      setError('La nueva contraseña tiene que ser distinta de la actual');
+      return;
+    }
     if (newPassword !== confirmPassword) {
       setError('Las contraseñas nuevas no coinciden');
       return;
@@ -89,7 +93,6 @@ export default function CambiarContrasenaPage() {
               <PasswordInput
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
-                required
                 className={inputClass}
               />
             </div>
@@ -98,10 +101,6 @@ export default function CambiarContrasenaPage() {
               <PasswordInput
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                required
-                minLength={8}
-                pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}"
-                title={STRONG_PASSWORD_HINT}
                 className={inputClass}
               />
               <p className="mt-1 text-xs text-[#868585]">{STRONG_PASSWORD_HINT}</p>
@@ -111,8 +110,6 @@ export default function CambiarContrasenaPage() {
               <PasswordInput
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-                minLength={8}
                 className={inputClass}
               />
             </div>
