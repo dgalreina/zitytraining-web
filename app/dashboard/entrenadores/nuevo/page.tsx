@@ -148,7 +148,6 @@ export default function NuevoEntrenadorPage() {
               name="address"
               value={form.address}
               onChange={handleChange}
-              required
               className={inputClass}
             />
           </div>

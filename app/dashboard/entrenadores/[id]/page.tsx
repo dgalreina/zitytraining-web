@@ -294,7 +294,6 @@ export default function DetalleEntrenadorPage() {
               name="address"
               value={form.address}
               onChange={handleChange}
-              required
               disabled={!editing}
               className={inputClass}
             />
