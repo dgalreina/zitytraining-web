@@ -15,7 +15,12 @@ async function handleResponse(res: Response) {
     throw new Error(body?.message?.toString() || `Error ${res.status}`);
   }
 
-  return res.json();
+  // Algunos endpoints (ej. cambiar contraseña) responden 200 sin body;
+  // res.json() sobre una respuesta vacía explota ("Unexpected end of
+  // JSON input" en Chrome, "did not match the expected pattern" en
+  // Safari — mismo fallo, cada motor lo describe a su manera).
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
 }
 
 export async function login(email: string, password: string) {
