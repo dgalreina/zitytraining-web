@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, Pencil } from 'lucide-react';
+import Link from 'next/link';
+import { Check, KeyRound, Pencil } from 'lucide-react';
 import DateOfBirthPicker from '@/components/DateOfBirthPicker';
 import { getMe, updateMe } from '@/lib/api';
 import { DEFAULT_TRAINER_COLOR, getAvatarGradient } from '@/lib/colors';
@@ -141,13 +142,22 @@ export default function PerfilPage() {
           </div>
 
           {!editing && (
-            <button
-              onClick={() => setEditing(true)}
-              className="flex items-center gap-1.5 rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-semibold text-[#2b2b2a] hover:bg-gray-200"
-            >
-              <Pencil size={13} />
-              Editar
-            </button>
+            <div className="flex items-center gap-2">
+              <Link
+                href="/dashboard/perfil/contrasena"
+                className="flex items-center gap-1.5 rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-semibold text-[#2b2b2a] hover:bg-gray-200"
+              >
+                <KeyRound size={13} />
+                Cambiar contraseña
+              </Link>
+              <button
+                onClick={() => setEditing(true)}
+                className="flex items-center gap-1.5 rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-semibold text-[#2b2b2a] hover:bg-gray-200"
+              >
+                <Pencil size={13} />
+                Editar
+              </button>
+            </div>
           )}
         </div>
 

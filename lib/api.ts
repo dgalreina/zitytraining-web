@@ -65,6 +65,21 @@ export async function updateMe(token: string, data: any) {
   return handleResponse(res);
 }
 
+export async function changeMyPassword(
+  token: string,
+  data: { currentPassword: string; newPassword: string },
+) {
+  const res = await fetch(`${API_URL}/users/me/password`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(res);
+}
+
 export async function getActiveClients(token: string) {
   const res = await fetch(`${API_URL}/users/clients`, {
     headers: { Authorization: `Bearer ${token}` },

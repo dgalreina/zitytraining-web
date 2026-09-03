@@ -140,8 +140,7 @@ export default function ClientesPage() {
       const fullName = `${c.firstName} ${c.lastName}`.toLowerCase();
       const matchesSearch =
         fullName.includes(search.toLowerCase()) ||
-        c.email?.toLowerCase().includes(search.toLowerCase()) ||
-        c.membershipNumber?.toLowerCase().includes(search.toLowerCase());
+        c.email?.toLowerCase().includes(search.toLowerCase());
       return matchesStatus && matchesSearch;
     });
   }, [clients, search, statusFilter]);
@@ -169,7 +168,7 @@ export default function ClientesPage() {
           />
           <input
             type="text"
-            placeholder="Buscar por nombre, email o nº de socio..."
+            placeholder="Buscar por nombre o email..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-4 text-sm text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none focus:ring-2 focus:ring-[#a2c037]/20"
@@ -189,7 +188,6 @@ export default function ClientesPage() {
             <thead>
               <tr className="border-b border-gray-100 text-xs font-semibold text-[#868585]">
                 <th className="px-5 py-3">Nombre</th>
-                <th className="px-5 py-3">Nº socio</th>
                 <th className="px-5 py-3">Email</th>
                 <th className="px-5 py-3">Edad</th>
                 <th className="px-5 py-3">Estado</th>
@@ -205,10 +203,7 @@ export default function ClientesPage() {
                   <td className="px-5 py-3 font-medium text-[#2b2b2a]">
                     {client.firstName} {client.lastName}
                   </td>
-                  <td className="px-5 py-3 text-[#868585]">
-                    {client.membershipNumber || '—'}
-                  </td>
-                  <td className="px-5 py-3 text-[#868585]">{client.email}</td>
+                  <td className="px-5 py-3 text-[#868585]">{client.email || '—'}</td>
                   <td className="px-5 py-3 text-[#868585]">
                     {client.dateOfBirth ? calculateAge(client.dateOfBirth) : '—'}
                   </td>
@@ -241,8 +236,7 @@ export default function ClientesPage() {
                   {statusBadge(client.status || 'active')}
                 </div>
                 <div className="flex flex-col gap-0.5 text-xs text-[#868585]">
-                  <span>Nº socio: {client.membershipNumber || '—'}</span>
-                  <span>{client.email}</span>
+                  <span>{client.email || 'Sin email'}</span>
                   <span>
                     Edad: {client.dateOfBirth ? calculateAge(client.dateOfBirth) : '—'}
                   </span>

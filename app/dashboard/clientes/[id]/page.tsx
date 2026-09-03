@@ -88,10 +88,9 @@ export default function DetalleClientePage() {
           firstName: user.firstName,
           lastName: user.lastName,
           dateOfBirth: user.dateOfBirth?.split('T')[0] ?? '',
-          email: user.email,
+          email: user.email || '',
           phone: user.phone,
           address: user.address,
-          membershipNumber: user.membershipNumber || '',
           status: user.status,
         };
         setForm(data);
@@ -128,16 +127,15 @@ export default function DetalleClientePage() {
       const { status, ...data } = form;
       const updated = await updateUser(token, id, {
         ...data,
-        membershipNumber: data.membershipNumber || undefined,
+        email: data.email || undefined,
       });
       const newData = {
         firstName: updated.firstName,
         lastName: updated.lastName,
         dateOfBirth: updated.dateOfBirth?.split('T')[0] ?? '',
-        email: updated.email,
+        email: updated.email || '',
         phone: updated.phone,
         address: updated.address,
-        membershipNumber: updated.membershipNumber || '',
         status: updated.status,
       };
       setForm(newData);
@@ -275,32 +273,6 @@ export default function DetalleClientePage() {
                   disabled={!editing}
                 />
                 <div>
-                  <label className={labelClass}>Nº de socio</label>
-                  <input
-                    name="membershipNumber"
-                    value={form.membershipNumber}
-                    onChange={handleChange}
-                    placeholder="SOC-0001"
-                    disabled={!editing}
-                    className={inputClass}
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={labelClass}>Email</label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={form.email}
-                    onChange={handleChange}
-                    required
-                    disabled={!editing}
-                    className={inputClass}
-                  />
-                </div>
-                <div>
                   <label className={labelClass}>Teléfono</label>
                   <input
                     name="phone"
@@ -311,6 +283,18 @@ export default function DetalleClientePage() {
                     className={inputClass}
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className={labelClass}>Email</label>
+                <input
+                  type="email"
+                  name="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  disabled={!editing}
+                  className={inputClass}
+                />
               </div>
 
               <div>

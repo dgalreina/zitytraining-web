@@ -140,9 +140,14 @@ export default function NuevoEntrenadorPage() {
               value={form.password}
               onChange={handleChange}
               required
-              minLength={4}
+              minLength={8}
+              pattern="(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}"
+              title="Al menos 8 caracteres, con mayúsculas, minúsculas, números y algún símbolo"
               className={inputClass}
             />
+            <p className="mt-1 text-xs text-[#868585]">
+              Al menos 8 caracteres, con mayúsculas, minúsculas, números y algún símbolo.
+            </p>
           </div>
 
           {error && <p className="text-sm font-medium text-red-600">{error}</p>}

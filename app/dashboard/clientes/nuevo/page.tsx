@@ -17,7 +17,6 @@ export default function NuevoClientePage() {
     lastName: '',
     dateOfBirth: '',
     email: '',
-    password: '',
     phone: '',
     address: '',
   });
@@ -43,6 +42,7 @@ export default function NuevoClientePage() {
     try {
       await createUserByAdmin(token, {
         ...form,
+        email: form.email || undefined,
         roles: ['client'],
       });
       router.push('/dashboard/clientes');
@@ -116,7 +116,6 @@ export default function NuevoClientePage() {
               name="email"
               value={form.email}
               onChange={handleChange}
-              required
               className={inputClass}
             />
           </div>
@@ -128,19 +127,6 @@ export default function NuevoClientePage() {
               value={form.address}
               onChange={handleChange}
               required
-              className={inputClass}
-            />
-          </div>
-
-          <div>
-            <label className={labelClass}>Contraseña inicial</label>
-            <input
-              type="password"
-              name="password"
-              value={form.password}
-              onChange={handleChange}
-              required
-              minLength={4}
               className={inputClass}
             />
           </div>
