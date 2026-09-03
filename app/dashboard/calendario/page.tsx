@@ -185,8 +185,9 @@ export default function CalendarioPage() {
             (u: any) => u.roles?.includes('trainer') && u.status === 'active',
           );
           setTrainers(activeTrainers);
-          // Por defecto, todos los entrenadores marcados
-          setSelectedTrainerIds(activeTrainers.map((t: any) => t._id));
+          // Admin: todos los entrenadores marcados por defecto. Entrenador:
+          // solo él mismo.
+          setSelectedTrainerIds(admin ? activeTrainers.map((t: any) => t._id) : [id]);
           const sortedClients = [...activeClients].sort((a: any, b: any) =>
             `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, 'es'),
           );
@@ -813,12 +814,16 @@ export default function CalendarioPage() {
           <FullCalendar
             ref={calendarRef}
             plugins={[timeGridPlugin, interactionPlugin]}
-            initialView="timeGridWeek"
+            initialView={isAdmin ? 'timeGridDay' : 'timeGridWeek'}
             firstDay={1}
             weekends={false}
             headerToolbar={{ left: 'prev,next today', center: '', right: 'timeGridDay,timeGridWeek' }}
             dayHeaderFormat={{ weekday: 'short', day: 'numeric' }}
-            buttonText={{ today: 'Hoy', day: 'Día', week: 'Semana' }}
+            buttonText={{
+              today: viewType === 'timeGridWeek' ? 'Esta semana' : 'Hoy',
+              day: 'Día',
+              week: 'Semana',
+            }}
             locale="es"
             allDaySlot={false}
             slotMinTime="07:00:00"
