@@ -172,6 +172,7 @@ export default function BookingModal({
           startTime: start.toISOString(),
           endTime: end.toISOString(),
           notes: notes || undefined,
+          isPrivate,
         });
       }
       onSaved();
@@ -256,12 +257,10 @@ export default function BookingModal({
                   Cancelada
                 </span>
               )}
-              {modal.mode === 'create' && (
-                <label className="ml-1 flex cursor-pointer items-center gap-1.5">
-                  <Switch checked={isPrivate} onChange={() => setIsPrivate((p) => !p)} />
-                  <span className="text-[11px] font-semibold text-[#868585]">Privada</span>
-                </label>
-              )}
+              <label className="ml-1 flex cursor-pointer items-center gap-1.5">
+                <Switch checked={isPrivate} onChange={() => setIsPrivate((p) => !p)} />
+                <span className="text-[11px] font-semibold text-[#868585]">Privada</span>
+              </label>
             </div>
           ) : (
             <button
@@ -472,12 +471,15 @@ export default function BookingModal({
               placeholder="Escribe aquí cualquier detalle sobre la sesión..."
               className="mb-3 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#6aa842] focus:outline-none"
             />
-            {modal.mode === 'edit' && (
+            {notes.trim() && (
+              // Solo borra el texto aquí en el formulario; como el resto de
+              // cambios de la nota, hace falta pulsar Guardar para que se
+              // quede así de verdad.
               <div className="mb-3 flex justify-end">
                 <button
-                  onClick={handleDelete}
-                  disabled={saving}
-                  title="Eliminar sesión"
+                  type="button"
+                  onClick={() => setNotes('')}
+                  title="Borrar nota"
                   className="rounded-lg bg-red-50 px-3 py-2 text-red-600 hover:bg-red-100"
                 >
                   <Trash2 size={16} />
