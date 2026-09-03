@@ -91,9 +91,15 @@ export default function DashboardHome() {
               >
                 <div className="mb-1 flex items-center gap-2">
                   <span className="text-sm font-semibold text-[#2b2b2a]">{timeStr}</span>
-                  <span className="rounded-full bg-[#a2c037]/10 px-2.5 py-1 text-xs font-semibold text-[#4b7a1f]">
-                    {counterpart}
-                  </span>
+                  {b.isPrivate ? (
+                    <span className="rounded-full bg-[#fa8072]/15 px-2.5 py-1 text-xs font-semibold text-[#c65a4e]">
+                      Privada
+                    </span>
+                  ) : (
+                    <span className="rounded-full bg-[#a2c037]/10 px-2.5 py-1 text-xs font-semibold text-[#4b7a1f]">
+                      {counterpart}
+                    </span>
+                  )}
                 </div>
                 {b.notes && (
                   <div className="mt-2 rounded-lg bg-gray-50 px-3 py-2">

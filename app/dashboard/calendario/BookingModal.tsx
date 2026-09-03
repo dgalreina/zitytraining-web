@@ -478,7 +478,10 @@ export default function BookingModal({
               <div className="mb-3 flex justify-end">
                 <button
                   type="button"
-                  onClick={() => setNotes('')}
+                  onClick={() => {
+                    setNotes('');
+                    setView('form');
+                  }}
                   title="Borrar nota"
                   className="rounded-lg bg-red-50 px-3 py-2 text-red-600 hover:bg-red-100"
                 >

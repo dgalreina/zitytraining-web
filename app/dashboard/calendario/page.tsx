@@ -501,6 +501,13 @@ export default function CalendarioPage() {
         startTime: info.event.start.toISOString(),
         endTime: info.event.end.toISOString(),
       });
+      // Sin esto, el "raw" que lleva colgado el evento (con la hora vieja)
+      // se queda tal cual, y si reabres el modal para editar te sale la
+      // hora/día de antes de arrastrar, aunque el evento ya se vea movido.
+      const api = calendarRef.current?.getApi();
+      if (api) {
+        loadBookings(api.view.activeStart.toISOString(), api.view.activeEnd.toISOString());
+      }
       loadMonthDots(selectedDate);
     } catch (err: any) {
       alert(err.message || 'No se pudo mover la sesión');
@@ -857,10 +864,8 @@ export default function CalendarioPage() {
                 <div className="ziti-event-box">
                   <div className="ziti-event-time">{timeStr}</div>
                   <div className="ziti-event-name">{arg.event.title}</div>
-                  {isCancelled && (
-                    <span className="ziti-event-cancelled-label">
-                      {viewType === 'timeGridWeek' ? 'C' : 'Cancelada'}
-                    </span>
+                  {isCancelled && viewType !== 'timeGridWeek' && (
+                    <span className="ziti-event-cancelled-label">Cancelada</span>
                   )}
                   {raw?.notes && <div className="ziti-event-tooltip">{raw.notes}</div>}
                 </div>
