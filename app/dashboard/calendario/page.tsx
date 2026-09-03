@@ -465,7 +465,7 @@ export default function CalendarioPage() {
       const el = gridRowRef.current;
       if (!el) return;
       const top = el.getBoundingClientRect().top;
-      const BOTTOM_GAP = 16; // un poco de aire debajo de la última franja
+      const BOTTOM_GAP = 32; // aire debajo de la última franja, para que no roce el borde
       setTopOffset(top + BOTTOM_GAP);
     }
     recalcOffset();
