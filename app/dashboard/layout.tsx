@@ -128,7 +128,7 @@ export default function DashboardLayout({
   if (!ready) return null;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#f7f7f5] font-[family-name:var(--font-inter)]">
+    <div className="flex h-dvh overflow-hidden bg-[#f7f7f5] font-[family-name:var(--font-inter)]">
       {sidebarOpen && (
         <div
           onClick={() => setSidebarOpen(false)}

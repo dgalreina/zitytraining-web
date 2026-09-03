@@ -452,6 +452,14 @@ export default function CalendarioPage() {
   // window.innerHeight). Lo único que medimos en JS es cuánto ocupa lo que
   // hay encima del calendario, en vez de un número mágico fijo tipo "190px"
   // que se desincroniza en cuanto cambia algo arriba (saludo, filtros...).
+  //
+  // Ojo: mientras loadingLists es true se muestra "Cargando..." en vez del
+  // calendario (ver el guard más abajo), así que gridRowRef.current todavía
+  // no existe cuando roleReady se pone a true (se pone antes de que
+  // termine la carga). Sin loadingLists aquí, este efecto se quedaba
+  // midiendo "null" para siempre y el alto se quedaba pegado al 190px de
+  // repuesto, dejando un hueco vacío cuando el contenido real ya ocupaba
+  // menos que eso.
   useEffect(() => {
     function recalcOffset() {
       const el = gridRowRef.current;
@@ -463,7 +471,7 @@ export default function CalendarioPage() {
     recalcOffset();
     window.addEventListener('resize', recalcOffset);
     return () => window.removeEventListener('resize', recalcOffset);
-  }, [roleReady]);
+  }, [roleReady, loadingLists]);
 
   function handleMiniDateChange(date: Date | null) {
     if (!date) return;
