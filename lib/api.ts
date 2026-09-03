@@ -132,6 +132,39 @@ export async function rejectUser(token: string, id: string) {
   return handleResponse(res);
 }
 
+// --- Fichas de salud ---
+
+export async function createHealthForm(token: string, data: any) {
+  const res = await fetch(`${API_URL}/health-forms`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(res);
+}
+
+export async function getHealthFormByClient(token: string, clientId: string) {
+  const res = await fetch(`${API_URL}/health-forms/client/${clientId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res);
+}
+
+export async function updateHealthForm(token: string, id: string, data: any) {
+  const res = await fetch(`${API_URL}/health-forms/${id}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(res);
+}
+
 // --- Bookings ---
 
 export async function getBookings(

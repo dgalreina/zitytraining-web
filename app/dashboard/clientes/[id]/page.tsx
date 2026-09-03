@@ -223,6 +223,12 @@ export default function DetalleClientePage() {
             {t.label}
           </button>
         ))}
+        <Link
+          href={`/dashboard/clientes/${id}/ficha-salud`}
+          className="px-4 py-2.5 text-sm font-semibold text-[#868585] transition hover:text-[#2b2b2a]"
+        >
+          Ficha de salud
+        </Link>
       </div>
 
       <div className="h-[calc(100dvh-260px)] overflow-y-auto pr-1">

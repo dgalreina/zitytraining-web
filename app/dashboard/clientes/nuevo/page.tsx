@@ -40,12 +40,14 @@ export default function NuevoClientePage() {
     }
 
     try {
-      await createUserByAdmin(token, {
+      const created = await createUserByAdmin(token, {
         ...form,
         email: form.email || undefined,
         roles: ['client'],
       });
-      router.push('/dashboard/clientes');
+      // Tras crearlo, se pasa a rellenar la ficha de salud (se puede
+      // dejar a medias y completar luego desde la ficha del cliente).
+      router.push(`/dashboard/clientes/${created._id}/ficha-salud`);
     } catch (err: any) {
       setError(err.message || 'No se pudo crear el cliente');
     } finally {
