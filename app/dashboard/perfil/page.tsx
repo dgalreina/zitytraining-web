@@ -142,22 +142,13 @@ export default function PerfilPage() {
           </div>
 
           {!editing && (
-            <div className="flex items-center gap-2">
-              <Link
-                href="/dashboard/perfil/contrasena"
-                className="flex items-center gap-1.5 rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-semibold text-[#2b2b2a] hover:bg-gray-200"
-              >
-                <KeyRound size={13} />
-                Cambiar contraseña
-              </Link>
-              <button
-                onClick={() => setEditing(true)}
-                className="flex items-center gap-1.5 rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-semibold text-[#2b2b2a] hover:bg-gray-200"
-              >
-                <Pencil size={13} />
-                Editar
-              </button>
-            </div>
+            <button
+              onClick={() => setEditing(true)}
+              className="flex items-center gap-1.5 rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-semibold text-[#2b2b2a] hover:bg-gray-200"
+            >
+              <Pencil size={13} />
+              Editar
+            </button>
           )}
         </div>
 
@@ -241,7 +232,7 @@ export default function PerfilPage() {
                     title="Sin asignar (gris)"
                     disabled={!editing}
                     onClick={() => setForm({ ...form, color: null })}
-                    className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-dashed border-gray-300 transition disabled:cursor-not-allowed"
+                    className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-dashed border-gray-300 transition disabled:cursor-not-allowed disabled:opacity-40"
                     style={{ backgroundColor: DEFAULT_TRAINER_COLOR }}
                   >
                     <Check size={16} className="text-white" />
@@ -254,7 +245,7 @@ export default function PerfilPage() {
                     title={c.name}
                     disabled={!editing}
                     onClick={() => setForm({ ...form, color: c.value })}
-                    className="flex h-9 w-9 items-center justify-center rounded-full transition disabled:cursor-not-allowed"
+                    className="flex h-9 w-9 items-center justify-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-40"
                     style={{ backgroundColor: c.value }}
                   >
                     {form.color === c.value && <Check size={16} className="text-white" />}
@@ -289,6 +280,16 @@ export default function PerfilPage() {
             </div>
           )}
         </form>
+
+        <div className="mt-5 border-t border-gray-100 pt-4">
+          <Link
+            href="/dashboard/perfil/contrasena"
+            className="flex items-center gap-1.5 text-sm font-semibold text-[#868585] hover:text-[#2b2b2a]"
+          >
+            <KeyRound size={14} />
+            Cambiar contraseña
+          </Link>
+        </div>
       </div>
     </div>
   );
