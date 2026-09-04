@@ -21,12 +21,13 @@ import {
   getClientPurchases,
   getProgressByClient,
   createProgressEntry,
+  getPlans,
   assignPlan,
   assignPunctualPlan,
   changePlan,
   cancelPurchase,
 } from '@/lib/api';
-import { TRAINING_CATEGORIES, TRAINING_PLANS, TrainingPlan } from '@/lib/pricing';
+import { TRAINING_CATEGORIES } from '@/lib/pricing';
 
 type Tab = 'info' | 'progreso' | 'plan' | 'historial';
 
@@ -226,9 +227,10 @@ export default function DetalleClientePage() {
   const [progressSaving, setProgressSaving] = useState(false);
   const [progressError, setProgressError] = useState('');
   const [progressSaved, setProgressSaved] = useState(false);
+  const [plans, setPlans] = useState<any[]>([]);
   const [assignModalOpen, setAssignModalOpen] = useState(false);
   const [assignMode, setAssignMode] = useState<'new' | 'punctual' | 'change'>('new');
-  const [selectedPlan, setSelectedPlan] = useState<TrainingPlan | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<any | null>(null);
   const [assignStartDate, setAssignStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [assignEndDate, setAssignEndDate] = useState('');
   const [assignSaving, setAssignSaving] = useState(false);
@@ -275,6 +277,10 @@ export default function DetalleClientePage() {
     getProgressByClient(token, id)
       .then(setProgressEntries)
       .catch(() => setProgressEntries([]));
+
+    getPlans(token)
+      .then(setPlans)
+      .catch(() => setPlans([]));
   }, [id, router]);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -329,7 +335,7 @@ export default function DetalleClientePage() {
     setAssignModalOpen(true);
   }
 
-  function openAssignModal(plan: TrainingPlan) {
+  function openAssignModal(plan: any) {
     setSelectedPlan(plan);
     setAssignError('');
   }
@@ -353,7 +359,7 @@ export default function DetalleClientePage() {
       const categoryTitle = TRAINING_CATEGORIES.find((c) => c.id === selectedPlan.category)?.title;
       const payload = {
         client: id,
-        itemId: selectedPlan.id,
+        itemId: selectedPlan._id,
         itemLabel: `${selectedPlan.label} (${categoryTitle})`,
         price: selectedPlan.monthlyPrice,
         startDate: assignStartDate,
@@ -978,9 +984,9 @@ export default function DetalleClientePage() {
                   <div key={category.id}>
                     <h4 className="mb-2 text-sm font-bold text-[#2b2b2a]">{category.title}</h4>
                     <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                      {TRAINING_PLANS.filter((p) => p.category === category.id).map((plan) => (
+                      {plans.filter((p) => p.category === category.id).map((plan) => (
                         <button
-                          key={plan.id}
+                          key={plan._id}
                           onClick={() => openAssignModal(plan)}
                           className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2 text-left text-sm transition hover:border-[#6aa842] hover:bg-[#a2c037]/5"
                         >

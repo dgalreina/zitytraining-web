@@ -3,17 +3,11 @@
 import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Check, Clock, X } from 'lucide-react';
-import {
-  TRAINING_CATEGORIES,
-  TRAINING_PLANS,
-  REMOTE_SERVICES,
-  TrainingPlan,
-  RemoteService,
-} from '@/lib/pricing';
-import { createPurchase, createCheckoutSession, getMyPurchases } from '@/lib/api';
+import { TRAINING_CATEGORIES, REMOTE_SERVICES, RemoteService } from '@/lib/pricing';
+import { createPurchase, createCheckoutSession, getMyPurchases, getPlans } from '@/lib/api';
 
 type Tab = 'plan' | 'contratar' | 'historial';
-type Selection = { type: 'plan'; item: TrainingPlan } | { type: 'service'; item: RemoteService };
+type Selection = { type: 'plan'; item: any } | { type: 'service'; item: RemoteService };
 type PlanPaymentMode = 'monthly' | 'sessions';
 
 const tabs: { id: Tab; label: string }[] = [
@@ -51,6 +45,7 @@ export default function PagosPage() {
   const [selection, setSelection] = useState<Selection | null>(null);
   const [planPaymentMode, setPlanPaymentMode] = useState<PlanPaymentMode>('monthly');
   const [purchases, setPurchases] = useState<any[] | null>(null);
+  const [plans, setPlans] = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [banner, setBanner] = useState<{ type: 'success' | 'canceled'; message: string } | null>(null);
@@ -91,6 +86,13 @@ export default function PagosPage() {
     } else {
       loadPurchases();
     }
+
+    const token = localStorage.getItem('token');
+    if (token) {
+      getPlans(token)
+        .then(setPlans)
+        .catch(() => setPlans([]));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -122,7 +124,7 @@ export default function PagosPage() {
         selection.type === 'plan'
           ? {
               type: 'plan',
-              itemId: selection.item.id,
+              itemId: selection.item._id,
               itemLabel: `${selection.item.label} (${
                 TRAINING_CATEGORIES.find((c) => c.id === selection.item.category)?.title
               })`,
@@ -248,18 +250,8 @@ export default function PagosPage() {
                 <p className="mb-3 text-xs text-[#868585]">{category.description}</p>
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-                  {TRAINING_PLANS.filter((p) => p.category === category.id).map((plan) => (
-                    <div
-                      key={plan.id}
-                      className={`rounded-xl bg-white p-4 ${
-                        plan.featured ? 'border-2 border-[#6aa842]' : 'border border-gray-100'
-                      }`}
-                    >
-                      {plan.featured && (
-                        <span className="mb-2 inline-block rounded-md bg-[#a2c037]/15 px-2.5 py-1 text-xs font-semibold text-[#4b7a1f]">
-                          Más elegido
-                        </span>
-                      )}
+                  {plans.filter((p) => p.category === category.id).map((plan) => (
+                    <div key={plan._id} className="rounded-xl border border-gray-100 bg-white p-4">
                       <div className="mb-2 flex items-center gap-2">
                         <Clock size={17} className="text-[#4b7a1f]" />
                         <span className="text-sm font-semibold text-[#2b2b2a]">{plan.label}</span>
