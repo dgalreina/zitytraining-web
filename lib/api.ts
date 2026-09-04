@@ -331,3 +331,44 @@ export async function getBookingsByTrainers(
   });
   return handleResponse(res);
 }
+
+// --- Gestor de planes ---
+
+export async function getPlans(token: string) {
+  const res = await fetch(`${API_URL}/plans`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res);
+}
+
+export async function createPlan(token: string, data: any) {
+  const res = await fetch(`${API_URL}/plans`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(res);
+}
+
+export async function updatePlan(token: string, id: string, data: any) {
+  const res = await fetch(`${API_URL}/plans/${id}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(res);
+}
+
+export async function deletePlan(token: string, id: string) {
+  const res = await fetch(`${API_URL}/plans/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res);
+}

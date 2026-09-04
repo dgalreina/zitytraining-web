@@ -11,6 +11,7 @@ import {
   Dumbbell,
   BarChart3,
   Tag,
+  Tags,
   Settings,
   LogOut,
   Menu,
@@ -21,6 +22,7 @@ import { getAvatarGradient } from '@/lib/colors';
 const ADMIN_ONLY_PREFIXES = [
   '/dashboard/entrenadores',
   '/dashboard/estadisticas',
+  '/dashboard/gestor-planes',
 ];
 
 const ADMIN_OR_TRAINER_PREFIXES = ['/dashboard/clientes'];
@@ -122,6 +124,9 @@ export default function DashboardLayout({
       : []),
     ...(isAdmin
       ? [{ href: '/dashboard/entrenadores', label: 'Entrenadores', icon: Dumbbell }]
+      : []),
+    ...(isAdmin
+      ? [{ href: '/dashboard/gestor-planes', label: 'Planes', icon: Tags }]
       : []),
   ];
 
