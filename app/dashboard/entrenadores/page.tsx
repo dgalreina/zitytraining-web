@@ -3,26 +3,31 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Search, Plus, ShieldCheck, ChevronDown, Check } from 'lucide-react';
-import { getUsers } from '@/lib/api';
+import { Search, Plus, ShieldCheck, ChevronDown, Check, RotateCcw } from 'lucide-react';
+import { getUsers, updateUser } from '@/lib/api';
 import { DEFAULT_TRAINER_COLOR } from '@/lib/colors';
 
-type StatusFilter = 'all' | 'active' | 'inactive';
+type StatusFilter = 'all' | 'active' | 'inactive' | 'deleted';
 
+// "Eliminados" va aparte a propósito: no entra dentro de "Todos", solo
+// se ve si se elige explícitamente (como una papelera).
 const statusOptions: { value: StatusFilter; label: string }[] = [
   { value: 'all', label: 'Todos los estados' },
   { value: 'active', label: 'Activos' },
   { value: 'inactive', label: 'Inactivos' },
+  { value: 'deleted', label: 'Eliminados' },
 ];
 
 function statusBadge(status: string) {
   const styles: Record<string, string> = {
     active: 'bg-[#a2c037]/15 text-[#4b7a1f]',
     inactive: 'bg-gray-100 text-gray-600',
+    deleted: 'bg-red-100 text-red-700',
   };
   const labels: Record<string, string> = {
     active: 'Activo',
     inactive: 'Inactivo',
+    deleted: 'Eliminado',
   };
   return (
     <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${styles[status] || styles.inactive}`}>
@@ -85,6 +90,8 @@ function StatusFilterDropdown({
                 setOpen(false);
               }}
               className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition ${
+                option.value === 'deleted' ? 'mt-1 border-t border-gray-100 pt-2' : ''
+              } ${
                 option.value === value
                   ? 'bg-[#a2c037]/10 font-semibold text-[#4b7a1f]'
                   : 'text-[#2b2b2a] hover:bg-gray-50'
@@ -102,9 +109,12 @@ function StatusFilterDropdown({
 
 export default function EntrenadoresPage() {
   const [trainers, setTrainers] = useState<any[]>([]);
+  const [deletedTrainers, setDeletedTrainers] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [loading, setLoading] = useState(true);
+  const [loadingDeleted, setLoadingDeleted] = useState(false);
+  const [restoringId, setRestoringId] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -121,16 +131,51 @@ export default function EntrenadoresPage() {
       .finally(() => setLoading(false));
   }, [router]);
 
+  // La papelera se carga aparte y solo cuando hace falta: son entrenadores
+  // que el listado normal (findAll) excluye a propósito.
+  useEffect(() => {
+    if (statusFilter !== 'deleted') return;
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    setLoadingDeleted(true);
+    getUsers(token, 'deleted')
+      .then((users) => setDeletedTrainers(users.filter((u: any) => u.roles?.includes('trainer'))))
+      .finally(() => setLoadingDeleted(false));
+  }, [statusFilter]);
+
+  async function handleRestore(e: React.MouseEvent, trainerId: string) {
+    e.stopPropagation();
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    setRestoringId(trainerId);
+    try {
+      const updated = await updateUser(token, trainerId, { status: 'active' });
+      setDeletedTrainers((prev) => prev.filter((t) => t._id !== trainerId));
+      // Para que aparezca ya mismo en Todos/Activos sin salir y volver a entrar.
+      setTrainers((prev) => [...prev.filter((t) => t._id !== trainerId), updated]);
+    } catch {
+      // Silencioso a propósito: si falla, el entrenador simplemente sigue
+      // apareciendo en la papelera para reintentar.
+    } finally {
+      setRestoringId(null);
+    }
+  }
+
+  const isTrashView = statusFilter === 'deleted';
+  const sourceTrainers = isTrashView ? deletedTrainers : trainers;
+  const isLoadingList = isTrashView ? loadingDeleted : loading;
+
   const filtered = useMemo(() => {
-    return trainers.filter((t) => {
-      const matchesStatus = statusFilter === 'all' || t.status === statusFilter;
+    return sourceTrainers.filter((t) => {
+      const matchesStatus = isTrashView || statusFilter === 'all' || t.status === statusFilter;
       const fullName = `${t.firstName} ${t.lastName}`.toLowerCase();
       const matchesSearch =
         fullName.includes(search.toLowerCase()) ||
         t.email?.toLowerCase().includes(search.toLowerCase());
       return matchesStatus && matchesSearch;
     });
-  }, [trainers, search, statusFilter]);
+  }, [sourceTrainers, search, statusFilter, isTrashView]);
 
   return (
     <div>
@@ -166,10 +211,12 @@ export default function EntrenadoresPage() {
       </div>
 
       <div className="hidden overflow-hidden rounded-xl bg-white md:block">
-        {loading ? (
+        {isLoadingList ? (
           <p className="p-6 text-sm text-gray-400">Cargando...</p>
         ) : filtered.length === 0 ? (
-          <p className="p-6 text-sm text-gray-400">No se encontraron entrenadores.</p>
+          <p className="p-6 text-sm text-gray-400">
+            {isTrashView ? 'No hay entrenadores eliminados.' : 'No se encontraron entrenadores.'}
+          </p>
         ) : (
           <table className="w-full text-left text-sm">
             <thead>
@@ -179,6 +226,7 @@ export default function EntrenadoresPage() {
                 <th className="px-5 py-3">Teléfono</th>
                 <th className="px-5 py-3">Rol</th>
                 <th className="px-5 py-3">Estado</th>
+                {isTrashView && <th className="px-5 py-3"></th>}
               </tr>
             </thead>
             <tbody>
@@ -207,6 +255,18 @@ export default function EntrenadoresPage() {
                     )}
                   </td>
                   <td className="px-5 py-3">{statusBadge(trainer.status)}</td>
+                  {isTrashView && (
+                    <td className="px-5 py-3 text-right">
+                      <button
+                        onClick={(e) => handleRestore(e, trainer._id)}
+                        disabled={restoringId === trainer._id}
+                        className="flex items-center gap-1.5 rounded-lg bg-[#a2c037]/15 px-3 py-1.5 text-xs font-semibold text-[#4b7a1f] hover:bg-[#a2c037]/25 disabled:opacity-60"
+                      >
+                        <RotateCcw size={13} />
+                        {restoringId === trainer._id ? 'Restaurando...' : 'Restaurar'}
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -216,10 +276,12 @@ export default function EntrenadoresPage() {
 
       {/* Tarjetas para móvil */}
       <div className="md:hidden">
-        {loading ? (
+        {isLoadingList ? (
           <p className="p-4 text-sm text-gray-400">Cargando...</p>
         ) : filtered.length === 0 ? (
-          <p className="p-4 text-sm text-gray-400">No se encontraron entrenadores.</p>
+          <p className="p-4 text-sm text-gray-400">
+            {isTrashView ? 'No hay entrenadores eliminados.' : 'No se encontraron entrenadores.'}
+          </p>
         ) : (
           <div className="flex flex-col gap-3">
             {filtered.map((trainer) => (
@@ -247,6 +309,16 @@ export default function EntrenadoresPage() {
                     <span>Entrenador</span>
                   )}
                 </div>
+                {isTrashView && (
+                  <button
+                    onClick={(e) => handleRestore(e, trainer._id)}
+                    disabled={restoringId === trainer._id}
+                    className="mt-3 flex items-center gap-1.5 rounded-lg bg-[#a2c037]/15 px-3 py-1.5 text-xs font-semibold text-[#4b7a1f] hover:bg-[#a2c037]/25 disabled:opacity-60"
+                  >
+                    <RotateCcw size={13} />
+                    {restoringId === trainer._id ? 'Restaurando...' : 'Restaurar'}
+                  </button>
+                )}
               </div>
             ))}
           </div>

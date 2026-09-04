@@ -162,8 +162,11 @@ export default function ClientesPage() {
     if (!token) return;
     setRestoringId(clientId);
     try {
-      await updateUser(token, clientId, { status: 'active' });
+      const updated = await updateUser(token, clientId, { status: 'active' });
       setDeletedClients((prev) => prev.filter((c) => c._id !== clientId));
+      // Para que aparezca ya mismo en Todos/Activos sin tener que salir
+      // y volver a entrar a recargar la lista desde cero.
+      setClients((prev) => [...prev.filter((c) => c._id !== clientId), updated]);
     } catch {
       // Silencioso a propósito: si falla, el cliente simplemente sigue
       // apareciendo en la papelera para reintentar.
