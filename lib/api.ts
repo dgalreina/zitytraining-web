@@ -116,22 +116,6 @@ export async function updateUser(token: string, id: string, data: any) {
   return handleResponse(res);
 }
 
-export async function approveUser(token: string, id: string) {
-  const res = await fetch(`${API_URL}/users/${id}/approve`, {
-    method: 'PATCH',
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  return handleResponse(res);
-}
-
-export async function rejectUser(token: string, id: string) {
-  const res = await fetch(`${API_URL}/users/${id}/reject`, {
-    method: 'PATCH',
-    headers: { Authorization: `Bearer ${token}` },
-  });
-  return handleResponse(res);
-}
-
 // --- Progreso (peso, % grasa, etc.) ---
 
 export async function createProgressEntry(token: string, data: any) {

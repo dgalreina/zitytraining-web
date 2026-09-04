@@ -17,8 +17,6 @@ import DateOfBirthPicker from '@/components/DateOfBirthPicker';
 import {
   getUser,
   updateUser,
-  approveUser,
-  rejectUser,
   getClientPurchases,
   getProgressByClient,
   createProgressEntry,
@@ -65,18 +63,35 @@ const labelClass = 'mb-1 block text-xs font-semibold text-[#868585]';
 function statusBadge(status: string) {
   const styles: Record<string, string> = {
     active: 'bg-[#a2c037]/15 text-[#4b7a1f]',
-    pending: 'bg-amber-100 text-amber-700',
-    rejected: 'bg-red-100 text-red-700',
+    inactive: 'bg-gray-100 text-gray-600',
   };
   const labels: Record<string, string> = {
     active: 'Activo',
-    pending: 'Pendiente',
-    rejected: 'Rechazado',
+    inactive: 'Inactivo',
   };
   return (
-    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${styles[status]}`}>
-      {labels[status]}
+    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${styles[status] || styles.inactive}`}>
+      {labels[status] || status}
     </span>
+  );
+}
+
+function Switch({ checked, onChange }: { checked: boolean; onChange: () => void }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      onClick={onChange}
+      className="relative h-6 w-11 shrink-0 rounded-full transition-colors duration-300"
+      style={{ backgroundColor: checked ? '#6aa842' : '#d1d5db' }}
+    >
+      <span
+        className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all duration-300 ${
+          checked ? 'left-[22px]' : 'left-0.5'
+        }`}
+      />
+    </button>
   );
 }
 
@@ -385,6 +400,10 @@ export default function DetalleClientePage() {
     setEditing(false);
   }
 
+  function handleToggleStatus() {
+    setForm({ ...form, status: form.status === 'active' ? 'inactive' : 'active' });
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!isAdmin) return;
@@ -395,10 +414,9 @@ export default function DetalleClientePage() {
     if (!token) return;
 
     try {
-      const { status, ...data } = form;
       const updated = await updateUser(token, id, {
-        ...data,
-        email: data.email || undefined,
+        ...form,
+        email: form.email || undefined,
       });
       const newData = {
         firstName: updated.firstName,
@@ -417,24 +435,6 @@ export default function DetalleClientePage() {
     } finally {
       setSaving(false);
     }
-  }
-
-  async function handleApprove() {
-    if (!isAdmin) return;
-    const token = localStorage.getItem('token');
-    if (!token) return;
-    await approveUser(token, id);
-    setForm({ ...form, status: 'active' });
-    setOriginal({ ...original, status: 'active' });
-  }
-
-  async function handleReject() {
-    if (!isAdmin) return;
-    const token = localStorage.getItem('token');
-    if (!token) return;
-    await rejectUser(token, id);
-    setForm({ ...form, status: 'rejected' });
-    setOriginal({ ...original, status: 'rejected' });
   }
 
   if (loading) return <p className="text-sm text-gray-400">Cargando...</p>;
@@ -462,25 +462,6 @@ export default function DetalleClientePage() {
         </h2>
         <div className="flex flex-wrap items-center gap-2">
           {statusBadge(form.status)}
-
-          {isAdmin && form.status === 'pending' && (
-            <>
-              <button
-                onClick={handleApprove}
-                title="Aprobar"
-                className="rounded-lg bg-[#a2c037]/15 p-1.5 text-[#4b7a1f] hover:bg-[#a2c037]/25"
-              >
-                <Check size={16} />
-              </button>
-              <button
-                onClick={handleReject}
-                title="Rechazar"
-                className="rounded-lg bg-red-50 p-1.5 text-red-600 hover:bg-red-100"
-              >
-                <X size={16} />
-              </button>
-            </>
-          )}
         </div>
       </div>
 
@@ -587,6 +568,22 @@ export default function DetalleClientePage() {
                   className={inputClass}
                 />
               </div>
+
+              {isAdmin && editing && (
+                <div className="flex items-center justify-between rounded-lg border border-gray-200 px-4 py-3">
+                  <div>
+                    <p className="text-sm font-semibold text-[#2b2b2a]">
+                      {form.status === 'active' ? 'Cliente activo' : 'Cliente inhabilitado'}
+                    </p>
+                    <p className="text-xs text-[#868585]">
+                      {form.status === 'active'
+                        ? 'El cliente aparece como activo en el gimnasio.'
+                        : 'El cliente está inhabilitado.'}
+                    </p>
+                  </div>
+                  <Switch checked={form.status === 'active'} onChange={handleToggleStatus} />
+                </div>
+              )}
 
               {error && <p className="text-sm font-medium text-red-600">{error}</p>}
 

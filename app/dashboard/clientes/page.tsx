@@ -6,13 +6,12 @@ import Link from 'next/link';
 import { Search, Plus, ChevronDown, Check } from 'lucide-react';
 import { getUsers, getActiveClients } from '@/lib/api';
 
-type StatusFilter = 'all' | 'pending' | 'active' | 'rejected';
+type StatusFilter = 'all' | 'active' | 'inactive';
 
 const statusOptions: { value: StatusFilter; label: string }[] = [
-  { value: 'all', label: 'Todos los estados' },
-  { value: 'pending', label: 'Pendientes' },
+  { value: 'all', label: 'Todos' },
   { value: 'active', label: 'Activos' },
-  { value: 'rejected', label: 'Rechazados' },
+  { value: 'inactive', label: 'Inactivos' },
 ];
 
 function calculateAge(dateOfBirth: string) {
@@ -24,17 +23,15 @@ function calculateAge(dateOfBirth: string) {
 function statusBadge(status: string) {
   const styles: Record<string, string> = {
     active: 'bg-[#a2c037]/15 text-[#4b7a1f]',
-    pending: 'bg-amber-100 text-amber-700',
-    rejected: 'bg-red-100 text-red-700',
+    inactive: 'bg-gray-100 text-gray-600',
   };
   const labels: Record<string, string> = {
     active: 'Activo',
-    pending: 'Pendiente',
-    rejected: 'Rechazado',
+    inactive: 'Inactivo',
   };
   return (
-    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${styles[status]}`}>
-      {labels[status]}
+    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${styles[status] || styles.inactive}`}>
+      {labels[status] || status}
     </span>
   );
 }
