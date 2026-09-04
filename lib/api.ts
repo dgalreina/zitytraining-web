@@ -37,8 +37,9 @@ export async function login(email: string, password: string) {
   return res.json();
 }
 
-export async function getUsers(token: string) {
-  const res = await fetch(`${API_URL}/users`, {
+export async function getUsers(token: string, status?: string) {
+  const query = status ? `?status=${status}` : '';
+  const res = await fetch(`${API_URL}/users${query}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return handleResponse(res);
@@ -112,6 +113,14 @@ export async function updateUser(token: string, id: string, data: any) {
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(data),
+  });
+  return handleResponse(res);
+}
+
+export async function deleteUser(token: string, id: string) {
+  const res = await fetch(`${API_URL}/users/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
   });
   return handleResponse(res);
 }

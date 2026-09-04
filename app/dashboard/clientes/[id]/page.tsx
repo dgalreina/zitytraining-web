@@ -12,11 +12,12 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { ArrowLeft, Check, X, Pencil, Clock, Ban } from 'lucide-react';
+import { ArrowLeft, Check, X, Pencil, Clock, Ban, Trash2 } from 'lucide-react';
 import DateOfBirthPicker from '@/components/DateOfBirthPicker';
 import {
   getUser,
   updateUser,
+  deleteUser,
   getClientPurchases,
   getProgressByClient,
   createProgressEntry,
@@ -64,10 +65,12 @@ function statusBadge(status: string) {
   const styles: Record<string, string> = {
     active: 'bg-[#a2c037]/15 text-[#4b7a1f]',
     inactive: 'bg-gray-100 text-gray-600',
+    deleted: 'bg-red-100 text-red-700',
   };
   const labels: Record<string, string> = {
     active: 'Activo',
     inactive: 'Inactivo',
+    deleted: 'Eliminado',
   };
   return (
     <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${styles[status] || styles.inactive}`}>
@@ -231,6 +234,8 @@ export default function DetalleClientePage() {
   const [assignSaving, setAssignSaving] = useState(false);
   const [assignError, setAssignError] = useState('');
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
@@ -402,6 +407,21 @@ export default function DetalleClientePage() {
 
   function handleToggleStatus() {
     setForm({ ...form, status: form.status === 'active' ? 'inactive' : 'active' });
+  }
+
+  async function handleDelete() {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    setDeleting(true);
+    try {
+      await deleteUser(token, id);
+      router.push('/dashboard/clientes');
+    } catch (err: any) {
+      setError(err.message || 'No se pudo eliminar el cliente');
+      setConfirmDeleteOpen(false);
+    } finally {
+      setDeleting(false);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -605,6 +625,17 @@ export default function DetalleClientePage() {
                     Cancelar
                   </button>
                 </div>
+              )}
+
+              {isAdmin && editing && (
+                <button
+                  type="button"
+                  onClick={() => setConfirmDeleteOpen(true)}
+                  className="flex items-center justify-center gap-1.5 self-start text-xs font-semibold text-red-600 hover:underline"
+                >
+                  <Trash2 size={13} />
+                  Eliminar cliente
+                </button>
               )}
             </form>
           </div>
@@ -1034,6 +1065,40 @@ export default function DetalleClientePage() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {confirmDeleteOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
+            <div className="mb-3 flex items-center gap-2 text-red-600">
+              <Trash2 size={20} />
+              <h3 className="font-[family-name:var(--font-work-sans)] text-base font-bold text-[#2b2b2a]">
+                Eliminar cliente
+              </h3>
+            </div>
+            <p className="mb-5 text-sm text-[#868585]">
+              {form.firstName} dejará de aparecer en la lista de clientes. Su historial de
+              planes y pagos no se borra, se queda guardado.
+            </p>
+            {error && <p className="mb-3 text-sm font-medium text-red-600">{error}</p>}
+            <div className="flex gap-3">
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="flex-1 rounded-lg bg-red-600 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+              >
+                {deleting ? 'Eliminando...' : 'Eliminar'}
+              </button>
+              <button
+                onClick={() => setConfirmDeleteOpen(false)}
+                disabled={deleting}
+                className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-semibold text-[#2b2b2a] hover:bg-gray-200"
+              >
+                Cancelar
+              </button>
+            </div>
           </div>
         </div>
       )}
