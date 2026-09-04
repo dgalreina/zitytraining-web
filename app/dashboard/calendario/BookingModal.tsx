@@ -67,7 +67,11 @@ export default function BookingModal({
   const [clientSearch, setClientSearch] = useState('');
   const [notes, setNotes] = useState('');
   const [durationOption, setDurationOption] = useState<DurationOption>('60');
-  const [customMinutes, setCustomMinutes] = useState(60);
+  // Como texto, no numero: un input numerico controlado no deja vaciar
+  // del todo el campo (React lo fuerza de vuelta a "0" antes del
+  // siguiente tecleo), lo que impedia escribir p.ej. "70" sin que
+  // quedara "070". Se convierte a numero solo donde hace falta.
+  const [customMinutes, setCustomMinutes] = useState('60');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [view, setView] = useState<ModalView>('form');
@@ -98,7 +102,7 @@ export default function BookingModal({
         setDurationOption('60');
       } else {
         setDurationOption('custom');
-        setCustomMinutes(diff);
+        setCustomMinutes(String(diff));
       }
     } else {
       // Preseleccionamos tu propio usuario si eres entrenador, o el primero
@@ -108,7 +112,7 @@ export default function BookingModal({
       setSelectedClientIds([]);
       setNotes('');
       setDurationOption('60');
-      setCustomMinutes(60);
+      setCustomMinutes('60');
       setStatus('active');
       setIsPrivate(false);
     }
@@ -125,7 +129,7 @@ export default function BookingModal({
   function getEffectiveDurationMinutes() {
     if (durationOption === '40') return 40;
     if (durationOption === '60') return 60;
-    return customMinutes;
+    return Number(customMinutes) || 0;
   }
 
   function handleStartTimeChange(date: Date | null) {
@@ -368,12 +372,14 @@ export default function BookingModal({
                   Minutos
                 </label>
                 <input
-                  type="number"
-                  min={5}
-                  max={240}
-                  step={5}
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   value={customMinutes}
-                  onChange={(e) => setCustomMinutes(Number(e.target.value))}
+                  onChange={(e) => {
+                    const digits = e.target.value.replace(/\D/g, '');
+                    setCustomMinutes(digits.replace(/^0+(?=\d)/, ''));
+                  }}
                   className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#6aa842] focus:outline-none"
                 />
               </div>

@@ -366,8 +366,12 @@ export default function DetalleClientePage() {
     if (!token) return;
 
     try {
-      const updated = await cancelPurchase(token, purchaseId);
-      setPurchases((prev) => (prev || []).map((p) => (p._id === purchaseId ? updated : p)));
+      await cancelPurchase(token, purchaseId);
+      // Cancelar un plan puntual retoma el que hubiera pausado, y el
+      // registro que vuelve trae el autor sin popular; recargamos del
+      // todo en vez de solo sustituir este, para reflejar ambas cosas.
+      const refreshed = await getClientPurchases(token, id);
+      setPurchases(refreshed);
     } catch (err: any) {
       alert(err.message || 'No se pudo parar el plan');
     } finally {
@@ -983,7 +987,7 @@ export default function DetalleClientePage() {
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
                     <label className="mb-1 block text-xs font-semibold text-[#868585]">
                       Fecha de inicio
