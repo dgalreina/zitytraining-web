@@ -12,11 +12,22 @@ const labelClass = 'mb-1 block text-xs font-semibold text-[#868585]';
 
 const emptyForm = {
   category: 'personal' as TrainingCategory,
-  label: '',
+  sessionsPerWeek: '',
+  durationMinutes: '',
   monthlyPrice: '',
-  sessionPrice: '',
-  sessionCount: '',
 };
+
+// Igual que en el backend (plans.service.ts): la vista previa del
+// precio por sesión y las sesiones/mes se calcula igual, para que se
+// vea antes de guardar.
+function computePreview(sessionsPerWeek: string, monthlyPrice: string) {
+  const weeks = Number(sessionsPerWeek);
+  const price = Number(monthlyPrice);
+  if (!weeks || isNaN(price)) return null;
+  const sessionCount = weeks * 4;
+  const sessionPrice = Math.round((price / sessionCount) * 100) / 100;
+  return { sessionCount, sessionPrice };
+}
 
 export default function GestorPlanesPage() {
   const [plans, setPlans] = useState<any[] | null>(null);
@@ -56,10 +67,9 @@ export default function GestorPlanesPage() {
     setEditingId(plan._id);
     setForm({
       category: plan.category,
-      label: plan.label,
+      sessionsPerWeek: String(plan.sessionsPerWeek),
+      durationMinutes: String(plan.durationMinutes),
       monthlyPrice: String(plan.monthlyPrice),
-      sessionPrice: String(plan.sessionPrice),
-      sessionCount: String(plan.sessionCount),
     });
     setFormError('');
     setModalOpen(true);
@@ -74,18 +84,17 @@ export default function GestorPlanesPage() {
 
     const payload = {
       category: form.category,
-      label: form.label,
+      sessionsPerWeek: Number(form.sessionsPerWeek),
+      durationMinutes: Number(form.durationMinutes),
       monthlyPrice: Number(form.monthlyPrice),
-      sessionPrice: Number(form.sessionPrice),
-      sessionCount: Number(form.sessionCount),
     };
 
-    if (!payload.label.trim()) {
-      setFormError('Ponle un nombre al plan');
-      return;
-    }
-    if ([payload.monthlyPrice, payload.sessionPrice, payload.sessionCount].some((n) => isNaN(n))) {
-      setFormError('Revisa los precios y el número de sesiones');
+    if (
+      isNaN(payload.sessionsPerWeek) || payload.sessionsPerWeek < 1 ||
+      isNaN(payload.durationMinutes) || payload.durationMinutes < 1 ||
+      isNaN(payload.monthlyPrice) || payload.monthlyPrice < 0
+    ) {
+      setFormError('Revisa las sesiones/semana, los minutos y el precio mensual');
       return;
     }
 
@@ -235,51 +244,49 @@ export default function GestorPlanesPage() {
                 </div>
               </div>
 
-              <div>
-                <label className={labelClass}>Nombre del plan</label>
-                <input
-                  value={form.label}
-                  onChange={(e) => setForm({ ...form, label: e.target.value })}
-                  placeholder="ej. 3 días/sem · 40'"
-                  className={inputClass}
-                />
-              </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className={labelClass}>Precio mensual (€)</label>
+                  <label className={labelClass}>Sesiones/semana</label>
                   <input
                     type="number"
-                    min={0}
-                    step="0.01"
-                    value={form.monthlyPrice}
-                    onChange={(e) => setForm({ ...form, monthlyPrice: e.target.value })}
+                    min={1}
+                    value={form.sessionsPerWeek}
+                    onChange={(e) => setForm({ ...form, sessionsPerWeek: e.target.value })}
                     className={inputClass}
                   />
                 </div>
                 <div>
-                  <label className={labelClass}>Precio por sesión (€)</label>
+                  <label className={labelClass}>Minutos por sesión</label>
                   <input
                     type="number"
-                    min={0}
-                    step="0.01"
-                    value={form.sessionPrice}
-                    onChange={(e) => setForm({ ...form, sessionPrice: e.target.value })}
+                    min={1}
+                    value={form.durationMinutes}
+                    onChange={(e) => setForm({ ...form, durationMinutes: e.target.value })}
                     className={inputClass}
                   />
                 </div>
               </div>
 
               <div>
-                <label className={labelClass}>Sesiones al mes</label>
+                <label className={labelClass}>Precio mensual (€)</label>
                 <input
                   type="number"
-                  min={1}
-                  value={form.sessionCount}
-                  onChange={(e) => setForm({ ...form, sessionCount: e.target.value })}
+                  min={0}
+                  step="0.01"
+                  value={form.monthlyPrice}
+                  onChange={(e) => setForm({ ...form, monthlyPrice: e.target.value })}
                   className={inputClass}
                 />
               </div>
+
+              {(() => {
+                const preview = computePreview(form.sessionsPerWeek, form.monthlyPrice);
+                return preview ? (
+                  <p className="text-xs text-[#868585]">
+                    {preview.sessionPrice}€/sesión · {preview.sessionCount} sesiones/mes
+                  </p>
+                ) : null;
+              })()}
 
               {formError && <p className="text-sm font-medium text-red-600">{formError}</p>}
 
