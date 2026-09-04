@@ -145,7 +145,7 @@ export default function GestorPlanesPage() {
       {plans === null ? (
         <p className="text-sm text-gray-400">Cargando...</p>
       ) : (
-        <div className="flex flex-col gap-4">
+        <div className="flex max-h-[75vh] flex-col gap-4 overflow-y-auto pr-1">
           {TRAINING_CATEGORIES.map((category) => (
             <div key={category.id} className="rounded-xl bg-white p-6">
               <div className="mb-4 flex items-center justify-between">

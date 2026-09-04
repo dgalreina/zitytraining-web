@@ -1014,10 +1014,10 @@ export default function DetalleClientePage() {
                   </p>
                   <p className="mt-1 text-xs text-[#868585]">
                     {assignMode === 'punctual'
-                      ? 'Plan puntual: se paga en mano. Pausa el plan activo actual mientras dura, y lo retoma solo al llegar la fecha de fin.'
+                      ? 'Plan puntual: pausa el plan activo actual mientras dura, y lo retoma solo al llegar la fecha de fin.'
                       : assignMode === 'change'
-                        ? 'Cambiar plan: se paga en mano. Sustituye el plan activo actual de forma definitiva, no se retoma.'
-                        : 'Suscripción: se paga en mano, sigue activa hasta que se pare.'}
+                        ? 'Cambiar plan: sustituye el plan activo actual de forma definitiva, no se retoma.'
+                        : 'Suscripción: sigue activa hasta que se pare.'}
                   </p>
                 </div>
 
