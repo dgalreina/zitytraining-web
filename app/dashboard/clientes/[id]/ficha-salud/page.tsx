@@ -286,7 +286,7 @@ export default function FichaSaludPage() {
         Volver al cliente
       </Link>
 
-      <div className="rounded-xl bg-white p-6">
+      <div className="max-h-[75vh] overflow-y-auto rounded-xl bg-white p-6">
         <div className="mb-1 flex items-center justify-between">
           <h2 className="font-[family-name:var(--font-work-sans)] text-lg font-bold text-[#2b2b2a]">
             Ficha de salud

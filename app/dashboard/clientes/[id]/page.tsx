@@ -916,7 +916,7 @@ export default function DetalleClientePage() {
           }}
         >
           <div
-            className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white p-6 shadow-xl"
+            className="max-h-[85vh] w-full max-w-lg overflow-x-hidden overflow-y-auto rounded-xl bg-white p-6 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mb-4 flex items-center justify-between">
@@ -988,7 +988,7 @@ export default function DetalleClientePage() {
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div>
+                  <div className="min-w-0">
                     <label className="mb-1 block text-xs font-semibold text-[#868585]">
                       Fecha de inicio
                     </label>
@@ -996,11 +996,11 @@ export default function DetalleClientePage() {
                       type="date"
                       value={assignStartDate}
                       onChange={(e) => setAssignStartDate(e.target.value)}
-                      className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none focus:ring-2 focus:ring-[#a2c037]/20"
+                      className="w-full min-w-0 rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none focus:ring-2 focus:ring-[#a2c037]/20"
                     />
                   </div>
                   {assignMode === 'punctual' && (
-                    <div>
+                    <div className="min-w-0">
                       <label className="mb-1 block text-xs font-semibold text-[#868585]">
                         Fecha de fin
                       </label>
@@ -1009,7 +1009,7 @@ export default function DetalleClientePage() {
                         value={assignEndDate}
                         min={assignStartDate}
                         onChange={(e) => setAssignEndDate(e.target.value)}
-                        className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none focus:ring-2 focus:ring-[#a2c037]/20"
+                        className="w-full min-w-0 rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none focus:ring-2 focus:ring-[#a2c037]/20"
                       />
                     </div>
                   )}
