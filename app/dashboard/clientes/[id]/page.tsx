@@ -296,23 +296,23 @@ export default function DetalleClientePage() {
         </div>
       </div>
 
-      <div className="mb-4 flex gap-1 border-b border-gray-200">
-        <button onClick={() => setTab('info')} className={tabButtonClass(tab === 'info')}>
+      <div className="mb-4 flex gap-1 overflow-x-auto border-b border-gray-200 scrollbar-none">
+        <button onClick={() => setTab('info')} className={`shrink-0 whitespace-nowrap ${tabButtonClass(tab === 'info')}`}>
           Información
         </button>
         <Link
           href={`/dashboard/clientes/${id}/ficha-salud`}
-          className="px-4 py-2.5 text-sm font-semibold text-[#868585] transition hover:text-[#2b2b2a]"
+          className="shrink-0 whitespace-nowrap px-4 py-2.5 text-sm font-semibold text-[#868585] transition hover:text-[#2b2b2a]"
         >
           Ficha de salud
         </Link>
-        <button onClick={() => setTab('progreso')} className={tabButtonClass(tab === 'progreso')}>
+        <button onClick={() => setTab('progreso')} className={`shrink-0 whitespace-nowrap ${tabButtonClass(tab === 'progreso')}`}>
           Progreso
         </button>
-        <button onClick={() => setTab('plan')} className={tabButtonClass(tab === 'plan')}>
+        <button onClick={() => setTab('plan')} className={`shrink-0 whitespace-nowrap ${tabButtonClass(tab === 'plan')}`}>
           Plan activo
         </button>
-        <button onClick={() => setTab('historial')} className={tabButtonClass(tab === 'historial')}>
+        <button onClick={() => setTab('historial')} className={`shrink-0 whitespace-nowrap ${tabButtonClass(tab === 'historial')}`}>
           Historial
         </button>
       </div>
