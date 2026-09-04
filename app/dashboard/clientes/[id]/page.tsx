@@ -90,6 +90,86 @@ function formatDateTime(date: string | Date) {
   });
 }
 
+function formatDateTimeShort(date: string | Date) {
+  const d = new Date(date);
+  const dateStr = d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+  const timeStr = d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+  return `${dateStr} · ${timeStr}`;
+}
+
+const FALLBACK_ACTOR_COLOR = '#868585'; // igual que en el calendario, para entrenadores/clientes sin color propio
+
+function actorName(userRef: any, fallback: string) {
+  return userRef?.firstName ? `${userRef.firstName} ${userRef.lastName}` : fallback;
+}
+
+function actorColor(userRef: any) {
+  return userRef?.color || FALLBACK_ACTOR_COLOR;
+}
+
+// Convierte cada compra en 1 o 2 eventos: cuando se contrato y, si
+// aplica, cuando/por que acabo (cancelada, cambiada por otra, o
+// caducada sola si era un plan puntual). Cada evento lleva fecha,
+// concepto (nombre del plan + accion) y autor (con su color, como en
+// el calendario) por separado, para pintarlos en columnas.
+function buildHistoryEvents(purchases: any[], clientName: string) {
+  const events: {
+    id: string;
+    date: Date;
+    itemLabel: string;
+    action: string;
+    author: string;
+    authorColor: string;
+  }[] = [];
+
+  for (const p of purchases) {
+    const creator = actorName(p.createdBy, p.assignedInPerson ? 'el equipo' : `${clientName} (cliente)`);
+    events.push({
+      id: `${p._id}-created`,
+      date: new Date(p.createdAt),
+      itemLabel: p.itemLabel,
+      action: 'contratado',
+      author: creator,
+      authorColor: actorColor(p.createdBy),
+    });
+
+    if (p.endedAt) {
+      const ender = actorName(p.endedBy, '');
+      if (p.endReason === 'changed') {
+        events.push({
+          id: `${p._id}-ended`,
+          date: new Date(p.endedAt),
+          itemLabel: p.itemLabel,
+          action: `cambiado a "${p.replacedByLabel}"`,
+          author: ender,
+          authorColor: actorColor(p.endedBy),
+        });
+      } else if (p.endReason === 'cancelled') {
+        events.push({
+          id: `${p._id}-ended`,
+          date: new Date(p.endedAt),
+          itemLabel: p.itemLabel,
+          action: 'cancelado',
+          author: ender,
+          authorColor: actorColor(p.endedBy),
+        });
+      } else if (p.scheduledEndDate) {
+        // Plan puntual que llego solo a su fecha de fin, sin que nadie lo parara a mano.
+        events.push({
+          id: `${p._id}-ended`,
+          date: new Date(p.endedAt),
+          itemLabel: p.itemLabel,
+          action: 'finalizado (fin de plan puntual)',
+          author: '',
+          authorColor: FALLBACK_ACTOR_COLOR,
+        });
+      }
+    }
+  }
+
+  return events.sort((a, b) => b.date.getTime() - a.date.getTime());
+}
+
 function purchaseStatusBadge(status: string) {
   const styles: Record<string, string> = {
     pending: 'bg-amber-100 text-amber-700',
@@ -791,39 +871,32 @@ export default function DetalleClientePage() {
         )}
 
         {tab === 'historial' && (
-          <div className="overflow-hidden rounded-xl bg-white">
+          <div className="rounded-xl bg-white p-6">
             {purchases === null ? (
-              <p className="p-6 text-sm text-gray-400">Cargando...</p>
+              <p className="text-sm text-gray-400">Cargando...</p>
             ) : purchases.length === 0 ? (
-              <p className="p-6 text-sm text-gray-400">Todavía no hay pagos registrados.</p>
+              <p className="text-sm text-gray-400">Todavía no hay pagos registrados.</p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[560px] text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-100 text-xs font-semibold text-[#868585]">
-                      <th className="px-5 py-3">Fecha</th>
-                      <th className="px-5 py-3">Concepto</th>
-                      <th className="px-5 py-3">Importe</th>
-                      <th className="px-5 py-3">Estado</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {purchases.map((p) => (
-                      <tr key={p._id} className="border-b border-gray-50">
-                        <td className="px-5 py-3 text-[#868585]">
-                          {new Date(p.createdAt).toLocaleDateString('es-ES', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric',
-                          })}
-                        </td>
-                        <td className="px-5 py-3 font-medium text-[#2b2b2a]">{p.itemLabel}</td>
-                        <td className="px-5 py-3 text-[#868585]">{p.price}€</td>
-                        <td className="px-5 py-3">{purchaseStatusBadge(p.status)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="flex flex-col gap-2">
+                {buildHistoryEvents(purchases, `${form.firstName} ${form.lastName}`).map((ev) => (
+                  <div key={ev.id} className="rounded-lg border border-gray-100 p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-xs text-[#868585]">{formatDateTimeShort(ev.date)}</span>
+                      {ev.author && (
+                        <span className="flex items-center gap-1.5 text-xs font-medium text-[#868585]">
+                          <span
+                            className="h-2.5 w-2.5 shrink-0 rounded-full"
+                            style={{ backgroundColor: ev.authorColor }}
+                          />
+                          {ev.author}
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-1 text-sm text-[#2b2b2a]">
+                      <span className="font-semibold">{ev.itemLabel}</span> {ev.action}
+                    </p>
+                  </div>
+                ))}
               </div>
             )}
           </div>
