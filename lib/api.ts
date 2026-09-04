@@ -274,6 +274,50 @@ export async function getClientPurchases(token: string, clientId: string) {
   return handleResponse(res);
 }
 
+export async function assignPlan(token: string, data: any) {
+  const res = await fetch(`${API_URL}/purchases/assign`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(res);
+}
+
+export async function assignPunctualPlan(token: string, data: any) {
+  const res = await fetch(`${API_URL}/purchases/assign-punctual`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(res);
+}
+
+export async function changePlan(token: string, data: any) {
+  const res = await fetch(`${API_URL}/purchases/change`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(res);
+}
+
+export async function cancelPurchase(token: string, purchaseId: string) {
+  const res = await fetch(`${API_URL}/purchases/${purchaseId}/cancel`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res);
+}
+
 export async function getAllBookings(token: string, from: string, to: string) {
   const query = new URLSearchParams({ scope: 'all', from, to });
   const res = await fetch(`${API_URL}/bookings?${query}`, {
