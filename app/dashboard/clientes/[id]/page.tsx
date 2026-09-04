@@ -80,6 +80,16 @@ function statusBadge(status: string) {
   );
 }
 
+function formatDateTime(date: string | Date) {
+  return new Date(date).toLocaleString('es-ES', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 function purchaseStatusBadge(status: string) {
   const styles: Record<string, string> = {
     pending: 'bg-amber-100 text-amber-700',
@@ -768,18 +778,8 @@ export default function DetalleClientePage() {
                       </span>
                       {item.activatedAt && item.endedAt && (
                         <p className="mt-1 text-xs text-[#868585]">
-                          Fue del{' '}
-                          {new Date(item.activatedAt).toLocaleDateString('es-ES', {
-                            day: 'numeric',
-                            month: 'long',
-                            year: 'numeric',
-                          })}{' '}
-                          al{' '}
-                          {new Date(item.endedAt).toLocaleDateString('es-ES', {
-                            day: 'numeric',
-                            month: 'long',
-                            year: 'numeric',
-                          })}
+                          Fue del {formatDateTime(item.activatedAt)} al{' '}
+                          {formatDateTime(item.endedAt)}
                         </p>
                       )}
                     </div>
@@ -797,32 +797,34 @@ export default function DetalleClientePage() {
             ) : purchases.length === 0 ? (
               <p className="p-6 text-sm text-gray-400">Todavía no hay pagos registrados.</p>
             ) : (
-              <table className="w-full text-left text-sm">
-                <thead>
-                  <tr className="border-b border-gray-100 text-xs font-semibold text-[#868585]">
-                    <th className="px-5 py-3">Fecha</th>
-                    <th className="px-5 py-3">Concepto</th>
-                    <th className="px-5 py-3">Importe</th>
-                    <th className="px-5 py-3">Estado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {purchases.map((p) => (
-                    <tr key={p._id} className="border-b border-gray-50">
-                      <td className="px-5 py-3 text-[#868585]">
-                        {new Date(p.createdAt).toLocaleDateString('es-ES', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
-                      </td>
-                      <td className="px-5 py-3 font-medium text-[#2b2b2a]">{p.itemLabel}</td>
-                      <td className="px-5 py-3 text-[#868585]">{p.price}€</td>
-                      <td className="px-5 py-3">{purchaseStatusBadge(p.status)}</td>
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[560px] text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-100 text-xs font-semibold text-[#868585]">
+                      <th className="px-5 py-3">Fecha</th>
+                      <th className="px-5 py-3">Concepto</th>
+                      <th className="px-5 py-3">Importe</th>
+                      <th className="px-5 py-3">Estado</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {purchases.map((p) => (
+                      <tr key={p._id} className="border-b border-gray-50">
+                        <td className="px-5 py-3 text-[#868585]">
+                          {new Date(p.createdAt).toLocaleDateString('es-ES', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                          })}
+                        </td>
+                        <td className="px-5 py-3 font-medium text-[#2b2b2a]">{p.itemLabel}</td>
+                        <td className="px-5 py-3 text-[#868585]">{p.price}€</td>
+                        <td className="px-5 py-3">{purchaseStatusBadge(p.status)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         )}
