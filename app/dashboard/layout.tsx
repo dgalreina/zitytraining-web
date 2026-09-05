@@ -12,6 +12,7 @@ import {
   BarChart3,
   Tag,
   Tags,
+  Fingerprint,
   Settings,
   LogOut,
   Menu,
@@ -26,7 +27,7 @@ const ADMIN_ONLY_PREFIXES = [
   '/dashboard/gestor-planes',
 ];
 
-const ADMIN_OR_TRAINER_PREFIXES = ['/dashboard/clientes'];
+const ADMIN_OR_TRAINER_PREFIXES = ['/dashboard/clientes', '/dashboard/fichar'];
 
 export default function DashboardLayout({
   children,
@@ -125,6 +126,9 @@ export default function DashboardLayout({
       : []),
     ...(isAdmin || isTrainer
       ? [{ href: '/dashboard/clientes', label: 'Clientes', icon: Users }]
+      : []),
+    ...(isAdmin || isTrainer
+      ? [{ href: '/dashboard/fichar', label: 'Fichar', icon: Fingerprint }]
       : []),
     ...(isAdmin
       ? [{ href: '/dashboard/entrenadores', label: 'Entrenadores', icon: Dumbbell }]

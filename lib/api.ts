@@ -454,3 +454,42 @@ export async function deletePlan(token: string, id: string) {
   });
   return handleResponse(res);
 }
+
+// --- Fichar (entrenadores) ---
+
+export async function clockIn(token: string) {
+  const res = await apiFetch(`${API_URL}/attendance/clock-in`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res);
+}
+
+export async function clockOut(token: string) {
+  const res = await apiFetch(`${API_URL}/attendance/clock-out`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res);
+}
+
+export async function getAttendanceStatus(token: string) {
+  const res = await apiFetch(`${API_URL}/attendance/status`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res);
+}
+
+export async function getMyAttendance(token: string) {
+  const res = await apiFetch(`${API_URL}/attendance/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res);
+}
+
+export async function getAllAttendance(token: string) {
+  const res = await apiFetch(`${API_URL}/attendance`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res);
+}
