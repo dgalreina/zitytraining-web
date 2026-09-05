@@ -487,8 +487,12 @@ export async function getMyAttendance(token: string) {
   return handleResponse(res);
 }
 
-export async function getAllAttendance(token: string) {
-  const res = await apiFetch(`${API_URL}/attendance`, {
+export async function getAllAttendance(token: string, from?: string, to?: string) {
+  const query = new URLSearchParams();
+  if (from) query.set('from', from);
+  if (to) query.set('to', to);
+  const qs = query.toString();
+  const res = await apiFetch(`${API_URL}/attendance${qs ? `?${qs}` : ''}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return handleResponse(res);
