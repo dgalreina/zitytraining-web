@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Plus, Pencil, Trash2, X, Check } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Check, Tags } from 'lucide-react';
 import { getPlans, createPlan, updatePlan, deletePlan } from '@/lib/api';
 import { TRAINING_CATEGORIES, TrainingCategory } from '@/lib/pricing';
 
@@ -56,9 +56,9 @@ export default function GestorPlanesPage() {
       .catch(() => setError('No se pudieron cargar los planes'));
   }
 
-  function openCreate(category: TrainingCategory) {
+  function openCreate() {
     setEditingId(null);
-    setForm({ ...emptyForm, category });
+    setForm(emptyForm);
     setFormError('');
     setModalOpen(true);
   }
@@ -135,9 +135,17 @@ export default function GestorPlanesPage() {
   return (
     <div className="max-w-3xl">
       <div className="mb-5 flex items-center justify-between">
-        <h2 className="font-[family-name:var(--font-work-sans)] text-lg font-bold text-[#2b2b2a]">
+        <h2 className="flex items-center gap-2 font-[family-name:var(--font-work-sans)] text-lg font-bold text-[#2b2b2a]">
+          <Tags size={20} />
           Planes
         </h2>
+        <button
+          onClick={openCreate}
+          className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#a2c037] to-[#6aa842] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+        >
+          <Plus size={16} />
+          Crear plan
+        </button>
       </div>
 
       {error && <p className="mb-4 text-sm font-medium text-red-600">{error}</p>}
@@ -148,20 +156,11 @@ export default function GestorPlanesPage() {
         <div className="flex max-h-[75vh] flex-col gap-4 overflow-y-auto pr-1">
           {TRAINING_CATEGORIES.map((category) => (
             <div key={category.id} className="rounded-xl bg-white p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <div>
-                  <h3 className="font-[family-name:var(--font-work-sans)] text-sm font-bold text-[#2b2b2a]">
-                    {category.title}
-                  </h3>
-                  <p className="text-xs text-[#868585]">{category.description}</p>
-                </div>
-                <button
-                  onClick={() => openCreate(category.id)}
-                  className="flex shrink-0 items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#a2c037] to-[#6aa842] px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90"
-                >
-                  <Plus size={14} />
-                  Nuevo plan
-                </button>
+              <div className="mb-4">
+                <h3 className="font-[family-name:var(--font-work-sans)] text-sm font-bold text-[#2b2b2a]">
+                  {category.title}
+                </h3>
+                <p className="text-xs text-[#868585]">{category.description}</p>
               </div>
 
               {plansByCategory(category.id).length === 0 ? (

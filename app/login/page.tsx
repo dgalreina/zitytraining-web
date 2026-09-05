@@ -38,7 +38,7 @@ export default function LoginPage() {
       const data = await login(email, password);
       localStorage.setItem('token', data.access_token);
       localStorage.setItem('user', JSON.stringify(data.user));
-      router.push('/dashboard');
+      router.push('/dashboard/calendario');
     } catch (err) {
       setError('Email o contraseña incorrectos');
     }

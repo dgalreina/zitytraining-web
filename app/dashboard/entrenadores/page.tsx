@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Search, Plus, ShieldCheck, ChevronDown, Check, RotateCcw } from 'lucide-react';
+import { Search, Plus, ShieldCheck, ChevronDown, Check, RotateCcw, Dumbbell } from 'lucide-react';
 import { getUsers, updateUser } from '@/lib/api';
 import { DEFAULT_TRAINER_COLOR } from '@/lib/colors';
 
@@ -180,7 +180,8 @@ export default function EntrenadoresPage() {
   return (
     <div>
       <div className="mb-5 flex items-center justify-between">
-        <h2 className="font-[family-name:var(--font-work-sans)] text-lg font-bold text-[#2b2b2a]">
+        <h2 className="flex items-center gap-2 font-[family-name:var(--font-work-sans)] text-lg font-bold text-[#2b2b2a]">
+          <Dumbbell size={20} />
           Entrenadores
         </h2>
         <Link
