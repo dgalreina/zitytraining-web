@@ -136,6 +136,16 @@
   overflow-x: auto !important;
 }
 
+/* Sabado y domingo, cuando se muestran (vista Dia siempre, vista Semana
+   solo si se despliega con el icono): fondo gris para que se note que
+   es fin de semana. */
+.fc-timegrid-col.fc-day-sat,
+.fc-timegrid-col.fc-day-sun,
+.fc-col-header-cell.fc-day-sat,
+.fc-col-header-cell.fc-day-sun {
+  background-color: #f7f7f5;
+}
+
 .fc .fc-timegrid-slot-label {
   font-size: 0.75rem;
   color: #868585;

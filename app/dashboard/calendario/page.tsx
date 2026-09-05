@@ -6,7 +6,7 @@ import FullCalendar from '@fullcalendar/react';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import '@/styles/fullcalendar-theme.css';
-import { X, ChevronDown, Check } from 'lucide-react';
+import { X, ChevronDown, ChevronUp, Check } from 'lucide-react';
 import MiniCalendar, { dayKey } from '@/components/MiniCalendar';
 import FilterDropdown from '@/components/FilterDropdown';
 import BookingModal, { ModalState } from './BookingModal';
@@ -137,6 +137,10 @@ export default function CalendarioPage() {
   const [viewTitle, setViewTitle] = useState('');
   const [viewType, setViewType] = useState('timeGridWeek');
   const [filtersOpen, setFiltersOpen] = useState(false);
+  // Solo aplica a la vista "Semana": en "Día" el fin de semana se ve
+  // siempre. Se pliega por defecto para que la semana entre sin scroll
+  // horizontal en la mayoría de móviles; el icono lo despliega.
+  const [showWeekendsInWeek, setShowWeekendsInWeek] = useState(false);
   const [topOffset, setTopOffset] = useState<number | null>(null);
   const calendarRef = useRef<FullCalendar>(null);
   const calendarWrapperRef = useRef<HTMLDivElement>(null);
@@ -791,15 +795,27 @@ export default function CalendarioPage() {
             viewType === 'timeGridWeek' ? 'ziti-week-view' : ''
           }`}
         >
-          <p className="ziti-calendar-title mb-2 shrink-0 text-center font-[family-name:var(--font-work-sans)] text-sm font-bold capitalize text-[#2b2b2a] sm:text-left">
-            {viewTitle}
-          </p>
+          <div className="mb-2 flex shrink-0 items-center justify-between gap-2">
+            <p className="ziti-calendar-title flex-1 text-center font-[family-name:var(--font-work-sans)] text-sm font-bold capitalize text-[#2b2b2a] sm:text-left">
+              {viewTitle}
+            </p>
+            {viewType === 'timeGridWeek' && (
+              <button
+                type="button"
+                onClick={() => setShowWeekendsInWeek((v) => !v)}
+                title={showWeekendsInWeek ? 'Ocultar fin de semana' : 'Mostrar fin de semana'}
+                className="shrink-0 rounded-lg p-1 text-[#868585] transition hover:bg-gray-100 hover:text-[#2b2b2a]"
+              >
+                {showWeekendsInWeek ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </button>
+            )}
+          </div>
           <FullCalendar
             ref={calendarRef}
             plugins={[timeGridPlugin, interactionPlugin]}
             initialView={isAdmin ? 'timeGridDay' : 'timeGridWeek'}
             firstDay={1}
-            weekends={false}
+            weekends={viewType === 'timeGridDay' ? true : showWeekendsInWeek}
             headerToolbar={{
               left: 'prev,next today',
               center: isTrainerPerspective ? 'filtros' : '',

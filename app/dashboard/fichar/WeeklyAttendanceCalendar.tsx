@@ -245,7 +245,7 @@ export default function WeeklyAttendanceCalendar() {
             plugins={[timeGridPlugin]}
             initialView="timeGridWeek"
             firstDay={1}
-            weekends={false}
+            weekends
             headerToolbar={{ left: 'prev,next today', center: '', right: '' }}
             buttonText={{ today: 'Esta semana' }}
             dayHeaderFormat={{ weekday: 'short', day: 'numeric' }}
