@@ -18,6 +18,7 @@ import {
   X,
 } from 'lucide-react';
 import { getAvatarGradient } from '@/lib/colors';
+import { logout } from '@/lib/api';
 
 const ADMIN_ONLY_PREFIXES = [
   '/dashboard/entrenadores',
@@ -108,7 +109,10 @@ export default function DashboardLayout({
   }, []);
 
   function handleLogout() {
+    const refreshToken = localStorage.getItem('refreshToken');
+    if (refreshToken) logout(refreshToken);
     localStorage.removeItem('token');
+    localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
     router.push('/login');
   }

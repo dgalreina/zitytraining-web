@@ -37,6 +37,7 @@ export default function LoginPage() {
     try {
       const data = await login(email, password);
       localStorage.setItem('token', data.access_token);
+      localStorage.setItem('refreshToken', data.refresh_token);
       localStorage.setItem('user', JSON.stringify(data.user));
       router.push('/dashboard/calendario');
     } catch (err) {
