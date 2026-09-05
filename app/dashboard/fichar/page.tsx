@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Fingerprint, LogIn, LogOut, AlertTriangle } from 'lucide-react';
 import { clockIn, clockOut, getAttendanceStatus, getMyAttendance } from '@/lib/api';
@@ -40,6 +40,8 @@ export default function FicharPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [now, setNow] = useState(new Date());
+  const [topOffset, setTopOffset] = useState<number | null>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
   function load(token: string) {
@@ -63,6 +65,23 @@ export default function FicharPage() {
     const interval = setInterval(() => setNow(new Date()), 30000);
     return () => clearInterval(interval);
   }, []);
+
+  // Igual que en Calendario: en vez de un numero fijo (que se desincroniza
+  // en cuanto cambia algo por encima, como las pestañas de admin), se mide
+  // cuanto ocupa lo que hay antes del bloque, para que "Tus fichajes"
+  // ocupe justo lo que queda de pantalla y no la propia pagina.
+  useEffect(() => {
+    function recalcOffset() {
+      const el = contentRef.current;
+      if (!el) return;
+      const top = el.getBoundingClientRect().top;
+      const BOTTOM_GAP = 24;
+      setTopOffset(top + BOTTOM_GAP);
+    }
+    recalcOffset();
+    window.addEventListener('resize', recalcOffset);
+    return () => window.removeEventListener('resize', recalcOffset);
+  }, [isAdmin, tab]);
 
   async function handleClockIn() {
     setError('');
@@ -114,84 +133,90 @@ export default function FicharPage() {
         </div>
       )}
 
-      {tab === 'calendar' ? (
-        <WeeklyAttendanceCalendar />
-      ) : (
-        <>
-          <div className="mb-4 rounded-xl bg-white p-6 text-center">
-            {status === null ? (
-              <p className="text-sm text-gray-400">Cargando...</p>
-            ) : clockedIn ? (
-              <>
-                <p className="text-sm text-[#868585]">
-                  Fichado desde las <span className="font-semibold text-[#2b2b2a]">{formatTime(status.since!)}</span>
-                </p>
-                <p className="mb-5 text-2xl font-bold text-[#4b7a1f]">
-                  {formatDuration(now.getTime() - new Date(status.since!).getTime())}
-                </p>
-                <button
-                  onClick={handleClockOut}
-                  disabled={saving}
-                  className="mx-auto flex items-center justify-center gap-2 rounded-lg bg-red-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
-                >
-                  <LogOut size={18} />
-                  {saving ? 'Fichando...' : 'Fichar salida'}
-                </button>
-              </>
-            ) : (
-              <>
-                <p className="mb-5 text-sm text-[#868585]">No estás fichado ahora mismo.</p>
-                <button
-                  onClick={handleClockIn}
-                  disabled={saving}
-                  className="mx-auto flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-[#a2c037] to-[#6aa842] px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
-                >
-                  <LogIn size={18} />
-                  {saving ? 'Fichando...' : 'Fichar entrada'}
-                </button>
-              </>
-            )}
-            {error && <p className="mt-3 text-sm font-medium text-red-600">{error}</p>}
-          </div>
+      <div
+        ref={contentRef}
+        className="flex flex-col gap-4"
+        style={topOffset !== null ? { height: `calc(100dvh - ${topOffset}px)` } : undefined}
+      >
+        {tab === 'calendar' ? (
+          <WeeklyAttendanceCalendar />
+        ) : (
+          <>
+            <div className="shrink-0 rounded-xl bg-white p-6 text-center">
+              {status === null ? (
+                <p className="text-sm text-gray-400">Cargando...</p>
+              ) : clockedIn ? (
+                <>
+                  <p className="text-sm text-[#868585]">
+                    Fichado desde las <span className="font-semibold text-[#2b2b2a]">{formatTime(status.since!)}</span>
+                  </p>
+                  <p className="mb-5 text-2xl font-bold text-[#4b7a1f]">
+                    {formatDuration(now.getTime() - new Date(status.since!).getTime())}
+                  </p>
+                  <button
+                    onClick={handleClockOut}
+                    disabled={saving}
+                    className="mx-auto flex items-center justify-center gap-2 rounded-lg bg-red-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
+                  >
+                    <LogOut size={18} />
+                    {saving ? 'Fichando...' : 'Fichar salida'}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <p className="mb-5 text-sm text-[#868585]">No estás fichado ahora mismo.</p>
+                  <button
+                    onClick={handleClockIn}
+                    disabled={saving}
+                    className="mx-auto flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-[#a2c037] to-[#6aa842] px-6 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+                  >
+                    <LogIn size={18} />
+                    {saving ? 'Fichando...' : 'Fichar entrada'}
+                  </button>
+                </>
+              )}
+              {error && <p className="mt-3 text-sm font-medium text-red-600">{error}</p>}
+            </div>
 
-          <div className="rounded-xl bg-white p-6">
-            <h3 className="mb-3 font-[family-name:var(--font-work-sans)] text-sm font-bold text-[#2b2b2a]">
-              Tus fichajes
-            </h3>
-            {entries === null ? (
-              <p className="text-sm text-gray-400">Cargando...</p>
-            ) : entries.length === 0 ? (
-              <p className="text-sm text-gray-400">Todavía no tienes fichajes registrados.</p>
-            ) : (
-              <div className="flex max-h-[50vh] flex-col gap-2 overflow-y-auto pr-1">
-                {entries.map((entry) => (
-                  <div key={entry._id} className="rounded-lg border border-gray-100 p-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="text-sm font-semibold text-[#2b2b2a]">
-                        {formatDate(entry.clockIn)}
-                      </span>
-                      {entry.clockOut && (
-                        <span className="text-xs font-medium text-[#4b7a1f]">
-                          {formatDuration(new Date(entry.clockOut).getTime() - new Date(entry.clockIn).getTime())}
+            <div className="flex min-h-0 flex-1 flex-col rounded-xl bg-white p-6">
+              <h3 className="mb-3 shrink-0 font-[family-name:var(--font-work-sans)] text-sm font-bold text-[#2b2b2a]">
+                Tus fichajes
+              </h3>
+              {entries === null ? (
+                <p className="text-sm text-gray-400">Cargando...</p>
+              ) : entries.length === 0 ? (
+                <p className="text-sm text-gray-400">Todavía no tienes fichajes registrados.</p>
+              ) : (
+                <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1">
+                  {entries.map((entry) => (
+                    <div key={entry._id} className="rounded-lg border border-gray-100 p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-sm font-semibold text-[#2b2b2a]">
+                          {formatDate(entry.clockIn)}
                         </span>
+                        {entry.clockOut && (
+                          <span className="text-xs font-medium text-[#4b7a1f]">
+                            {formatDuration(new Date(entry.clockOut).getTime() - new Date(entry.clockIn).getTime())}
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-1 text-xs text-[#868585]">
+                        {formatTime(entry.clockIn)} – {entry.clockOut ? formatTime(entry.clockOut) : 'en curso'}
+                      </p>
+                      {entry.autoClockedOut && (
+                        <p className="mt-1.5 flex items-center gap-1.5 text-xs text-amber-700">
+                          <AlertTriangle size={13} />
+                          Cerrado automáticamente a las 22:00 (se olvidó fichar la salida)
+                        </p>
                       )}
                     </div>
-                    <p className="mt-1 text-xs text-[#868585]">
-                      {formatTime(entry.clockIn)} – {entry.clockOut ? formatTime(entry.clockOut) : 'en curso'}
-                    </p>
-                    {entry.autoClockedOut && (
-                      <p className="mt-1.5 flex items-center gap-1.5 text-xs text-amber-700">
-                        <AlertTriangle size={13} />
-                        Cerrado automáticamente a las 22:00 (se olvidó fichar la salida)
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </>
-      )}
+                  ))}
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
