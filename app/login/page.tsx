@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { X } from 'lucide-react';
-import { login } from '@/lib/api';
+import { login, debugLog as logAuthEvent } from '@/lib/api';
 import PasswordInput from '@/components/PasswordInput';
 
 // TODO: quitar este bloque de depuración (DEBUG_LOG_KEY, debugLog, el
@@ -23,9 +23,25 @@ export default function LoginPage() {
   const [forgotSent, setForgotSent] = useState(false);
   const [debugLog, setDebugLog] = useState<string | null>(null);
   const [debugNow, setDebugNow] = useState<Record<string, boolean> | null>(null);
+  // Empieza en true para no pintar el formulario ni un instante si
+  // resulta que ya hay sesión guardada (evita el parpadeo antes de
+  // mandar al calendario). Se pasa a false solo si de verdad hace
+  // falta iniciar sesión.
+  const [checkingAuth, setCheckingAuth] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
+    // Si llegamos aquí con una sesión perfectamente válida (ej. iOS
+    // abriendo la PWA directamente en /login porque fue la URL que
+    // quedó guardada al "Añadir a pantalla de inicio"), no tiene
+    // sentido mostrar el formulario: nos vamos derechos al calendario.
+    const token = localStorage.getItem('token');
+    if (token) {
+      logAuthEvent('login_page_con_sesion_valida', { redirigido: '/dashboard/calendario' });
+      router.push('/dashboard/calendario');
+      return;
+    }
+
     // Esto se ve SIEMPRE, aunque el propio log se haya borrado: si el
     // sistema operativo vació todo el localStorage (ej. al cerrar la
     // app en iOS), el log de abajo desaparecería con él, y sin esto no
@@ -38,7 +54,8 @@ export default function LoginPage() {
     });
     const raw = localStorage.getItem(DEBUG_LOG_KEY);
     setDebugLog(raw);
-  }, []);
+    setCheckingAuth(false);
+  }, [router]);
 
   function closeForgotModal() {
     setForgotOpen(false);
@@ -68,6 +85,8 @@ export default function LoginPage() {
       setError('Email o contraseña incorrectos');
     }
   }
+
+  if (checkingAuth) return null;
 
   return (
     <main className="flex min-h-screen font-[family-name:var(--font-inter)]">

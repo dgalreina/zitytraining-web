@@ -7,7 +7,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 // en /login aunque haya pasado en el móvil, donde no hay consola a mano.
 const DEBUG_LOG_KEY = 'debug_auth_log';
 
-function debugLog(event: string, details?: Record<string, unknown>) {
+export function debugLog(event: string, details?: Record<string, unknown>) {
   try {
     const raw = localStorage.getItem(DEBUG_LOG_KEY);
     const log = raw ? JSON.parse(raw) : [];
