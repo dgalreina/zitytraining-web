@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Plus, Trash2, X, Check, Timer, StickyNote, Link2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Check, Timer, StickyNote, Link2 } from 'lucide-react';
 import {
   DndContext,
   PointerSensor,
@@ -11,7 +11,7 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core';
 import { SortableContext, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { getWorkouts, createWorkout, deleteWorkout } from '@/lib/api';
+import { getWorkouts, createWorkout, updateWorkout, deleteWorkout } from '@/lib/api';
 import { Slot, emptySlot } from './ExerciseSlotInput';
 import SortableExerciseSlot from './SortableExerciseSlot';
 import { categoryMeta } from './exerciseCategories';
@@ -23,6 +23,7 @@ export default function WorkoutsTab() {
   const [workouts, setWorkouts] = useState<any[] | null>(null);
   const [error, setError] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [slots, setSlots] = useState<Slot[]>([]);
   const [formError, setFormError] = useState('');
@@ -60,8 +61,27 @@ export default function WorkoutsTab() {
   }
 
   function openCreate() {
+    setEditingId(null);
     setName('');
     setSlots(Array.from({ length: INITIAL_SLOT_COUNT }, emptySlot));
+    setFormError('');
+    setModalOpen(true);
+  }
+
+  function openEdit(workout: any) {
+    setEditingId(workout._id);
+    setName(workout.name);
+    const loaded: Slot[] = workout.slots.map((s: any) => ({
+      key: Math.random().toString(36).slice(2),
+      exerciseId: s.exercise?._id || null,
+      exerciseName: s.exercise?.name || '',
+      reps: (s.reps || []).map((r: number) => String(r)),
+      supersetGroup: s.supersetGroup,
+      restPause: !!s.restPause,
+      notes: s.notes || '',
+    }));
+    loaded.push(emptySlot());
+    setSlots(loaded);
     setFormError('');
     setModalOpen(true);
   }
@@ -124,7 +144,7 @@ export default function WorkoutsTab() {
     if (!token) return;
     setSaving(true);
     try {
-      await createWorkout(token, {
+      const payload = {
         name: name.trim(),
         slots: filled.map((s) => ({
           exerciseId: s.exerciseId!,
@@ -133,7 +153,12 @@ export default function WorkoutsTab() {
           restPause: s.restPause || undefined,
           notes: s.notes.trim() || undefined,
         })),
-      });
+      };
+      if (editingId) {
+        await updateWorkout(token, editingId, payload);
+      } else {
+        await createWorkout(token, payload);
+      }
       load(token);
       setModalOpen(false);
     } catch (err: any) {
@@ -184,13 +209,22 @@ export default function WorkoutsTab() {
                 <h3 className="font-[family-name:var(--font-work-sans)] text-sm font-bold text-[#2b2b2a]">
                   {w.name}
                 </h3>
-                <button
-                  onClick={() => setConfirmDeleteId(w._id)}
-                  title="Eliminar"
-                  className="rounded-lg bg-red-50 p-1.5 text-red-600 hover:bg-red-100"
-                >
-                  <Trash2 size={14} />
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => openEdit(w)}
+                    title="Editar"
+                    className="rounded-lg bg-gray-100 p-1.5 text-[#2b2b2a] hover:bg-gray-200"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                  <button
+                    onClick={() => setConfirmDeleteId(w._id)}
+                    title="Eliminar"
+                    className="rounded-lg bg-red-50 p-1.5 text-red-600 hover:bg-red-100"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </div>
               <div className="flex flex-col gap-2">
                 {(() => {
@@ -270,7 +304,7 @@ export default function WorkoutsTab() {
           <div className="flex max-h-[90vh] w-full max-w-lg flex-col rounded-xl bg-white p-6 shadow-xl">
             <div className="mb-4 flex shrink-0 items-center justify-between">
               <h3 className="font-[family-name:var(--font-work-sans)] text-base font-bold text-[#2b2b2a]">
-                Nuevo entrenamiento
+                {editingId ? 'Editar entrenamiento' : 'Nuevo entrenamiento'}
               </h3>
               <button onClick={() => setModalOpen(false)} className="text-gray-400 hover:text-gray-600">
                 <X size={18} />
@@ -317,7 +351,7 @@ export default function WorkoutsTab() {
                 className="flex shrink-0 items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-[#a2c037] to-[#6aa842] py-2.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
               >
                 <Check size={16} />
-                {saving ? 'Guardando...' : 'Crear entrenamiento'}
+                {saving ? 'Guardando...' : editingId ? 'Guardar cambios' : 'Crear entrenamiento'}
               </button>
             </form>
           </div>

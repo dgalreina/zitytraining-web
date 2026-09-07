@@ -591,6 +591,31 @@ export async function createWorkout(
   return handleResponse(res);
 }
 
+export async function updateWorkout(
+  token: string,
+  id: string,
+  data: {
+    name: string;
+    slots: {
+      exerciseId: string;
+      reps?: number[];
+      supersetGroup?: string;
+      restPause?: boolean;
+      notes?: string;
+    }[];
+  },
+) {
+  const res = await apiFetch(`${API_URL}/workouts/${id}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(res);
+}
+
 export async function deleteWorkout(token: string, id: string) {
   const res = await apiFetch(`${API_URL}/workouts/${id}`, {
     method: 'DELETE',
