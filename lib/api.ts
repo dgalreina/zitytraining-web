@@ -574,7 +574,7 @@ export async function createWorkout(
     slots: {
       exerciseId: string;
       reps?: number[];
-      supersetGroup?: string;
+      linkedToNext?: boolean;
       restPause?: boolean;
       notes?: string;
     }[];
@@ -599,7 +599,7 @@ export async function updateWorkout(
     slots: {
       exerciseId: string;
       reps?: number[];
-      supersetGroup?: string;
+      linkedToNext?: boolean;
       restPause?: boolean;
       notes?: string;
     }[];

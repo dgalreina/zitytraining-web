@@ -1,33 +1,37 @@
-// Numera los slots: normales van 1, 2, 3... y los que comparten
-// supersetGroup (superserie) se numeran juntos como 1a, 1b, 1c...
-export function computeSlotLabels(items: { supersetGroup?: string }[]): string[] {
+// Numera los slots: normales van 1, 2, 3... y los que van encadenados
+// (linkedToNext) se numeran juntos como 1a, 1b, 1c... Cada slot solo
+// sabe si esta enlazado con el SIGUIENTE, asi que apagar el enlace en
+// cualquier punto de la cadena solo rompe esa union concreta.
+export function computeSlotLabels(items: { linkedToNext?: boolean }[]): string[] {
   const labels: string[] = [];
   let counter = 0;
   let i = 0;
 
   while (i < items.length) {
-    const group = items[i].supersetGroup;
+    counter++;
 
-    if (!group) {
-      counter++;
+    if (!items[i].linkedToNext) {
       labels.push(String(counter));
       i++;
       continue;
     }
 
-    counter++;
     let letter = 0;
-    while (i < items.length && items[i].supersetGroup === group) {
+    let j = i;
+    while (j < items.length) {
       labels.push(`${counter}${String.fromCharCode(97 + letter)}`);
       letter++;
-      i++;
+      const linksFurther = items[j].linkedToNext;
+      j++;
+      if (!linksFurther) break;
     }
+    i = j;
   }
 
   return labels;
 }
 
-// Agrupa slots consecutivos que comparten supersetGroup en bloques,
+// Agrupa slots consecutivos enlazados (linkedToNext) en bloques,
 // conservando su posicion original en la lista plana (para poder mirar
 // su etiqueta con computeSlotLabels). Un bloque de 1 es un ejercicio
 // normal; de 2 o mas es una superserie.
@@ -36,20 +40,22 @@ export function groupSlotsForDisplay(items: any[]): { slot: any; flatIndex: numb
   let i = 0;
 
   while (i < items.length) {
-    const group = items[i].supersetGroup;
-
-    if (!group) {
+    if (!items[i].linkedToNext) {
       blocks.push([{ slot: items[i], flatIndex: i }]);
       i++;
       continue;
     }
 
     const block: { slot: any; flatIndex: number }[] = [];
-    while (i < items.length && items[i].supersetGroup === group) {
-      block.push({ slot: items[i], flatIndex: i });
-      i++;
+    let j = i;
+    while (j < items.length) {
+      block.push({ slot: items[j], flatIndex: j });
+      const linksFurther = items[j].linkedToNext;
+      j++;
+      if (!linksFurther) break;
     }
     blocks.push(block);
+    i = j;
   }
 
   return blocks;

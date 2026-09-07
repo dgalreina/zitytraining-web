@@ -11,7 +11,7 @@ export type Slot = {
   exerciseId: string | null;
   exerciseName: string;
   reps: string[];
-  supersetGroup?: string;
+  linkedToNext: boolean;
   restPause: boolean;
   notes: string;
 };
@@ -22,6 +22,7 @@ export function emptySlot(): Slot {
     exerciseId: null,
     exerciseName: '',
     reps: Array.from({ length: DEFAULT_SETS }, () => ''),
+    linkedToNext: false,
     restPause: false,
     notes: '',
   };
@@ -142,6 +143,17 @@ export default function ExerciseSlotInput({
     onChange({ reps: [...slot.reps, ''] });
   }
 
+  // Interruptor de verdad: si ya esta enlazado con el siguiente, apagarlo
+  // solo rompe ese enlace (el de abajo queda suelto o sigue su propia
+  // cadena). Si no lo esta, lo enciende y añade el siguiente ejercicio.
+  function handleToggleSuperset() {
+    if (slot.linkedToNext) {
+      onChange({ linkedToNext: false });
+    } else {
+      onAddSuperset();
+    }
+  }
+
   function handleToggleNotes() {
     setNotesOpen((open) => {
       const next = !open;
@@ -153,11 +165,7 @@ export default function ExerciseSlotInput({
   const exactMatch = suggestions.some((s) => s.name.toLowerCase() === query.trim().toLowerCase());
 
   return (
-    <div
-      className={`rounded-lg border p-3 ${
-        slot.supersetGroup ? 'border-[#6aa842] border-l-4' : 'border-gray-100'
-      }`}
-    >
+    <div className="rounded-lg border border-gray-100 p-3">
       <div className="flex items-center gap-2">
         {dragHandleProps && (
           <button
@@ -272,10 +280,10 @@ export default function ExerciseSlotInput({
       <div className="mt-2 flex flex-wrap items-center gap-1.5 pl-8">
         <button
           type="button"
-          onClick={onAddSuperset}
+          onClick={handleToggleSuperset}
           disabled={!slot.exerciseId}
-          title="Añadir ejercicio a la superserie"
-          className={`${toggleButtonClass(!!slot.supersetGroup)} disabled:opacity-40`}
+          title={slot.linkedToNext ? 'Quitar de la superserie' : 'Encadenar con el siguiente ejercicio'}
+          className={`${toggleButtonClass(slot.linkedToNext)} disabled:opacity-40`}
         >
           <Link2 size={12} />
           SS

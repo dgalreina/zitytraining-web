@@ -76,7 +76,7 @@ export default function WorkoutsTab() {
       exerciseId: s.exercise?._id || null,
       exerciseName: s.exercise?.name || '',
       reps: (s.reps || []).map((r: number) => String(r)),
-      supersetGroup: s.supersetGroup,
+      linkedToNext: !!s.linkedToNext,
       restPause: !!s.restPause,
       notes: s.notes || '',
     }));
@@ -100,27 +100,27 @@ export default function WorkoutsTab() {
 
   function removeSlot(key: string) {
     setSlots((prev) => {
+      const idx = prev.findIndex((s) => s.key === key);
+      if (idx === -1) return prev;
       const next = prev.filter((s) => s.key !== key);
-      // Si un grupo se queda con un unico miembro, deja de ser superserie.
-      const counts: Record<string, number> = {};
-      next.forEach((s) => {
-        if (s.supersetGroup) counts[s.supersetGroup] = (counts[s.supersetGroup] || 0) + 1;
-      });
-      return next.map((s) => (s.supersetGroup && counts[s.supersetGroup] === 1 ? { ...s, supersetGroup: undefined } : s));
+      // Si el anterior enlazaba con el que se borra, se queda suelto:
+      // si no, apuntaria sin querer al que ocupe ahora su sitio.
+      if (idx > 0 && prev[idx - 1].linkedToNext) {
+        next[idx - 1] = { ...next[idx - 1], linkedToNext: false };
+      }
+      return next;
     });
   }
 
-  // "SS": añade un ejercicio vacio justo detras, agrupado con el
-  // pulsado (comparten supersetGroup) para que se numeren 1a, 1b, 1c...
+  // "SS": enciende el enlace del pulsado con el siguiente y añade un
+  // ejercicio vacio justo detras para continuar la cadena (1a, 1b, 1c...).
   function addSupersetAfter(key: string) {
     setSlots((prev) => {
       const idx = prev.findIndex((s) => s.key === key);
       if (idx === -1) return prev;
-      const current = prev[idx];
-      const groupId = current.supersetGroup || current.key;
       const next = [...prev];
-      next[idx] = { ...current, supersetGroup: groupId };
-      next.splice(idx + 1, 0, { ...emptySlot(), supersetGroup: groupId });
+      next[idx] = { ...next[idx], linkedToNext: true };
+      next.splice(idx + 1, 0, emptySlot());
       return next;
     });
   }
@@ -149,7 +149,7 @@ export default function WorkoutsTab() {
         slots: filled.map((s) => ({
           exerciseId: s.exerciseId!,
           reps: s.reps.map(Number).filter((v) => v > 0),
-          supersetGroup: s.supersetGroup,
+          linkedToNext: s.linkedToNext || undefined,
           restPause: s.restPause || undefined,
           notes: s.notes.trim() || undefined,
         })),
@@ -327,17 +327,36 @@ export default function WorkoutsTab() {
                   <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1">
                     {(() => {
                       const labels = computeSlotLabels(slots);
-                      return slots.map((slot, i) => (
-                        <SortableExerciseSlot
-                          key={slot.key}
-                          label={labels[i]}
-                          slot={slot}
-                          onChange={(patch) => updateSlot(slot.key, patch)}
-                          onRemove={() => removeSlot(slot.key)}
-                          onAddSuperset={() => addSupersetAfter(slot.key)}
-                          removable={slots.length > 1}
-                        />
-                      ));
+                      const blocks = groupSlotsForDisplay(slots);
+                      return blocks.map((block, bi) => {
+                        const isSuperset = block.length > 1;
+                        const items = block.map(({ slot, flatIndex }, si) => (
+                          <div key={slot.key}>
+                            <SortableExerciseSlot
+                              label={labels[flatIndex]}
+                              slot={slot}
+                              onChange={(patch) => updateSlot(slot.key, patch)}
+                              onRemove={() => removeSlot(slot.key)}
+                              onAddSuperset={() => addSupersetAfter(slot.key)}
+                              removable={slots.length > 1}
+                            />
+                            {isSuperset && si < block.length - 1 && (
+                              <div className="flex items-center gap-1.5 py-1 pl-3 text-[#6aa842]">
+                                <Link2 size={12} className="shrink-0" />
+                                <span className="text-[10px] font-semibold uppercase">Superserie</span>
+                              </div>
+                            )}
+                          </div>
+                        ));
+
+                        return isSuperset ? (
+                          <div key={bi} className="flex flex-col gap-2 rounded-lg border-l-4 border-[#6aa842] pl-2">
+                            {items}
+                          </div>
+                        ) : (
+                          <div key={bi}>{items}</div>
+                        );
+                      });
                     })()}
                   </div>
                 </SortableContext>
