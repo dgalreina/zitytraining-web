@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Search, Plus, X, Trash2, GripVertical } from 'lucide-react';
+import { Search, Plus, X, Trash2, GripVertical, Link2, Timer, StickyNote } from 'lucide-react';
 import { searchExercises, createExercise } from '@/lib/api';
 
 const DEFAULT_SETS = 4;
@@ -11,6 +11,9 @@ export type Slot = {
   exerciseId: string | null;
   exerciseName: string;
   reps: string[];
+  supersetGroup?: string;
+  restPause: boolean;
+  notes: string;
 };
 
 export function emptySlot(): Slot {
@@ -19,21 +22,33 @@ export function emptySlot(): Slot {
     exerciseId: null,
     exerciseName: '',
     reps: Array.from({ length: DEFAULT_SETS }, () => ''),
+    restPause: false,
+    notes: '',
   };
 }
 
+function toggleButtonClass(active: boolean) {
+  return `flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-semibold transition ${
+    active
+      ? 'border-[#6aa842] bg-[#a2c037]/10 text-[#4b7a1f]'
+      : 'border-gray-200 text-[#868585] hover:bg-gray-50'
+  }`;
+}
+
 export default function ExerciseSlotInput({
-  index,
+  label,
   slot,
   onChange,
   onRemove,
+  onAddSuperset,
   removable,
   dragHandleProps,
 }: {
-  index: number;
+  label: string;
   slot: Slot;
   onChange: (patch: Partial<Slot>) => void;
   onRemove: () => void;
+  onAddSuperset: () => void;
   removable: boolean;
   dragHandleProps?: { attributes: Record<string, any>; listeners: Record<string, any> | undefined };
 }) {
@@ -42,6 +57,7 @@ export default function ExerciseSlotInput({
   const [open, setOpen] = useState(false);
   const [searching, setSearching] = useState(false);
   const [resolving, setResolving] = useState(false);
+  const [notesOpen, setNotesOpen] = useState(!!slot.notes);
   const containerRef = useRef<HTMLDivElement>(null);
   const justSelectedRef = useRef(false);
 
@@ -126,6 +142,14 @@ export default function ExerciseSlotInput({
     onChange({ reps: [...slot.reps, ''] });
   }
 
+  function handleToggleNotes() {
+    setNotesOpen((open) => {
+      const next = !open;
+      if (!next) onChange({ notes: '' });
+      return next;
+    });
+  }
+
   const exactMatch = suggestions.some((s) => s.name.toLowerCase() === query.trim().toLowerCase());
 
   return (
@@ -142,8 +166,8 @@ export default function ExerciseSlotInput({
             <GripVertical size={16} />
           </button>
         )}
-        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-[#868585]">
-          {index + 1}
+        <span className="flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full bg-gray-100 px-1 text-xs font-bold text-[#868585]">
+          {label}
         </span>
 
         <div ref={containerRef} className="relative flex-1">
@@ -240,6 +264,50 @@ export default function ExerciseSlotInput({
           <Plus size={12} />
         </button>
       </div>
+
+      <div className="mt-2 flex flex-wrap items-center gap-1.5 pl-8">
+        <button
+          type="button"
+          onClick={onAddSuperset}
+          disabled={!slot.exerciseId}
+          title="Añadir ejercicio a la superserie"
+          className={`${toggleButtonClass(!!slot.supersetGroup)} disabled:opacity-40`}
+        >
+          <Link2 size={12} />
+          SS
+        </button>
+        <button
+          type="button"
+          onClick={() => onChange({ restPause: !slot.restPause })}
+          disabled={!slot.exerciseId}
+          title="Rest-pause"
+          className={`${toggleButtonClass(slot.restPause)} disabled:opacity-40`}
+        >
+          <Timer size={12} />
+          RP
+        </button>
+        <button
+          type="button"
+          onClick={handleToggleNotes}
+          disabled={!slot.exerciseId}
+          title="Notas"
+          className={`${toggleButtonClass(notesOpen)} disabled:opacity-40`}
+        >
+          <StickyNote size={12} />
+          Notas
+        </button>
+      </div>
+
+      {notesOpen && (
+        <div className="mt-2 pl-8">
+          <input
+            value={slot.notes}
+            onChange={(e) => onChange({ notes: e.target.value })}
+            placeholder="Escribe una nota para este ejercicio..."
+            className="w-full rounded-md border border-gray-200 px-2 py-1.5 text-xs text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none"
+          />
+        </div>
+      )}
     </div>
   );
 }

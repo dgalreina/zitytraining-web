@@ -567,7 +567,19 @@ export async function getWorkouts(token: string) {
   return handleResponse(res);
 }
 
-export async function createWorkout(token: string, data: { name: string; slots: { exerciseId: string; reps: number[] }[] }) {
+export async function createWorkout(
+  token: string,
+  data: {
+    name: string;
+    slots: {
+      exerciseId: string;
+      reps?: number[];
+      supersetGroup?: string;
+      restPause?: boolean;
+      notes?: string;
+    }[];
+  },
+) {
   const res = await apiFetch(`${API_URL}/workouts`, {
     method: 'POST',
     headers: {

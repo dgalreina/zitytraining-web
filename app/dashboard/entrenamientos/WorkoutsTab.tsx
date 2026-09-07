@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Plus, Trash2, X, Check } from 'lucide-react';
+import { Plus, Trash2, X, Check, Timer, StickyNote } from 'lucide-react';
 import {
   DndContext,
   PointerSensor,
@@ -15,6 +15,7 @@ import { getWorkouts, createWorkout, deleteWorkout } from '@/lib/api';
 import { Slot, emptySlot } from './ExerciseSlotInput';
 import SortableExerciseSlot from './SortableExerciseSlot';
 import { categoryMeta } from './exerciseCategories';
+import { computeSlotLabels } from './workoutSlotLabels';
 
 const INITIAL_SLOT_COUNT = 6;
 
@@ -78,7 +79,30 @@ export default function WorkoutsTab() {
   }
 
   function removeSlot(key: string) {
-    setSlots((prev) => prev.filter((s) => s.key !== key));
+    setSlots((prev) => {
+      const next = prev.filter((s) => s.key !== key);
+      // Si un grupo se queda con un unico miembro, deja de ser superserie.
+      const counts: Record<string, number> = {};
+      next.forEach((s) => {
+        if (s.supersetGroup) counts[s.supersetGroup] = (counts[s.supersetGroup] || 0) + 1;
+      });
+      return next.map((s) => (s.supersetGroup && counts[s.supersetGroup] === 1 ? { ...s, supersetGroup: undefined } : s));
+    });
+  }
+
+  // "SS": añade un ejercicio vacio justo detras, agrupado con el
+  // pulsado (comparten supersetGroup) para que se numeren 1a, 1b, 1c...
+  function addSupersetAfter(key: string) {
+    setSlots((prev) => {
+      const idx = prev.findIndex((s) => s.key === key);
+      if (idx === -1) return prev;
+      const current = prev[idx];
+      const groupId = current.supersetGroup || current.key;
+      const next = [...prev];
+      next[idx] = { ...current, supersetGroup: groupId };
+      next.splice(idx + 1, 0, { ...emptySlot(), supersetGroup: groupId });
+      return next;
+    });
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -95,11 +119,6 @@ export default function WorkoutsTab() {
       setFormError('Añade al menos un ejercicio');
       return;
     }
-    const withoutReps = filled.find((s) => s.reps.map(Number).filter((v) => v > 0).length === 0);
-    if (withoutReps) {
-      setFormError('Indica las repeticiones de cada ejercicio añadido');
-      return;
-    }
 
     const token = localStorage.getItem('token');
     if (!token) return;
@@ -110,6 +129,9 @@ export default function WorkoutsTab() {
         slots: filled.map((s) => ({
           exerciseId: s.exerciseId!,
           reps: s.reps.map(Number).filter((v) => v > 0),
+          supersetGroup: s.supersetGroup,
+          restPause: s.restPause || undefined,
+          notes: s.notes.trim() || undefined,
         })),
       });
       load(token);
@@ -171,32 +193,49 @@ export default function WorkoutsTab() {
                 </button>
               </div>
               <div className="flex flex-col divide-y divide-gray-100">
-                {w.slots.map((slot: any, i: number) => {
-                  const Icon = categoryMeta(slot.exercise?.category || 'otros').icon;
-                  return (
-                    <div key={i} className="flex flex-col gap-1.5 py-2 first:pt-0 last:pb-0">
-                      <div className="flex items-center gap-2">
-                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gray-100 text-[10px] font-bold text-[#868585]">
-                          {i + 1}
-                        </span>
-                        <Icon size={16} className="shrink-0" />
-                        <span className="text-sm font-medium text-[#2b2b2a]">
-                          {slot.exercise?.name || 'Ejercicio eliminado'}
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap gap-1 pl-13">
-                        {slot.reps.map((rep: number, j: number) => (
-                          <span
-                            key={j}
-                            className="flex h-6 min-w-6 items-center justify-center rounded-md bg-[#a2c037]/10 px-1.5 text-xs font-semibold text-[#4b7a1f]"
-                          >
-                            {rep}
+                {(() => {
+                  const labels = computeSlotLabels(w.slots);
+                  return w.slots.map((slot: any, i: number) => {
+                    const Icon = categoryMeta(slot.exercise?.category || 'otros').icon;
+                    return (
+                      <div key={i} className="flex flex-col gap-1.5 py-2 first:pt-0 last:pb-0">
+                        <div className="flex items-center gap-2">
+                          <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-gray-100 px-1 text-[10px] font-bold text-[#868585]">
+                            {labels[i]}
                           </span>
-                        ))}
+                          <Icon size={16} className="shrink-0" />
+                          <span className="text-sm font-medium text-[#2b2b2a]">
+                            {slot.exercise?.name || 'Ejercicio eliminado'}
+                          </span>
+                          {slot.restPause && (
+                            <span className="flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+                              <Timer size={10} />
+                              RP
+                            </span>
+                          )}
+                        </div>
+                        {slot.reps.length > 0 && (
+                          <div className="flex flex-wrap gap-1 pl-13">
+                            {slot.reps.map((rep: number, j: number) => (
+                              <span
+                                key={j}
+                                className="flex h-6 min-w-6 items-center justify-center rounded-md bg-[#a2c037]/10 px-1.5 text-xs font-semibold text-[#4b7a1f]"
+                              >
+                                {rep}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {slot.notes && (
+                          <div className="flex items-start gap-1.5 pl-13 text-xs text-[#868585]">
+                            <StickyNote size={12} className="mt-0.5 shrink-0" />
+                            <span>{slot.notes}</span>
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  });
+                })()}
               </div>
             </div>
           ))}
@@ -229,16 +268,20 @@ export default function WorkoutsTab() {
               <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
                 <SortableContext items={slots.map((s) => s.key)} strategy={verticalListSortingStrategy}>
                   <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1">
-                    {slots.map((slot, i) => (
-                      <SortableExerciseSlot
-                        key={slot.key}
-                        index={i}
-                        slot={slot}
-                        onChange={(patch) => updateSlot(slot.key, patch)}
-                        onRemove={() => removeSlot(slot.key)}
-                        removable={slots.length > 1}
-                      />
-                    ))}
+                    {(() => {
+                      const labels = computeSlotLabels(slots);
+                      return slots.map((slot, i) => (
+                        <SortableExerciseSlot
+                          key={slot.key}
+                          label={labels[i]}
+                          slot={slot}
+                          onChange={(patch) => updateSlot(slot.key, patch)}
+                          onRemove={() => removeSlot(slot.key)}
+                          onAddSuperset={() => addSupersetAfter(slot.key)}
+                          removable={slots.length > 1}
+                        />
+                      ));
+                    })()}
                   </div>
                 </SortableContext>
               </DndContext>

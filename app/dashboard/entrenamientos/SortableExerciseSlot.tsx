@@ -5,16 +5,18 @@ import { CSS } from '@dnd-kit/utilities';
 import ExerciseSlotInput, { Slot } from './ExerciseSlotInput';
 
 export default function SortableExerciseSlot({
-  index,
+  label,
   slot,
   onChange,
   onRemove,
+  onAddSuperset,
   removable,
 }: {
-  index: number;
+  label: string;
   slot: Slot;
   onChange: (patch: Partial<Slot>) => void;
   onRemove: () => void;
+  onAddSuperset: () => void;
   removable: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -32,10 +34,11 @@ export default function SortableExerciseSlot({
   return (
     <div ref={setNodeRef} style={style}>
       <ExerciseSlotInput
-        index={index}
+        label={label}
         slot={slot}
         onChange={onChange}
         onRemove={onRemove}
+        onAddSuperset={onAddSuperset}
         removable={removable}
         dragHandleProps={{ attributes, listeners }}
       />
