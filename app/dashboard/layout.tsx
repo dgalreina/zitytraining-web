@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { getAvatarGradient } from '@/lib/colors';
 import { logout } from '@/lib/api';
+import { getTokenWithRetry } from '@/lib/authStorage';
 
 const ADMIN_ONLY_PREFIXES = [
   '/dashboard/entrenadores',
@@ -46,49 +47,49 @@ export default function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
+    return getTokenWithRetry((token) => {
+      if (!token) {
+        router.push('/login');
+        return;
+      }
 
-    if (!token) {
-      router.push('/login');
-      return;
-    }
+      const storedUser = localStorage.getItem('user');
+      let admin = false;
+      let trainer = false;
+      let client = false;
 
-    let admin = false;
-    let trainer = false;
-    let client = false;
+      if (storedUser) {
+        const parsed = JSON.parse(storedUser);
+        setUserName(`${parsed.firstName} ${parsed.lastName}`);
+        setInitials(`${parsed.firstName?.[0] ?? ''}${parsed.lastName?.[0] ?? ''}`);
+        setAvatarColor(parsed.color || null);
+        admin = parsed.roles?.includes('admin') ?? false;
+        trainer = parsed.roles?.includes('trainer') ?? false;
+        client = parsed.roles?.includes('client') ?? false;
+        setIsAdmin(admin);
+        setIsTrainer(trainer);
+        setIsClient(client);
+      }
 
-    if (storedUser) {
-      const parsed = JSON.parse(storedUser);
-      setUserName(`${parsed.firstName} ${parsed.lastName}`);
-      setInitials(`${parsed.firstName?.[0] ?? ''}${parsed.lastName?.[0] ?? ''}`);
-      setAvatarColor(parsed.color || null);
-      admin = parsed.roles?.includes('admin') ?? false;
-      trainer = parsed.roles?.includes('trainer') ?? false;
-      client = parsed.roles?.includes('client') ?? false;
-      setIsAdmin(admin);
-      setIsTrainer(trainer);
-      setIsClient(client);
-    }
+      const isAdminOnlyRoute = ADMIN_ONLY_PREFIXES.some((prefix) =>
+        pathname.startsWith(prefix),
+      );
+      const isAdminOrTrainerRoute = ADMIN_OR_TRAINER_PREFIXES.some((prefix) =>
+        pathname.startsWith(prefix),
+      );
 
-    const isAdminOnlyRoute = ADMIN_ONLY_PREFIXES.some((prefix) =>
-      pathname.startsWith(prefix),
-    );
-    const isAdminOrTrainerRoute = ADMIN_OR_TRAINER_PREFIXES.some((prefix) =>
-      pathname.startsWith(prefix),
-    );
+      if (!admin && isAdminOnlyRoute) {
+        router.push('/dashboard');
+        return;
+      }
 
-    if (!admin && isAdminOnlyRoute) {
-      router.push('/dashboard');
-      return;
-    }
+      if (!admin && !trainer && isAdminOrTrainerRoute) {
+        router.push('/dashboard');
+        return;
+      }
 
-    if (!admin && !trainer && isAdminOrTrainerRoute) {
-      router.push('/dashboard');
-      return;
-    }
-
-    setReady(true);
+      setReady(true);
+    });
   }, [router, pathname]);
 
   useEffect(() => {
