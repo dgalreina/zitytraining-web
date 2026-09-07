@@ -511,3 +511,78 @@ export async function getAllAttendance(token: string, from?: string, to?: string
   });
   return handleResponse(res);
 }
+
+// --- Entrenamientos ---
+
+export async function searchExercises(token: string, q: string) {
+  const res = await apiFetch(`${API_URL}/exercises?q=${encodeURIComponent(q)}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res);
+}
+
+export async function createExercise(token: string, name: string) {
+  const res = await apiFetch(`${API_URL}/exercises`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ name }),
+  });
+  return handleResponse(res);
+}
+
+export async function getExercises(token: string) {
+  const res = await apiFetch(`${API_URL}/exercises`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res);
+}
+
+export async function updateExercise(token: string, id: string, name: string) {
+  const res = await apiFetch(`${API_URL}/exercises/${id}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ name }),
+  });
+  return handleResponse(res);
+}
+
+export async function deleteExercise(token: string, id: string) {
+  const res = await apiFetch(`${API_URL}/exercises/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res);
+}
+
+export async function getWorkouts(token: string) {
+  const res = await apiFetch(`${API_URL}/workouts`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res);
+}
+
+export async function createWorkout(token: string, data: { name: string; slots: { exerciseId: string; reps: number[] }[] }) {
+  const res = await apiFetch(`${API_URL}/workouts`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(res);
+}
+
+export async function deleteWorkout(token: string, id: string) {
+  const res = await apiFetch(`${API_URL}/workouts/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res);
+}

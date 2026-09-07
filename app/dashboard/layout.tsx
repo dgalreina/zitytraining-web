@@ -13,6 +13,7 @@ import {
   Tag,
   Tags,
   Fingerprint,
+  ClipboardList,
   LogOut,
   Menu,
   X,
@@ -26,7 +27,7 @@ const ADMIN_ONLY_PREFIXES = [
   '/dashboard/gestor-planes',
 ];
 
-const ADMIN_OR_TRAINER_PREFIXES = ['/dashboard/clientes', '/dashboard/fichar'];
+const ADMIN_OR_TRAINER_PREFIXES = ['/dashboard/clientes', '/dashboard/fichar', '/dashboard/entrenamientos'];
 
 export default function DashboardLayout({
   children,
@@ -128,6 +129,9 @@ export default function DashboardLayout({
       : []),
     ...(isAdmin || isTrainer
       ? [{ href: '/dashboard/fichar', label: 'Fichar', icon: Fingerprint }]
+      : []),
+    ...(isAdmin || isTrainer
+      ? [{ href: '/dashboard/entrenamientos', label: 'Entrenamientos', icon: ClipboardList }]
       : []),
     ...(isAdmin
       ? [{ href: '/dashboard/entrenadores', label: 'Entrenadores', icon: Dumbbell }]
