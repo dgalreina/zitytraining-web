@@ -22,9 +22,20 @@ export default function LoginPage() {
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotSent, setForgotSent] = useState(false);
   const [debugLog, setDebugLog] = useState<string | null>(null);
+  const [debugNow, setDebugNow] = useState<Record<string, boolean> | null>(null);
   const router = useRouter();
 
   useEffect(() => {
+    // Esto se ve SIEMPRE, aunque el propio log se haya borrado: si el
+    // sistema operativo vació todo el localStorage (ej. al cerrar la
+    // app en iOS), el log de abajo desaparecería con él, y sin esto no
+    // habría forma de distinguir "no ha pasado nada" de "se borró todo".
+    setDebugNow({
+      token: !!localStorage.getItem('token'),
+      refreshToken: !!localStorage.getItem('refreshToken'),
+      user: !!localStorage.getItem('user'),
+      debug_auth_log: !!localStorage.getItem(DEBUG_LOG_KEY),
+    });
     const raw = localStorage.getItem(DEBUG_LOG_KEY);
     setDebugLog(raw);
   }, []);
@@ -144,6 +155,25 @@ export default function LoginPage() {
               <p className="mt-4 text-sm font-medium text-red-600">{error}</p>
             )}
           </div>
+
+          {debugNow && (
+            <div className="mt-4 rounded-xl bg-[#2b2b2a] p-4 text-white">
+              <p className="mb-1 text-xs font-bold uppercase text-gray-400">
+                Debug: estado ahora mismo
+              </p>
+              <p className="text-[11px] leading-relaxed text-[#a2c037]">
+                token: {debugNow.token ? 'sí' : 'NO (vacío)'} · refreshToken:{' '}
+                {debugNow.refreshToken ? 'sí' : 'NO (vacío)'} · user: {debugNow.user ? 'sí' : 'NO (vacío)'}
+              </p>
+              {!debugNow.debug_auth_log && (
+                <p className="mt-1 text-[11px] text-amber-400">
+                  El historial de abajo tampoco existe: si esto pasó justo después de cerrar la
+                  app, todo el localStorage se vació de golpe (no es un 401 nuestro, se borró
+                  entero).
+                </p>
+              )}
+            </div>
+          )}
 
           {debugLog && (
             <div className="mt-4 rounded-xl bg-[#2b2b2a] p-4 text-white">
