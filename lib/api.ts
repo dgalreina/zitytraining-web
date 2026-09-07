@@ -110,21 +110,13 @@ async function handleResponse(res: Response) {
       tokenExpirado: exp ? exp.expired : null,
       tokenCaducaba: exp ? exp.expiredAt : null,
     });
-    localStorage.removeItem('token');
-    localStorage.removeItem('refreshToken');
-    localStorage.removeItem('user');
-    if (refreshToken) {
-      // Best-effort: si el refresh token seguía siendo válido en el
-      // servidor (esto era otro fallo de auth), lo revocamos igual.
-      fetch(`${API_URL}/auth/logout`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken }),
-      }).catch(() => {});
-    }
-    if (typeof window !== 'undefined') {
-      window.location.href = '/login';
-    }
+    // TODO EXPERIMENTO: desactivado temporalmente el borrado de
+    // localStorage y el mandar a /login ante un 401, para comprobar si
+    // es este código el que causa el salto a login en móvil. El evento
+    // sigue quedando registrado arriba (debugLog) para poder verlo.
+    // Revertir a borrar token/refreshToken/user, avisar a /auth/logout
+    // y hacer window.location.href = '/login' en cuanto tengamos la
+    // respuesta.
     throw new Error('Sesión expirada, inicia sesión de nuevo');
   }
 
