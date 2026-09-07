@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ClipboardList } from 'lucide-react';
 import WorkoutsTab from './WorkoutsTab';
@@ -18,6 +18,8 @@ function tabButtonClass(active: boolean) {
 
 export default function EntrenamientosPage() {
   const [tab, setTab] = useState<Tab>('workouts');
+  const [topOffset, setTopOffset] = useState<number | null>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -26,6 +28,22 @@ export default function EntrenamientosPage() {
       router.push('/login');
     }
   }, [router]);
+
+  // Igual que en Fichar/Calendario: se mide cuanto ocupa lo que hay por
+  // encima (titulo + pestañas) para que solo la lista de dentro haga
+  // scroll, en vez de la pagina entera.
+  useEffect(() => {
+    function recalcOffset() {
+      const el = contentRef.current;
+      if (!el) return;
+      const top = el.getBoundingClientRect().top;
+      const BOTTOM_GAP = 24;
+      setTopOffset(top + BOTTOM_GAP);
+    }
+    recalcOffset();
+    window.addEventListener('resize', recalcOffset);
+    return () => window.removeEventListener('resize', recalcOffset);
+  }, [tab]);
 
   return (
     <div className="max-w-2xl">
@@ -43,7 +61,13 @@ export default function EntrenamientosPage() {
         </button>
       </div>
 
-      {tab === 'workouts' ? <WorkoutsTab /> : <ExercisesTab />}
+      <div
+        ref={contentRef}
+        className="flex min-h-0 flex-col"
+        style={topOffset !== null ? { height: `calc(100dvh - ${topOffset}px)` } : undefined}
+      >
+        {tab === 'workouts' ? <WorkoutsTab /> : <ExercisesTab />}
+      </div>
     </div>
   );
 }

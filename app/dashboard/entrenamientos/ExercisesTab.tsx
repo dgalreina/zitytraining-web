@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2, X, Check } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Check, Lock } from 'lucide-react';
 import { getExercises, createExercise, updateExercise, deleteExercise } from '@/lib/api';
 
 export default function ExercisesTab() {
@@ -84,8 +84,8 @@ export default function ExercisesTab() {
   }
 
   return (
-    <>
-      <div className="mb-5 flex justify-end">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="mb-5 flex shrink-0 justify-end">
         <button
           onClick={openCreate}
           className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#a2c037] to-[#6aa842] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
@@ -95,37 +95,51 @@ export default function ExercisesTab() {
         </button>
       </div>
 
-      {error && <p className="mb-4 text-sm font-medium text-red-600">{error}</p>}
+      {error && <p className="mb-4 shrink-0 text-sm font-medium text-red-600">{error}</p>}
 
       {exercises === null ? (
         <p className="text-sm text-gray-400">Cargando...</p>
       ) : exercises.length === 0 ? (
         <p className="text-sm text-gray-400">Todavía no hay ejercicios en el catálogo.</p>
       ) : (
-        <div className="rounded-xl bg-white p-3">
-          <div className="flex flex-col gap-1">
+        <div className="flex min-h-0 flex-1 flex-col rounded-xl bg-white p-3">
+          <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
             {exercises.map((ex) => (
               <div
                 key={ex._id}
                 className="flex items-center justify-between gap-3 rounded-lg px-3 py-2.5 hover:bg-gray-50"
               >
-                <span className="text-sm font-medium text-[#2b2b2a]">{ex.name}</span>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => openEdit(ex)}
-                    title="Editar"
-                    className="rounded-lg bg-gray-100 p-1.5 text-[#2b2b2a] hover:bg-gray-200"
-                  >
-                    <Pencil size={14} />
-                  </button>
-                  <button
-                    onClick={() => setConfirmDeleteId(ex._id)}
-                    title="Eliminar"
-                    className="rounded-lg bg-red-50 p-1.5 text-red-600 hover:bg-red-100"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
+                <span className="flex items-center gap-2 text-sm font-medium text-[#2b2b2a]">
+                  {ex.name}
+                  {ex.locked && (
+                    <span className="flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-400">
+                      <Lock size={10} />
+                      Predefinido
+                    </span>
+                  )}
+                </span>
+                {ex.locked ? (
+                  <span title="No se puede editar ni eliminar" className="p-1.5 text-gray-300">
+                    <Lock size={14} />
+                  </span>
+                ) : (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => openEdit(ex)}
+                      title="Editar"
+                      className="rounded-lg bg-gray-100 p-1.5 text-[#2b2b2a] hover:bg-gray-200"
+                    >
+                      <Pencil size={14} />
+                    </button>
+                    <button
+                      onClick={() => setConfirmDeleteId(ex._id)}
+                      title="Eliminar"
+                      className="rounded-lg bg-red-50 p-1.5 text-red-600 hover:bg-red-100"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -214,6 +228,6 @@ export default function ExercisesTab() {
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }

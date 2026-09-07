@@ -136,8 +136,8 @@ export default function WorkoutsTab() {
   }
 
   return (
-    <>
-      <div className="mb-5 flex justify-end">
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="mb-5 flex shrink-0 justify-end">
         <button
           onClick={openCreate}
           className="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-[#a2c037] to-[#6aa842] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
@@ -147,14 +147,14 @@ export default function WorkoutsTab() {
         </button>
       </div>
 
-      {error && <p className="mb-4 text-sm font-medium text-red-600">{error}</p>}
+      {error && <p className="mb-4 shrink-0 text-sm font-medium text-red-600">{error}</p>}
 
       {workouts === null ? (
         <p className="text-sm text-gray-400">Cargando...</p>
       ) : workouts.length === 0 ? (
         <p className="text-sm text-gray-400">Todavía no hay entrenamientos creados.</p>
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1">
           {workouts.map((w) => (
             <div key={w._id} className="rounded-xl bg-white p-5">
               <div className="mb-3 flex items-center justify-between">
@@ -280,6 +280,6 @@ export default function WorkoutsTab() {
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
