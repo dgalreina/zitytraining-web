@@ -521,14 +521,14 @@ export async function searchExercises(token: string, q: string) {
   return handleResponse(res);
 }
 
-export async function createExercise(token: string, name: string) {
+export async function createExercise(token: string, name: string, category?: string) {
   const res = await apiFetch(`${API_URL}/exercises`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ name, category }),
   });
   return handleResponse(res);
 }
@@ -540,14 +540,14 @@ export async function getExercises(token: string) {
   return handleResponse(res);
 }
 
-export async function updateExercise(token: string, id: string, name: string) {
+export async function updateExercise(token: string, id: string, name: string, category?: string) {
   const res = await apiFetch(`${API_URL}/exercises/${id}`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`,
     },
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ name, category }),
   });
   return handleResponse(res);
 }
