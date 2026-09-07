@@ -153,7 +153,11 @@ export default function ExerciseSlotInput({
   const exactMatch = suggestions.some((s) => s.name.toLowerCase() === query.trim().toLowerCase());
 
   return (
-    <div className="rounded-lg border border-gray-100 p-3">
+    <div
+      className={`rounded-lg border p-3 ${
+        slot.supersetGroup ? 'border-[#6aa842] border-l-4' : 'border-gray-100'
+      }`}
+    >
       <div className="flex items-center gap-2">
         {dragHandleProps && (
           <button
