@@ -80,13 +80,16 @@ export default function BookingModal({
   const [status, setStatus] = useState<'active' | 'cancelled'>('active');
   const [isPrivate, setIsPrivate] = useState(false);
 
+  // El entrenamiento es un campo mas del formulario: se queda en local
+  // hasta que se pulsa "Guardar", igual que las notas o los clientes.
+  // Al crear uno nuevo desde aqui si que se crea de verdad en el
+  // catalogo (es un recurso aparte), pero solo queda "enganchado" a
+  // esta sesion cuando se guarda la sesion.
   const [bookingWorkout, setBookingWorkout] = useState<any | null>(null);
   const [workoutFormOpen, setWorkoutFormOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [allWorkouts, setAllWorkouts] = useState<any[] | null>(null);
   const [workoutSearch, setWorkoutSearch] = useState('');
-  const [savingWorkout, setSavingWorkout] = useState(false);
-  const [workoutError, setWorkoutError] = useState('');
 
   // Cada vez que se abre (o cambia lo que se está editando), recarga el
   // formulario desde cero a partir de esa sesión, o de los valores por
@@ -100,7 +103,6 @@ export default function BookingModal({
     setBookingWorkout(null);
     setPickerOpen(false);
     setWorkoutSearch('');
-    setWorkoutError('');
 
     if (modal.mode === 'edit') {
       const raw = modal.booking;
@@ -142,7 +144,6 @@ export default function BookingModal({
   }
 
   function openWorkoutPicker() {
-    setWorkoutError('');
     setPickerOpen(true);
     if (allWorkouts === null) {
       const token = localStorage.getItem('token');
@@ -153,42 +154,18 @@ export default function BookingModal({
     }
   }
 
-  async function attachWorkout(workout: any) {
-    if (modal!.mode !== 'edit') return;
-    setSavingWorkout(true);
-    setWorkoutError('');
-    const token = localStorage.getItem('token');
-    if (!token) return;
-    try {
-      await updateBooking(token, modal!.booking._id, { workoutId: workout._id });
-      setBookingWorkout(workout);
-      setPickerOpen(false);
-    } catch (err: any) {
-      setWorkoutError(err.message || 'No se pudo asignar el entrenamiento');
-    } finally {
-      setSavingWorkout(false);
-    }
+  function attachWorkout(workout: any) {
+    setBookingWorkout(workout);
+    setPickerOpen(false);
   }
 
-  async function handleWorkoutCreated(workout: any) {
-    await attachWorkout(workout);
+  function handleWorkoutCreated(workout: any) {
+    attachWorkout(workout);
     setWorkoutFormOpen(false);
   }
 
-  async function removeWorkout() {
-    if (modal!.mode !== 'edit') return;
-    setSavingWorkout(true);
-    setWorkoutError('');
-    const token = localStorage.getItem('token');
-    if (!token) return;
-    try {
-      await updateBooking(token, modal!.booking._id, { workoutId: null });
-      setBookingWorkout(null);
-    } catch (err: any) {
-      setWorkoutError(err.message || 'No se pudo quitar el entrenamiento');
-    } finally {
-      setSavingWorkout(false);
-    }
+  function removeWorkout() {
+    setBookingWorkout(null);
   }
 
   const filteredWorkouts = (allWorkouts || []).filter((w) =>
@@ -237,6 +214,7 @@ export default function BookingModal({
           endTime: end.toISOString(),
           notes: notes || undefined,
           isPrivate,
+          workoutId: bookingWorkout?._id,
         });
       } else {
         await updateBooking(token, (modal as { mode: 'edit'; booking: any }).booking._id, {
@@ -246,6 +224,7 @@ export default function BookingModal({
           endTime: end.toISOString(),
           notes: notes || undefined,
           isPrivate,
+          workoutId: bookingWorkout?._id || null,
         });
       }
       onSaved();
@@ -524,18 +503,16 @@ export default function BookingModal({
                       <span className="absolute right-2.5 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-[#6aa842]" />
                     )}
                   </button>
-                  {modal.mode === 'edit' && (
-                    <button
-                      type="button"
-                      onClick={() => setView('training')}
-                      className="relative flex-1 rounded-lg border border-gray-200 py-1.5 text-sm font-semibold text-[#868585] transition hover:bg-gray-50"
-                    >
-                      Entrenamiento
-                      {bookingWorkout && (
-                        <span className="absolute right-2.5 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-[#6aa842]" />
-                      )}
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => setView('training')}
+                    className="relative flex-1 rounded-lg border border-gray-200 py-1.5 text-sm font-semibold text-[#868585] transition hover:bg-gray-50"
+                  >
+                    Entrenamiento
+                    {bookingWorkout && (
+                      <span className="absolute right-2.5 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-[#6aa842]" />
+                    )}
+                  </button>
                 </div>
               </>
             )}
@@ -575,8 +552,6 @@ export default function BookingModal({
 
         {view === 'training' && (
           <div className="mb-3">
-            {workoutError && <p className="mb-2 text-sm font-medium text-red-600">{workoutError}</p>}
-
             {bookingWorkout ? (
               <div>
                 <div className="mb-2 flex items-center justify-between gap-2">
@@ -584,9 +559,8 @@ export default function BookingModal({
                   <button
                     type="button"
                     onClick={removeWorkout}
-                    disabled={savingWorkout}
                     title="Quitar entrenamiento de esta sesión"
-                    className="shrink-0 rounded-lg bg-red-50 p-1.5 text-red-600 hover:bg-red-100 disabled:opacity-60"
+                    className="shrink-0 rounded-lg bg-red-50 p-1.5 text-red-600 hover:bg-red-100"
                   >
                     <Trash2 size={14} />
                   </button>
@@ -613,8 +587,7 @@ export default function BookingModal({
                         key={w._id}
                         type="button"
                         onClick={() => attachWorkout(w)}
-                        disabled={savingWorkout}
-                        className="block w-full rounded-md px-3 py-2 text-left text-sm text-[#2b2b2a] hover:bg-gray-50 disabled:opacity-60"
+                        className="block w-full rounded-md px-3 py-2 text-left text-sm text-[#2b2b2a] hover:bg-gray-50"
                       >
                         {w.name}
                       </button>
