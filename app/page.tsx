@@ -3,10 +3,6 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-// TODO EXPERIMENTO: desactivado temporalmente el mandar a /login cuando
-// no hay token, para averiguar si el salto a login en móvil lo provoca
-// este código o no. Revertir a "else { router.push('/login'); }" en
-// cuanto tengamos la respuesta.
 export default function Home() {
   const router = useRouter();
 
@@ -14,6 +10,8 @@ export default function Home() {
     const token = localStorage.getItem('token');
     if (token) {
       router.push('/dashboard/calendario');
+    } else {
+      router.push('/login');
     }
   }, [router]);
 

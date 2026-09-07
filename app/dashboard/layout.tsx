@@ -46,13 +46,13 @@ export default function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
+    const token = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
 
-    // TODO EXPERIMENTO: desactivado temporalmente el mandar a /login
-    // cuando no hay token, para averiguar si el salto a login en móvil
-    // lo provoca este código o no. Revertir a comprobar
-    // "if (!token) { router.push('/login'); return; }" al principio
-    // en cuanto tengamos la respuesta.
+    if (!token) {
+      router.push('/login');
+      return;
+    }
 
     let admin = false;
     let trainer = false;
