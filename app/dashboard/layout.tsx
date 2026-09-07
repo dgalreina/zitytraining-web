@@ -20,7 +20,6 @@ import {
 } from 'lucide-react';
 import { getAvatarGradient } from '@/lib/colors';
 import { logout } from '@/lib/api';
-import { getTokenWithRetry } from '@/lib/authStorage';
 
 const ADMIN_ONLY_PREFIXES = [
   '/dashboard/entrenadores',
@@ -47,49 +46,49 @@ export default function DashboardLayout({
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
-    return getTokenWithRetry((token) => {
-      if (!token) {
-        router.push('/login');
-        return;
-      }
+    const token = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('user');
 
-      const storedUser = localStorage.getItem('user');
-      let admin = false;
-      let trainer = false;
-      let client = false;
+    if (!token) {
+      router.push('/login');
+      return;
+    }
 
-      if (storedUser) {
-        const parsed = JSON.parse(storedUser);
-        setUserName(`${parsed.firstName} ${parsed.lastName}`);
-        setInitials(`${parsed.firstName?.[0] ?? ''}${parsed.lastName?.[0] ?? ''}`);
-        setAvatarColor(parsed.color || null);
-        admin = parsed.roles?.includes('admin') ?? false;
-        trainer = parsed.roles?.includes('trainer') ?? false;
-        client = parsed.roles?.includes('client') ?? false;
-        setIsAdmin(admin);
-        setIsTrainer(trainer);
-        setIsClient(client);
-      }
+    let admin = false;
+    let trainer = false;
+    let client = false;
 
-      const isAdminOnlyRoute = ADMIN_ONLY_PREFIXES.some((prefix) =>
-        pathname.startsWith(prefix),
-      );
-      const isAdminOrTrainerRoute = ADMIN_OR_TRAINER_PREFIXES.some((prefix) =>
-        pathname.startsWith(prefix),
-      );
+    if (storedUser) {
+      const parsed = JSON.parse(storedUser);
+      setUserName(`${parsed.firstName} ${parsed.lastName}`);
+      setInitials(`${parsed.firstName?.[0] ?? ''}${parsed.lastName?.[0] ?? ''}`);
+      setAvatarColor(parsed.color || null);
+      admin = parsed.roles?.includes('admin') ?? false;
+      trainer = parsed.roles?.includes('trainer') ?? false;
+      client = parsed.roles?.includes('client') ?? false;
+      setIsAdmin(admin);
+      setIsTrainer(trainer);
+      setIsClient(client);
+    }
 
-      if (!admin && isAdminOnlyRoute) {
-        router.push('/dashboard');
-        return;
-      }
+    const isAdminOnlyRoute = ADMIN_ONLY_PREFIXES.some((prefix) =>
+      pathname.startsWith(prefix),
+    );
+    const isAdminOrTrainerRoute = ADMIN_OR_TRAINER_PREFIXES.some((prefix) =>
+      pathname.startsWith(prefix),
+    );
 
-      if (!admin && !trainer && isAdminOrTrainerRoute) {
-        router.push('/dashboard');
-        return;
-      }
+    if (!admin && isAdminOnlyRoute) {
+      router.push('/dashboard');
+      return;
+    }
 
-      setReady(true);
-    });
+    if (!admin && !trainer && isAdminOrTrainerRoute) {
+      router.push('/dashboard');
+      return;
+    }
+
+    setReady(true);
   }, [router, pathname]);
 
   useEffect(() => {
