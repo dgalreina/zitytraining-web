@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Search, Plus, X, Trash2 } from 'lucide-react';
+import { Search, Plus, X, Trash2, GripVertical } from 'lucide-react';
 import { searchExercises, createExercise } from '@/lib/api';
 
 const DEFAULT_SETS = 4;
@@ -28,12 +28,14 @@ export default function ExerciseSlotInput({
   onChange,
   onRemove,
   removable,
+  dragHandleProps,
 }: {
   index: number;
   slot: Slot;
   onChange: (patch: Partial<Slot>) => void;
   onRemove: () => void;
   removable: boolean;
+  dragHandleProps?: { attributes: Record<string, any>; listeners: Record<string, any> | undefined };
 }) {
   const [query, setQuery] = useState(slot.exerciseName);
   const [suggestions, setSuggestions] = useState<any[]>([]);
@@ -129,6 +131,17 @@ export default function ExerciseSlotInput({
   return (
     <div className="rounded-lg border border-gray-100 p-3">
       <div className="flex items-center gap-2">
+        {dragHandleProps && (
+          <button
+            type="button"
+            {...dragHandleProps.attributes}
+            {...dragHandleProps.listeners}
+            className="shrink-0 touch-none text-gray-300 hover:text-gray-500 active:cursor-grabbing"
+            style={{ cursor: 'grab' }}
+          >
+            <GripVertical size={16} />
+          </button>
+        )}
         <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-[#868585]">
           {index + 1}
         </span>

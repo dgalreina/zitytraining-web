@@ -2,8 +2,18 @@
 
 import { useEffect, useState } from 'react';
 import { Plus, Trash2, X, Check } from 'lucide-react';
+import {
+  DndContext,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import { SortableContext, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { getWorkouts, createWorkout, deleteWorkout } from '@/lib/api';
-import ExerciseSlotInput, { Slot, emptySlot } from './ExerciseSlotInput';
+import { Slot, emptySlot } from './ExerciseSlotInput';
+import SortableExerciseSlot from './SortableExerciseSlot';
 
 const INITIAL_SLOT_COUNT = 6;
 
@@ -17,6 +27,23 @@ export default function WorkoutsTab() {
   const [saving, setSaving] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Distancia minima antes de considerarlo un arrastre: asi un simple
+  // tap en el icono no se confunde con un drag accidental.
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+  );
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setSlots((prev) => {
+      const oldIndex = prev.findIndex((s) => s.key === active.id);
+      const newIndex = prev.findIndex((s) => s.key === over.id);
+      if (oldIndex === -1 || newIndex === -1) return prev;
+      return arrayMove(prev, oldIndex, newIndex);
+    });
+  }
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -142,16 +169,25 @@ export default function WorkoutsTab() {
                   <Trash2 size={14} />
                 </button>
               </div>
-              <div className="flex flex-col gap-1.5">
+              <div className="flex flex-col divide-y divide-gray-100">
                 {w.slots.map((slot: any, i: number) => (
-                  <div key={i} className="flex items-center justify-between text-sm text-[#868585]">
-                    <span className="flex items-center gap-2">
-                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-gray-100 text-[10px] font-bold text-[#868585]">
+                  <div key={i} className="flex flex-wrap items-center justify-between gap-2 py-2 first:pt-0 last:pb-0">
+                    <span className="flex items-center gap-2 text-sm font-medium text-[#2b2b2a]">
+                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gray-100 text-[10px] font-bold text-[#868585]">
                         {i + 1}
                       </span>
                       {slot.exercise?.name || 'Ejercicio eliminado'}
                     </span>
-                    <span className="font-medium text-[#2b2b2a]">{slot.reps.join(' · ')} reps</span>
+                    <div className="flex flex-wrap justify-end gap-1">
+                      {slot.reps.map((rep: number, j: number) => (
+                        <span
+                          key={j}
+                          className="flex h-6 min-w-6 items-center justify-center rounded-md bg-[#a2c037]/10 px-1.5 text-xs font-semibold text-[#4b7a1f]"
+                        >
+                          {rep}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -183,18 +219,22 @@ export default function WorkoutsTab() {
                 />
               </div>
 
-              <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1">
-                {slots.map((slot, i) => (
-                  <ExerciseSlotInput
-                    key={slot.key}
-                    index={i}
-                    slot={slot}
-                    onChange={(patch) => updateSlot(slot.key, patch)}
-                    onRemove={() => removeSlot(slot.key)}
-                    removable={slots.length > 1}
-                  />
-                ))}
-              </div>
+              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                <SortableContext items={slots.map((s) => s.key)} strategy={verticalListSortingStrategy}>
+                  <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1">
+                    {slots.map((slot, i) => (
+                      <SortableExerciseSlot
+                        key={slot.key}
+                        index={i}
+                        slot={slot}
+                        onChange={(patch) => updateSlot(slot.key, patch)}
+                        onRemove={() => removeSlot(slot.key)}
+                        removable={slots.length > 1}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
 
               {formError && <p className="shrink-0 text-sm font-medium text-red-600">{formError}</p>}
 
