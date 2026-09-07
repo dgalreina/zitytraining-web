@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2, X, Check, Lock } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Check, Lock, ChevronDown } from 'lucide-react';
 import { getExercises, createExercise, updateExercise, deleteExercise } from '@/lib/api';
 import { EXERCISE_CATEGORIES } from './exerciseCategories';
 
@@ -18,6 +18,7 @@ export default function ExercisesTab() {
   const [saving, setSaving] = useState(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [openCategory, setOpenCategory] = useState<string | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -116,15 +117,28 @@ export default function ExercisesTab() {
             const items = exercisesByCategory(cat.id);
             if (items.length === 0) return null;
             const Icon = cat.icon;
+            const isOpen = openCategory === cat.id;
             return (
               <div key={cat.id} className="rounded-xl bg-white p-4">
-                <div className="mb-2 flex items-center gap-2 px-1">
-                  <Icon size={16} className="text-[#6aa842]" />
-                  <h3 className="font-[family-name:var(--font-work-sans)] text-sm font-bold text-[#2b2b2a]">
-                    {cat.label}
-                  </h3>
-                </div>
-                <div className="flex flex-col gap-1">
+                <button
+                  type="button"
+                  onClick={() => setOpenCategory(isOpen ? null : cat.id)}
+                  className="flex w-full items-center justify-between gap-2 px-1"
+                >
+                  <span className="flex items-center gap-2">
+                    <Icon size={16} className="text-[#6aa842]" />
+                    <h3 className="font-[family-name:var(--font-work-sans)] text-sm font-bold text-[#2b2b2a]">
+                      {cat.label}
+                    </h3>
+                    <span className="text-xs font-medium text-gray-400">({items.length})</span>
+                  </span>
+                  <ChevronDown
+                    size={16}
+                    className={`text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
+                  />
+                </button>
+                {isOpen && (
+                <div className="mt-2 flex flex-col gap-1">
                   {items.map((ex) => (
                     <div
                       key={ex._id}
@@ -164,6 +178,7 @@ export default function ExercisesTab() {
                     </div>
                   ))}
                 </div>
+                )}
               </div>
             );
           })}
