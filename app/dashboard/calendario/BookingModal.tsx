@@ -7,7 +7,9 @@ import 'react-datepicker/dist/react-datepicker.css';
 import '@/styles/datepicker-theme.css';
 import { X, Trash2, ChevronLeft, Ban, RotateCcw } from 'lucide-react';
 import FilterDropdown from '@/components/FilterDropdown';
-import { createBooking, updateBooking, deleteBooking } from '@/lib/api';
+import { createBooking, updateBooking, deleteBooking, getWorkouts } from '@/lib/api';
+import WorkoutFormModal from '../entrenamientos/WorkoutFormModal';
+import WorkoutSummary from '../entrenamientos/WorkoutSummary';
 
 registerLocale('es', es);
 
@@ -78,6 +80,14 @@ export default function BookingModal({
   const [status, setStatus] = useState<'active' | 'cancelled'>('active');
   const [isPrivate, setIsPrivate] = useState(false);
 
+  const [bookingWorkout, setBookingWorkout] = useState<any | null>(null);
+  const [workoutFormOpen, setWorkoutFormOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [allWorkouts, setAllWorkouts] = useState<any[] | null>(null);
+  const [workoutSearch, setWorkoutSearch] = useState('');
+  const [savingWorkout, setSavingWorkout] = useState(false);
+  const [workoutError, setWorkoutError] = useState('');
+
   // Cada vez que se abre (o cambia lo que se está editando), recarga el
   // formulario desde cero a partir de esa sesión, o de los valores por
   // defecto si es una nueva.
@@ -87,6 +97,10 @@ export default function BookingModal({
     setClientSearch('');
     setError('');
     setView('form');
+    setBookingWorkout(null);
+    setPickerOpen(false);
+    setWorkoutSearch('');
+    setWorkoutError('');
 
     if (modal.mode === 'edit') {
       const raw = modal.booking;
@@ -96,6 +110,7 @@ export default function BookingModal({
       setNotes(raw.notes || '');
       setStatus(raw.status === 'cancelled' ? 'cancelled' : 'active');
       setIsPrivate(!!raw.isPrivate);
+      setBookingWorkout(raw.workout || null);
       if (diff === 40) {
         setDurationOption('40');
       } else if (diff === 60) {
@@ -125,6 +140,60 @@ export default function BookingModal({
       prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id],
     );
   }
+
+  function openWorkoutPicker() {
+    setWorkoutError('');
+    setPickerOpen(true);
+    if (allWorkouts === null) {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      getWorkouts(token)
+        .then(setAllWorkouts)
+        .catch(() => setAllWorkouts([]));
+    }
+  }
+
+  async function attachWorkout(workout: any) {
+    if (modal!.mode !== 'edit') return;
+    setSavingWorkout(true);
+    setWorkoutError('');
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    try {
+      await updateBooking(token, modal!.booking._id, { workoutId: workout._id });
+      setBookingWorkout(workout);
+      setPickerOpen(false);
+    } catch (err: any) {
+      setWorkoutError(err.message || 'No se pudo asignar el entrenamiento');
+    } finally {
+      setSavingWorkout(false);
+    }
+  }
+
+  async function handleWorkoutCreated(workout: any) {
+    await attachWorkout(workout);
+    setWorkoutFormOpen(false);
+  }
+
+  async function removeWorkout() {
+    if (modal!.mode !== 'edit') return;
+    setSavingWorkout(true);
+    setWorkoutError('');
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    try {
+      await updateBooking(token, modal!.booking._id, { workoutId: null });
+      setBookingWorkout(null);
+    } catch (err: any) {
+      setWorkoutError(err.message || 'No se pudo quitar el entrenamiento');
+    } finally {
+      setSavingWorkout(false);
+    }
+  }
+
+  const filteredWorkouts = (allWorkouts || []).filter((w) =>
+    w.name.toLowerCase().includes(workoutSearch.trim().toLowerCase()),
+  );
 
   function getEffectiveDurationMinutes() {
     if (durationOption === '40') return 40;
@@ -242,6 +311,7 @@ export default function BookingModal({
   maxStartTime.setHours(21, 20, 0, 0);
 
   return (
+    <>
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
       <div className="max-h-[85vh] w-full max-w-sm overflow-y-auto rounded-xl bg-white p-6 shadow-xl">
         <div className="mb-4 flex items-center justify-between">
@@ -454,13 +524,18 @@ export default function BookingModal({
                       <span className="absolute right-2.5 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-[#6aa842]" />
                     )}
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setView('training')}
-                    className="flex-1 rounded-lg border border-gray-200 py-1.5 text-sm font-semibold text-[#868585] transition hover:bg-gray-50"
-                  >
-                    Entrenamiento
-                  </button>
+                  {modal.mode === 'edit' && (
+                    <button
+                      type="button"
+                      onClick={() => setView('training')}
+                      className="relative flex-1 rounded-lg border border-gray-200 py-1.5 text-sm font-semibold text-[#868585] transition hover:bg-gray-50"
+                    >
+                      Entrenamiento
+                      {bookingWorkout && (
+                        <span className="absolute right-2.5 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-[#6aa842]" />
+                      )}
+                    </button>
+                  )}
                 </div>
               </>
             )}
@@ -499,9 +574,80 @@ export default function BookingModal({
         )}
 
         {view === 'training' && (
-          <p className="mb-3 text-sm text-gray-400">
-            Próximamente podrás añadir aquí el entrenamiento de la sesión.
-          </p>
+          <div className="mb-3">
+            {workoutError && <p className="mb-2 text-sm font-medium text-red-600">{workoutError}</p>}
+
+            {bookingWorkout ? (
+              <div>
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <h4 className="text-sm font-bold text-[#2b2b2a]">{bookingWorkout.name}</h4>
+                  <button
+                    type="button"
+                    onClick={removeWorkout}
+                    disabled={savingWorkout}
+                    title="Quitar entrenamiento de esta sesión"
+                    className="shrink-0 rounded-lg bg-red-50 p-1.5 text-red-600 hover:bg-red-100 disabled:opacity-60"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+                <WorkoutSummary slots={bookingWorkout.slots} />
+              </div>
+            ) : pickerOpen ? (
+              <div>
+                <input
+                  value={workoutSearch}
+                  onChange={(e) => setWorkoutSearch(e.target.value)}
+                  placeholder="Buscar entrenamiento..."
+                  autoFocus
+                  className="mb-1.5 w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-[#6aa842] focus:outline-none"
+                />
+                <div className="mb-2 max-h-48 overflow-y-auto rounded-lg border border-gray-200 p-1">
+                  {allWorkouts === null ? (
+                    <p className="p-2 text-xs text-gray-400">Cargando...</p>
+                  ) : filteredWorkouts.length === 0 ? (
+                    <p className="p-2 text-xs text-gray-400">Sin resultados.</p>
+                  ) : (
+                    filteredWorkouts.map((w) => (
+                      <button
+                        key={w._id}
+                        type="button"
+                        onClick={() => attachWorkout(w)}
+                        disabled={savingWorkout}
+                        className="block w-full rounded-md px-3 py-2 text-left text-sm text-[#2b2b2a] hover:bg-gray-50 disabled:opacity-60"
+                      >
+                        {w.name}
+                      </button>
+                    ))
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setPickerOpen(false)}
+                  className="text-xs font-semibold text-[#868585] hover:underline"
+                >
+                  Cancelar
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => setWorkoutFormOpen(true)}
+                  className="rounded-lg bg-gradient-to-r from-[#a2c037] to-[#6aa842] py-2 text-sm font-semibold text-white hover:opacity-90"
+                >
+                  Crear entrenamiento nuevo
+                </button>
+                <button
+                  type="button"
+                  onClick={openWorkoutPicker}
+                  className="rounded-lg border border-gray-200 py-2 text-sm font-semibold text-[#868585] hover:bg-gray-50"
+                >
+                  Elegir uno existente
+                </button>
+              </div>
+            )}
+          </div>
         )}
 
         {view === 'form' && (
@@ -541,5 +687,14 @@ export default function BookingModal({
         )}
       </div>
     </div>
+
+    {workoutFormOpen && (
+      <WorkoutFormModal
+        title="Entrenamiento para esta sesión"
+        onClose={() => setWorkoutFormOpen(false)}
+        onSaved={handleWorkoutCreated}
+      />
+    )}
+    </>
   );
 }

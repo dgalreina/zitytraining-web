@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getBookings } from '@/lib/api';
+import WorkoutSummary from './entrenamientos/WorkoutSummary';
 
 export default function DashboardHome() {
   const [bookings, setBookings] = useState<any[] | null>(null);
@@ -107,6 +108,14 @@ export default function DashboardHome() {
                     <p className="whitespace-pre-wrap break-words text-xs text-[#2b2b2a]">
                       {b.notes}
                     </p>
+                  </div>
+                )}
+                {b.workout && (
+                  <div className="mt-2 rounded-lg bg-gray-50 px-3 py-2">
+                    <p className="mb-1 text-xs font-semibold text-[#868585]">
+                      Entrenamiento: {b.workout.name}
+                    </p>
+                    <WorkoutSummary slots={b.workout.slots} />
                   </div>
                 )}
               </div>

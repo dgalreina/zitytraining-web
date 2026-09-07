@@ -119,25 +119,25 @@ export default function DashboardLayout({
   }
 
   const navItems = [
-    { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/dashboard/calendario', label: 'Calendario', icon: CalendarClock },
-    ...(isClient
-      ? [{ href: '/dashboard/pagos', label: 'Planes', icon: Tag }]
+    { href: '/dashboard', label: 'Clases de hoy', icon: LayoutDashboard },
+    ...(isAdmin || isTrainer
+      ? [{ href: '/dashboard/fichar', label: 'Fichar', icon: Fingerprint }]
       : []),
     ...(isAdmin || isTrainer
       ? [{ href: '/dashboard/clientes', label: 'Clientes', icon: Users }]
       : []),
     ...(isAdmin || isTrainer
-      ? [{ href: '/dashboard/fichar', label: 'Fichar', icon: Fingerprint }]
-      : []),
-    ...(isAdmin || isTrainer
       ? [{ href: '/dashboard/entrenamientos', label: 'Entrenamientos', icon: ClipboardList }]
       : []),
-    ...(isAdmin
-      ? [{ href: '/dashboard/entrenadores', label: 'Entrenadores', icon: Dumbbell }]
+    ...(isClient
+      ? [{ href: '/dashboard/pagos', label: 'Planes', icon: Tag }]
       : []),
     ...(isAdmin
       ? [{ href: '/dashboard/gestor-planes', label: 'Planes', icon: Tags }]
+      : []),
+    ...(isAdmin
+      ? [{ href: '/dashboard/entrenadores', label: 'Entrenadores', icon: Dumbbell }]
       : []),
   ];
 
