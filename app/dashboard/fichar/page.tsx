@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Fingerprint, LogIn, LogOut, AlertTriangle } from 'lucide-react';
-import { clockIn, clockOut, getAttendanceStatus, getMyAttendance } from '@/lib/api';
+import { Fingerprint, LogIn, LogOut, AlertTriangle, PenLine, X, Check } from 'lucide-react';
+import { clockIn, clockOut, getAttendanceStatus, getMyAttendance, createManualAttendance } from '@/lib/api';
 import WeeklyAttendanceCalendar from './WeeklyAttendanceCalendar';
 
 type Tab = 'mine' | 'calendar';
@@ -43,6 +43,14 @@ export default function FicharPage() {
   const [topOffset, setTopOffset] = useState<number | null>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
+  const [manualOpen, setManualOpen] = useState(false);
+  const [manualMode, setManualMode] = useState<'full' | 'in' | 'out'>('full');
+  const [manualDate, setManualDate] = useState('');
+  const [manualStart, setManualStart] = useState('');
+  const [manualEnd, setManualEnd] = useState('');
+  const [manualSaving, setManualSaving] = useState(false);
+  const [manualError, setManualError] = useState('');
 
   function load(token: string) {
     getAttendanceStatus(token).then(setStatus).catch(() => setStatus({ clockedIn: false }));
@@ -113,6 +121,43 @@ export default function FicharPage() {
     }
   }
 
+  function closeManualModal() {
+    setManualOpen(false);
+    setManualMode('full');
+    setManualDate('');
+    setManualStart('');
+    setManualEnd('');
+    setManualError('');
+  }
+
+  async function handleCreateManual(e: React.FormEvent) {
+    e.preventDefault();
+    setManualError('');
+
+    const needsStart = manualMode !== 'out';
+    const needsEnd = manualMode !== 'in';
+    if (!manualDate || (needsStart && !manualStart) || (needsEnd && !manualEnd)) {
+      setManualError('Rellena la fecha y la hora');
+      return;
+    }
+
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    setManualSaving(true);
+    try {
+      await createManualAttendance(token, {
+        clockIn: needsStart ? `${manualDate}T${manualStart}` : undefined,
+        clockOut: needsEnd ? `${manualDate}T${manualEnd}` : undefined,
+      });
+      closeManualModal();
+      load(token);
+    } catch (err: any) {
+      setManualError(err.message || 'No se pudo guardar el fichaje manual');
+    } finally {
+      setManualSaving(false);
+    }
+  }
+
   const clockedIn = status?.clockedIn ?? false;
 
   return (
@@ -178,6 +223,14 @@ export default function FicharPage() {
               {error && <p className="mt-3 text-sm font-medium text-red-600">{error}</p>}
             </div>
 
+            <button
+              onClick={() => setManualOpen(true)}
+              className="mx-auto flex shrink-0 items-center gap-1.5 text-xs font-medium text-[#868585] transition hover:text-[#4b7a1f]"
+            >
+              <PenLine size={14} />
+              Añadir fichaje manual
+            </button>
+
             <div className="flex min-h-0 flex-1 flex-col rounded-xl bg-white p-6">
               <h3 className="mb-3 shrink-0 font-[family-name:var(--font-work-sans)] text-sm font-bold text-[#2b2b2a]">
                 Tus fichajes
@@ -191,8 +244,14 @@ export default function FicharPage() {
                   {entries.map((entry) => (
                     <div key={entry._id} className="rounded-lg border border-gray-100 p-3">
                       <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="text-sm font-semibold text-[#2b2b2a]">
+                        <span className="flex items-center gap-1.5 text-sm font-semibold text-[#2b2b2a]">
                           {formatDate(entry.clockIn)}
+                          {entry.manual && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
+                              <PenLine size={10} />
+                              Manual
+                            </span>
+                          )}
                         </span>
                         {entry.clockOut && (
                           <span className="text-xs font-medium text-[#4b7a1f]">
@@ -217,6 +276,88 @@ export default function FicharPage() {
           </>
         )}
       </div>
+
+      {manualOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="font-[family-name:var(--font-work-sans)] text-sm font-bold text-[#2b2b2a]">
+                Fichaje manual
+              </h3>
+              <button
+                onClick={closeManualModal}
+                className="text-[#868585] transition hover:text-[#2b2b2a]"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="mb-3 flex gap-1 rounded-lg bg-gray-100 p-1 text-xs font-semibold">
+              {(
+                [
+                  { key: 'full', label: 'Entrada y salida' },
+                  { key: 'in', label: 'Solo entrada' },
+                  { key: 'out', label: 'Solo salida' },
+                ] as const
+              ).map((option) => (
+                <button
+                  key={option.key}
+                  type="button"
+                  onClick={() => setManualMode(option.key)}
+                  className={`flex-1 rounded-md px-2 py-1.5 transition ${
+                    manualMode === option.key ? 'bg-white text-[#4b7a1f] shadow-sm' : 'text-[#868585]'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+            <form onSubmit={handleCreateManual} className="flex flex-col gap-3">
+              <label className="flex flex-col gap-1 text-xs font-medium text-[#868585]">
+                Fecha
+                <input
+                  type="date"
+                  value={manualDate}
+                  onChange={(e) => setManualDate(e.target.value)}
+                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-[#2b2b2a]"
+                />
+              </label>
+              <div className="flex gap-3">
+                {manualMode !== 'out' && (
+                  <label className="flex flex-1 flex-col gap-1 text-xs font-medium text-[#868585]">
+                    Entrada
+                    <input
+                      type="time"
+                      value={manualStart}
+                      onChange={(e) => setManualStart(e.target.value)}
+                      className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-[#2b2b2a]"
+                    />
+                  </label>
+                )}
+                {manualMode !== 'in' && (
+                  <label className="flex flex-1 flex-col gap-1 text-xs font-medium text-[#868585]">
+                    Salida
+                    <input
+                      type="time"
+                      value={manualEnd}
+                      onChange={(e) => setManualEnd(e.target.value)}
+                      className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-[#2b2b2a]"
+                    />
+                  </label>
+                )}
+              </div>
+              {manualError && <p className="text-sm font-medium text-red-600">{manualError}</p>}
+              <button
+                type="submit"
+                disabled={manualSaving}
+                className="mt-1 flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-[#a2c037] to-[#6aa842] px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+              >
+                <Check size={16} />
+                {manualSaving ? 'Guardando...' : 'Guardar fichaje'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

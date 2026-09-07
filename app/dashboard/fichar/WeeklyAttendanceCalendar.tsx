@@ -18,6 +18,25 @@ function hexToRgba(hex: string, alpha: number) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
+function formatTime(date: Date | null) {
+  if (!date) return '';
+  return date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+}
+
+// El recuadro del evento es estrecho, "10:00 - 11:30" no cabe en una
+// linea: entrada y salida van apiladas, una encima de otra.
+function renderEventContent(arg: any) {
+  return (
+    <div className="flex h-full flex-col justify-center overflow-hidden px-1 text-[10px] leading-tight">
+      <span className="font-semibold">{formatTime(arg.event.start)}</span>
+      <span>{formatTime(arg.event.end)}</span>
+      {arg.event.extendedProps?.manual && (
+        <span className="font-semibold text-blue-700">Manual</span>
+      )}
+    </div>
+  );
+}
+
 function ColorDot({ color }: { color?: string | null }) {
   return (
     <span
@@ -221,6 +240,7 @@ export default function WeeklyAttendanceCalendar() {
       color: hexToRgba(color, 0.35),
       borderColor: color,
       textColor: '#2b2b2a',
+      extendedProps: { manual: !!e.manual },
     }));
 
   return (
@@ -259,7 +279,8 @@ export default function WeeklyAttendanceCalendar() {
             editable={false}
             eventStartEditable={false}
             slotDuration="00:30:00"
-            displayEventTime
+            displayEventTime={false}
+            eventContent={renderEventContent}
             events={events}
             datesSet={handleDatesSet}
           />

@@ -6,6 +6,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 let refreshInFlight: Promise<string | null> | null = null;
 
 async function tryRefreshToken(): Promise<string | null> {
+  console.log('[refresh-token] start');
   if (refreshInFlight) return refreshInFlight;
 
   const refreshToken = localStorage.getItem('refreshToken');
@@ -49,6 +50,7 @@ async function tryRefreshToken(): Promise<string | null> {
 // con el refresh token guardado y repite la petición una vez. Si el
 // refresh también falla, handleResponse se encarga de cerrar la sesión.
 async function apiFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  console.log('[apiFetch] start');
   const res = await fetch(url, options);
   if (res.status !== 401) return res;
 
@@ -469,6 +471,18 @@ export async function clockOut(token: string) {
   const res = await apiFetch(`${API_URL}/attendance/clock-out`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res);
+}
+
+export async function createManualAttendance(token: string, data: { clockIn?: string; clockOut?: string }) {
+  const res = await apiFetch(`${API_URL}/attendance/manual`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
   });
   return handleResponse(res);
 }
