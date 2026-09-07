@@ -14,6 +14,7 @@ import { SortableContext, arrayMove, verticalListSortingStrategy } from '@dnd-ki
 import { getWorkouts, createWorkout, deleteWorkout } from '@/lib/api';
 import { Slot, emptySlot } from './ExerciseSlotInput';
 import SortableExerciseSlot from './SortableExerciseSlot';
+import { categoryMeta } from './exerciseCategories';
 
 const INITIAL_SLOT_COUNT = 6;
 
@@ -170,26 +171,32 @@ export default function WorkoutsTab() {
                 </button>
               </div>
               <div className="flex flex-col divide-y divide-gray-100">
-                {w.slots.map((slot: any, i: number) => (
-                  <div key={i} className="flex flex-wrap items-center justify-between gap-2 py-2 first:pt-0 last:pb-0">
-                    <span className="flex items-center gap-2 text-sm font-medium text-[#2b2b2a]">
-                      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gray-100 text-[10px] font-bold text-[#868585]">
-                        {i + 1}
-                      </span>
-                      {slot.exercise?.name || 'Ejercicio eliminado'}
-                    </span>
-                    <div className="flex flex-wrap justify-end gap-1">
-                      {slot.reps.map((rep: number, j: number) => (
-                        <span
-                          key={j}
-                          className="flex h-6 min-w-6 items-center justify-center rounded-md bg-[#a2c037]/10 px-1.5 text-xs font-semibold text-[#4b7a1f]"
-                        >
-                          {rep}
+                {w.slots.map((slot: any, i: number) => {
+                  const Icon = categoryMeta(slot.exercise?.category || 'otros').icon;
+                  return (
+                    <div key={i} className="flex flex-col gap-1.5 py-2 first:pt-0 last:pb-0">
+                      <div className="flex items-center gap-2">
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gray-100 text-[10px] font-bold text-[#868585]">
+                          {i + 1}
                         </span>
-                      ))}
+                        <Icon size={16} className="shrink-0" />
+                        <span className="text-sm font-medium text-[#2b2b2a]">
+                          {slot.exercise?.name || 'Ejercicio eliminado'}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-1 pl-13">
+                        {slot.reps.map((rep: number, j: number) => (
+                          <span
+                            key={j}
+                            className="flex h-6 min-w-6 items-center justify-center rounded-md bg-[#a2c037]/10 px-1.5 text-xs font-semibold text-[#4b7a1f]"
+                          >
+                            {rep}
+                          </span>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           ))}
