@@ -1,11 +1,18 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { X } from 'lucide-react';
 import { login } from '@/lib/api';
 import PasswordInput from '@/components/PasswordInput';
+
+// TODO: quitar este bloque de depuración (DEBUG_LOG_KEY, debugLog, el
+// useEffect que lo lee y el <pre> que lo pinta) en cuanto se localice
+// por qué a veces se cierra la sesión sola. Sirve para ver en el propio
+// móvil (sin consola a mano) si localStorage estaba vacío o el token
+// realmente había caducado justo antes de que nos mandara aquí.
+const DEBUG_LOG_KEY = 'debug_auth_log';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -14,7 +21,13 @@ export default function LoginPage() {
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotSent, setForgotSent] = useState(false);
+  const [debugLog, setDebugLog] = useState<string | null>(null);
   const router = useRouter();
+
+  useEffect(() => {
+    const raw = localStorage.getItem(DEBUG_LOG_KEY);
+    setDebugLog(raw);
+  }, []);
 
   function closeForgotModal() {
     setForgotOpen(false);
@@ -131,6 +144,29 @@ export default function LoginPage() {
               <p className="mt-4 text-sm font-medium text-red-600">{error}</p>
             )}
           </div>
+
+          {debugLog && (
+            <div className="mt-4 rounded-xl bg-[#2b2b2a] p-4 text-white">
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-xs font-bold uppercase text-gray-400">
+                  Debug: por qué te ha sacado
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    localStorage.removeItem('debug_auth_log');
+                    setDebugLog(null);
+                  }}
+                  className="text-xs font-semibold text-gray-400 underline"
+                >
+                  Borrar
+                </button>
+              </div>
+              <pre className="max-h-64 overflow-auto whitespace-pre-wrap wrap-break-word text-[10px] leading-relaxed text-[#a2c037]">
+                {JSON.stringify(JSON.parse(debugLog), null, 2)}
+              </pre>
+            </div>
+          )}
         </div>
       </div>
 
