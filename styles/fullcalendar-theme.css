@@ -199,8 +199,12 @@
    opacity < 1 por defecto: al ser semitransparente, las líneas de la
    rejilla horaria se transparentaban a través de él (esos filos
    grises). Se sustituye por un oscurecido real (filter), que no deja
-   ver nada detrás, y se quita el aro blanco que añade FullCalendar. */
-.fc-event-mirror {
+   ver nada detrás, y se quita el aro blanco que añade FullCalendar.
+   El propio evento de origen (la casilla desde la que arrastras) usa
+   una clase distinta, .fc-event-dragging, con el mismo problema de
+   opacity por defecto, así que lleva el mismo arreglo. */
+.fc-event-mirror,
+.fc-event-dragging {
   opacity: 1 !important;
   box-shadow: none !important;
   filter: brightness(0.85);
