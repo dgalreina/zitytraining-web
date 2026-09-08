@@ -178,16 +178,19 @@
    redondear (no tiene border-radius), asomando como un filo cuadrado
    detrás del recuadro redondeado. Al tocar fuera se quita el foco y por
    eso volvía a verse bien. Con el ratón en escritorio no se reproducía
-   porque un click normal no dejaba el mismo foco. Se anula del todo. */
+   porque un click normal no dejaba el mismo foco. Se anula del todo,
+   pero SIN tocar el evento mientras se arrastra (también se queda con
+   el foco puesto, y usa este mismo ::after para oscurecerse a propósito;
+   si no se excluye aquí, esta regla (más específica) se lo come). */
 .fc-event:focus,
 .fc-event-selected {
   outline: none !important;
 }
 
-.fc-event:focus::after,
-.fc-event-selected::after,
-.fc-event:focus::before,
-.fc-event-selected::before {
+.fc-event:focus:not(.fc-event-dragging):not(.fc-event-mirror)::after,
+.fc-event-selected:not(.fc-event-dragging):not(.fc-event-mirror)::after,
+.fc-event:focus:not(.fc-event-dragging):not(.fc-event-mirror)::before,
+.fc-event-selected:not(.fc-event-dragging):not(.fc-event-mirror)::before {
   content: none !important;
 }
 
