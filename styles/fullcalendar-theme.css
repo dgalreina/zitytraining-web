@@ -171,6 +171,37 @@
   overflow: visible !important;
 }
 
+/* Esta es la causa real del "se queda oscuro con un filo feo" al soltar
+   una sesión en móvil: al soltar el dedo, FullCalendar deja el evento con
+   el foco puesto, y por defecto .fc-event:focus le añade una capa negra
+   al 25% (::after) que además sobresale 1px por las esquinas SIN
+   redondear (no tiene border-radius), asomando como un filo cuadrado
+   detrás del recuadro redondeado. Al tocar fuera se quita el foco y por
+   eso volvía a verse bien. Con el ratón en escritorio no se reproducía
+   porque un click normal no dejaba el mismo foco. Se anula del todo. */
+.fc-event:focus,
+.fc-event-selected {
+  outline: none !important;
+}
+
+.fc-event:focus::after,
+.fc-event-selected::after,
+.fc-event:focus::before,
+.fc-event-selected::before {
+  content: none !important;
+}
+
+/* FullCalendar pone a TODO evento de la vista de horas un anillo blanco de
+   1px (box-shadow), pensado para separar eventos que coinciden en el
+   tiempo. En pantallas retina esa línea de 1px cae en posiciones con
+   decimales y se renderiza borrosa/gris en vez de blanca nítida (se nota
+   sobre todo en móvil, o en escritorio si la ventana es muy estrecha).
+   No solo pasaba en el mirror/dragging: pasa siempre, así que se quita
+   en general. */
+.fc-timegrid-event {
+  box-shadow: none !important;
+}
+
 .fc-timegrid-event,
 .fc-timegrid-event .fc-event-main,
 .fc-timegrid-event-harness,
