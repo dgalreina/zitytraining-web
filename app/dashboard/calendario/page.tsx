@@ -192,9 +192,13 @@ export default function CalendarioPage() {
           // Admin: todos los entrenadores marcados por defecto. Entrenador:
           // solo él mismo.
           setSelectedTrainerIds(admin ? activeTrainers.map((t: any) => t._id) : [id]);
-          const sortedClients = [...activeClients].sort((a: any, b: any) =>
-            `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, 'es'),
-          );
+          // El backend ya manda los favoritos primero; aquí solo se
+          // desempata alfabéticamente dentro de cada grupo (favoritos /
+          // resto), sin deshacer ese orden.
+          const sortedClients = [...activeClients].sort((a: any, b: any) => {
+            if (!!a.isFavorite !== !!b.isFavorite) return a.isFavorite ? -1 : 1;
+            return `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, 'es');
+          });
           setClients(sortedClients);
         })
         .finally(() => setLoadingLists(false));

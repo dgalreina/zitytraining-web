@@ -5,7 +5,7 @@ import DatePicker, { registerLocale } from 'react-datepicker';
 import { es } from 'date-fns/locale';
 import 'react-datepicker/dist/react-datepicker.css';
 import '@/styles/datepicker-theme.css';
-import { X, Trash2, ChevronLeft, Ban, RotateCcw } from 'lucide-react';
+import { X, Trash2, ChevronLeft, Ban, RotateCcw, Star } from 'lucide-react';
 import FilterDropdown from '@/components/FilterDropdown';
 import { createBooking, updateBooking, deleteBooking, getWorkouts } from '@/lib/api';
 import WorkoutFormModal from '../entrenamientos/WorkoutFormModal';
@@ -482,6 +482,9 @@ export default function BookingModal({
                             onChange={() => toggleClient(c._id)}
                             className="shrink-0 accent-[#6aa842]"
                           />
+                          {c.isFavorite && (
+                            <Star size={12} className="shrink-0 fill-amber-400 text-amber-400" />
+                          )}
                           <span className="truncate">
                             {c.firstName} {c.lastName}
                           </span>

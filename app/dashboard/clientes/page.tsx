@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Search, Plus, ChevronDown, Check, RotateCcw, Users } from 'lucide-react';
-import { getUsers, getActiveClients, updateUser } from '@/lib/api';
+import { Search, Plus, ChevronDown, Check, RotateCcw, Users, Star } from 'lucide-react';
+import { getUsers, getActiveClients, updateUser, addFavoriteClient, removeFavoriteClient } from '@/lib/api';
 
 type StatusFilter = 'all' | 'active' | 'inactive' | 'deleted';
 
@@ -175,6 +175,23 @@ export default function ClientesPage() {
     }
   }
 
+  async function handleToggleFavorite(e: React.MouseEvent, clientId: string, isFavorite: boolean) {
+    e.stopPropagation();
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    setClients((prev) =>
+      prev.map((c) => (c._id === clientId ? { ...c, isFavorite: !isFavorite } : c)),
+    );
+    try {
+      if (isFavorite) await removeFavoriteClient(token, clientId);
+      else await addFavoriteClient(token, clientId);
+    } catch {
+      setClients((prev) =>
+        prev.map((c) => (c._id === clientId ? { ...c, isFavorite } : c)),
+      );
+    }
+  }
+
   const statusFilterOptions = isAdmin ? statusOptions : statusOptions.filter((o) => o.value !== 'deleted');
   const isTrashView = statusFilter === 'deleted';
   const sourceClients = isTrashView ? deletedClients : clients;
@@ -251,7 +268,22 @@ export default function ClientesPage() {
                   className="cursor-pointer border-b border-gray-50 transition hover:bg-gray-50"
                 >
                   <td className="px-5 py-3 font-medium text-[#2b2b2a]">
-                    {client.firstName} {client.lastName}
+                    <div className="flex items-center gap-2">
+                      {!isTrashView && (
+                        <button
+                          type="button"
+                          onClick={(e) => handleToggleFavorite(e, client._id, !!client.isFavorite)}
+                          className="shrink-0 text-gray-300 hover:text-amber-400"
+                          title={client.isFavorite ? 'Quitar de favoritos' : 'Marcar como favorito'}
+                        >
+                          <Star
+                            size={15}
+                            className={client.isFavorite ? 'fill-amber-400 text-amber-400' : ''}
+                          />
+                        </button>
+                      )}
+                      {client.firstName} {client.lastName}
+                    </div>
                   </td>
                   <td className="px-5 py-3 text-[#868585]">{client.email || '—'}</td>
                   <td className="px-5 py-3 text-[#868585]">
@@ -294,7 +326,20 @@ export default function ClientesPage() {
                 className="cursor-pointer rounded-lg border border-gray-100 bg-white p-4 shadow-sm transition active:bg-gray-50"
               >
                 <div className="mb-2 flex items-center justify-between">
-                  <span className="font-semibold text-[#2b2b2a]">
+                  <span className="flex items-center gap-1.5 font-semibold text-[#2b2b2a]">
+                    {!isTrashView && (
+                      <button
+                        type="button"
+                        onClick={(e) => handleToggleFavorite(e, client._id, !!client.isFavorite)}
+                        className="shrink-0 text-gray-300 hover:text-amber-400"
+                        title={client.isFavorite ? 'Quitar de favoritos' : 'Marcar como favorito'}
+                      >
+                        <Star
+                          size={15}
+                          className={client.isFavorite ? 'fill-amber-400 text-amber-400' : ''}
+                        />
+                      </button>
+                    )}
                     {client.firstName} {client.lastName}
                   </span>
                   {statusBadge(client.status || 'active')}

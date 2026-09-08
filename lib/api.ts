@@ -223,6 +223,22 @@ export async function getActiveClients(token: string) {
   return handleResponse(res);
 }
 
+export async function addFavoriteClient(token: string, clientId: string) {
+  const res = await apiFetch(`${API_URL}/users/clients/${clientId}/favorite`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res);
+}
+
+export async function removeFavoriteClient(token: string, clientId: string) {
+  const res = await apiFetch(`${API_URL}/users/clients/${clientId}/favorite`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return handleResponse(res);
+}
+
 export async function createUserByAdmin(token: string, data: any) {
   const res = await apiFetch(`${API_URL}/users/admin`, {
     method: 'POST',
