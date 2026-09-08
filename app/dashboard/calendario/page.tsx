@@ -842,6 +842,7 @@ export default function CalendarioPage() {
             expandRows
             selectable={canEdit}
             selectLongPressDelay={200}
+            eventLongPressDelay={200}
             eventStartEditable={canEdit}
             eventDurationEditable={false}
             select={handleSelect}

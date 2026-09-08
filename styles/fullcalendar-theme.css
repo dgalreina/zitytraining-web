@@ -195,6 +195,17 @@
   background: transparent !important;
 }
 
+/* El "fantasma" que sigue al dedo al arrastrar una sesión viene con
+   opacity < 1 por defecto: al ser semitransparente, las líneas de la
+   rejilla horaria se transparentaban a través de él (esos filos
+   grises). Se sustituye por un oscurecido real (filter), que no deja
+   ver nada detrás, y se quita el aro blanco que añade FullCalendar. */
+.fc-event-mirror {
+  opacity: 1 !important;
+  box-shadow: none !important;
+  filter: brightness(0.85);
+}
+
 .ziti-event-box {
   position: relative;
   padding: 2px 5px;
