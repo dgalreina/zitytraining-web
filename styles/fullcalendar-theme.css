@@ -280,6 +280,16 @@
   word-break: break-word;
 }
 
+.ziti-event-companions {
+  font-size: 0.62rem;
+  font-weight: 500;
+  line-height: 1.2;
+  opacity: 0.85;
+  overflow: hidden;
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+
 /* Sesión cancelada (distinto de borrada): mismo color que siempre (para
    saber de quién era), sin transparencia, con borde rojo simple y una
    etiqueta pequeña abajo a la derecha. El !important es necesario para
