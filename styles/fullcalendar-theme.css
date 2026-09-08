@@ -195,19 +195,32 @@
   background: transparent !important;
 }
 
-/* El "fantasma" que sigue al dedo al arrastrar una sesión viene con
-   opacity < 1 por defecto: al ser semitransparente, las líneas de la
-   rejilla horaria se transparentaban a través de él (esos filos
-   grises). Se sustituye por un oscurecido real (filter), que no deja
-   ver nada detrás, y se quita el aro blanco que añade FullCalendar.
-   El propio evento de origen (la casilla desde la que arrastras) usa
-   una clase distinta, .fc-event-dragging, con el mismo problema de
-   opacity por defecto, así que lleva el mismo arreglo. */
+/* El "fantasma" que sigue al dedo al arrastrar una sesión (.fc-event-mirror)
+   y el propio evento en su casilla de origen mientras se mueve
+   (.fc-event-dragging) vienen con opacity < 1 por defecto: al ser
+   semitransparentes, las líneas de la rejilla horaria se transparentaban
+   a través de ellos (esos filos grises). Se quita esa transparencia y el
+   aro blanco que añade FullCalendar.
+   El oscurecido se hace con una capa semitransparente encima (::after) en
+   vez de "filter: brightness()": en iOS/Safari, filter combinado con
+   border-radius puede no recortarse bien a las esquinas redondeadas y deja
+   un filo gris justo ahí (no se veía en escritorio porque ese bug es solo
+   de motores WebKit). Con la capa encima no hace falta filter. */
 .fc-event-mirror,
 .fc-event-dragging {
   opacity: 1 !important;
   box-shadow: none !important;
-  filter: brightness(0.85);
+  position: relative;
+}
+
+.fc-event-mirror::after,
+.fc-event-dragging::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: rgba(0, 0, 0, 0.18);
+  pointer-events: none;
 }
 
 .ziti-event-box {

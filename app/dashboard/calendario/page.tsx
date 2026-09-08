@@ -843,6 +843,10 @@ export default function CalendarioPage() {
             selectable={canEdit}
             selectLongPressDelay={200}
             eventLongPressDelay={200}
+            // Sin esto, al soltar el dedo el bloque desliza 500ms de vuelta
+            // a su sitio con top/left (no transform), lo que en Safari/iOS
+            // puede provocar un filo gris de repintado durante el gesto.
+            dragRevertDuration={0}
             eventStartEditable={canEdit}
             eventDurationEditable={false}
             select={handleSelect}
