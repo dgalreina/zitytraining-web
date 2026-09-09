@@ -77,15 +77,11 @@ export default function DashboardHome() {
                 minute: '2-digit',
               })} – ${end.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`;
 
-              // El primero es el cliente principal (a quien se cobra la
-              // sesión); el resto, acompañantes, se listan aparte debajo.
-              const mainClient = (b.clients || [])[0];
-              const companions = (b.clients || []).slice(1);
               const counterpart =
                 role === 'trainer'
-                  ? mainClient
-                    ? `${mainClient.firstName} ${mainClient.lastName}`
-                    : 'Cliente'
+                  ? (b.clients || [])
+                      .map((c: any) => `${c.firstName} ${c.lastName?.[0] ?? ''}.`)
+                      .join(', ')
                   : b.trainer
                     ? `${b.trainer.firstName} ${b.trainer.lastName}`
                     : 'Entrenador';
@@ -107,11 +103,6 @@ export default function DashboardHome() {
                       </span>
                     )}
                   </div>
-                  {!b.isPrivate && companions.length > 0 && (
-                    <p className="mb-1 text-xs text-[#868585]">
-                      + {companions.map((c: any) => `${c.firstName} ${c.lastName}`).join(', ')}
-                    </p>
-                  )}
                   {b.notes && (
                     <div className="mt-2 rounded-lg bg-gray-50 px-3 py-2">
                       <p className="mb-0.5 text-xs font-semibold text-[#868585]">Nota</p>

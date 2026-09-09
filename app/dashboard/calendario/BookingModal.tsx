@@ -65,13 +65,9 @@ export default function BookingModal({
 }) {
   const [start, setStart] = useState<Date>(() => modal?.start ?? new Date());
   const [modalTrainerId, setModalTrainerId] = useState('');
-  // Cliente principal (a quien se le hace el cobro) y hasta 2 acompañantes,
-  // por separado: el principal se elige de una lista de selección única,
-  // los acompañantes en otra pantalla aparte que lo excluye a él.
-  const [mainClientId, setMainClientId] = useState('');
-  const [companionIds, setCompanionIds] = useState<string[]>([]);
+  // Hasta 3 clientes, sin distinguir uno "principal" de los demás.
+  const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
   const [clientSearch, setClientSearch] = useState('');
-  const [companionSearch, setCompanionSearch] = useState('');
   const [notes, setNotes] = useState('');
   const [durationOption, setDurationOption] = useState<DurationOption>('60');
   // Como texto, no numero: un input numerico controlado no deja vaciar
@@ -82,7 +78,6 @@ export default function BookingModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [view, setView] = useState<ModalView>('form');
-  const [companionsOpen, setCompanionsOpen] = useState(false);
   const [status, setStatus] = useState<'active' | 'cancelled'>('active');
   const [isPrivate, setIsPrivate] = useState(false);
 
@@ -104,8 +99,6 @@ export default function BookingModal({
     if (!modal) return;
     setStart(modal.start);
     setClientSearch('');
-    setCompanionSearch('');
-    setCompanionsOpen(false);
     setError('');
     setView('form');
     setBookingWorkout(null);
@@ -116,8 +109,7 @@ export default function BookingModal({
       const raw = modal.booking;
       const diff = minutesBetween(modal.start, new Date(raw.endTime));
       setModalTrainerId(raw.trainer?._id || raw.trainer || '');
-      setMainClientId(raw.clients[0]?._id || '');
-      setCompanionIds(raw.clients.slice(1, 3).map((c: any) => c._id));
+      setSelectedClientIds(raw.clients.map((c: any) => c._id));
       setNotes(raw.notes || '');
       setStatus(raw.status === 'cancelled' ? 'cancelled' : 'active');
       setIsPrivate(!!raw.isPrivate);
@@ -135,8 +127,7 @@ export default function BookingModal({
       // marcado en el checklist si eres admin puro; el selector siempre se
       // muestra, así que esto es solo un punto de partida cómodo.
       setModalTrainerId(defaultTrainerId);
-      setMainClientId('');
-      setCompanionIds([]);
+      setSelectedClientIds([]);
       setNotes('');
       setDurationOption('60');
       setCustomMinutes('60');
@@ -147,16 +138,10 @@ export default function BookingModal({
 
   if (!modal) return null;
 
-  function selectMainClient(id: string) {
-    setMainClientId(id);
-    // Por si ya estaba elegido como acompañante: no puede ser las dos cosas.
-    setCompanionIds((prev) => prev.filter((c) => c !== id));
-  }
-
-  function toggleCompanion(id: string) {
-    setCompanionIds((prev) => {
+  function toggleClient(id: string) {
+    setSelectedClientIds((prev) => {
       if (prev.includes(id)) return prev.filter((c) => c !== id);
-      if (prev.length >= 2) return prev; // máximo 2 acompañantes
+      if (prev.length >= 3) return prev; // máximo 3 clientes
       return [...prev, id];
     });
   }
@@ -207,8 +192,8 @@ export default function BookingModal({
       return;
     }
     // Una privada es solo tuya: no lleva clientes.
-    if (!isPrivate && !mainClientId) {
-      setError('Selecciona un cliente');
+    if (!isPrivate && selectedClientIds.length === 0) {
+      setError('Selecciona al menos un cliente');
       return;
     }
     const duration = getEffectiveDurationMinutes();
@@ -223,14 +208,11 @@ export default function BookingModal({
     const token = localStorage.getItem('token');
     if (!token) return;
 
-    // El principal siempre va primero: es a quien se le hace el cobro.
-    const clientsPayload = isPrivate ? [] : [mainClientId, ...companionIds];
-
     try {
       if (modal!.mode === 'create') {
         await createBooking(token, {
           trainer: modalTrainerId,
-          clients: clientsPayload,
+          clients: isPrivate ? [] : selectedClientIds,
           startTime: start.toISOString(),
           endTime: end.toISOString(),
           notes: notes || undefined,
@@ -240,7 +222,7 @@ export default function BookingModal({
       } else {
         await updateBooking(token, (modal as { mode: 'edit'; booking: any }).booking._id, {
           trainer: modalTrainerId,
-          clients: clientsPayload,
+          clients: isPrivate ? [] : selectedClientIds,
           startTime: start.toISOString(),
           endTime: end.toISOString(),
           notes: notes || undefined,
@@ -302,14 +284,6 @@ export default function BookingModal({
   const filteredClients = clients.filter((c) =>
     `${c.firstName} ${c.lastName}`.toLowerCase().includes(clientSearch.trim().toLowerCase()),
   );
-
-  const filteredCompanionClients = clients
-    .filter((c) => c._id !== mainClientId)
-    .filter((c) =>
-      `${c.firstName} ${c.lastName}`.toLowerCase().includes(companionSearch.trim().toLowerCase()),
-    );
-
-  const companionClients = clients.filter((c) => companionIds.includes(c._id));
 
   // El centro cierra a las 22:00; 21:20 es la última hora de inicio que deja
   // sitio a la sesión más corta (40 min) antes del cierre.
@@ -483,7 +457,9 @@ export default function BookingModal({
               </>
             ) : (
               <>
-                <label className="mb-1 block text-xs font-semibold text-[#868585]">Cliente</label>
+                <label className="mb-1 block text-xs font-semibold text-[#868585]">
+                  Clientes (máximo 3)
+                </label>
                 {clients.length > 0 && (
                   <input
                     type="text"
@@ -500,89 +476,35 @@ export default function BookingModal({
                     <p className="p-2 text-xs text-gray-400">Sin resultados.</p>
                   ) : (
                     <div className="grid grid-cols-2 gap-x-1">
-                      {filteredClients.map((c) => (
-                        <label
-                          key={c._id}
-                          className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-gray-50"
-                        >
-                          <input
-                            type="radio"
-                            name="mainClient"
-                            checked={mainClientId === c._id}
-                            onChange={() => selectMainClient(c._id)}
-                            className="shrink-0 accent-[#6aa842]"
-                          />
-                          {c.isFavorite && (
-                            <Star size={12} className="shrink-0 fill-amber-400 text-amber-400" />
-                          )}
-                          <span className="truncate">
-                            {c.firstName} {c.lastName}
-                          </span>
-                        </label>
-                      ))}
+                      {filteredClients.map((c) => {
+                        const checked = selectedClientIds.includes(c._id);
+                        const disabled = !checked && selectedClientIds.length >= 3;
+                        return (
+                          <label
+                            key={c._id}
+                            className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm ${
+                              disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer hover:bg-gray-50'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              disabled={disabled}
+                              onChange={() => toggleClient(c._id)}
+                              className="shrink-0 accent-[#6aa842]"
+                            />
+                            {c.isFavorite && (
+                              <Star size={12} className="shrink-0 fill-amber-400 text-amber-400" />
+                            )}
+                            <span className="truncate">
+                              {c.firstName} {c.lastName}
+                            </span>
+                          </label>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
-
-                <button
-                  type="button"
-                  onClick={() => setCompanionsOpen((v) => !v)}
-                  className="mb-1.5 text-sm font-semibold text-[#4b7a1f] hover:underline"
-                >
-                  {companionsOpen
-                    ? 'Ocultar acompañantes'
-                    : companionClients.length > 0
-                      ? `Acompañantes: ${companionClients.map((c) => c.firstName).join(', ')}`
-                      : '+ Añadir acompañantes'}
-                </button>
-
-                {companionsOpen && (
-                  <>
-                    {clients.length > 0 && (
-                      <input
-                        type="text"
-                        value={companionSearch}
-                        onChange={(e) => setCompanionSearch(e.target.value)}
-                        placeholder="Buscar cliente..."
-                        className="mb-1.5 w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-[#6aa842] focus:outline-none"
-                      />
-                    )}
-                    <div className="mb-3 max-h-40 overflow-y-auto rounded-lg border border-gray-200 p-1">
-                      {filteredCompanionClients.length === 0 ? (
-                        <p className="p-2 text-xs text-gray-400">Sin resultados.</p>
-                      ) : (
-                        <div className="grid grid-cols-2 gap-x-1">
-                          {filteredCompanionClients.map((c) => {
-                            const checked = companionIds.includes(c._id);
-                            const disabled = !checked && companionIds.length >= 2;
-                            return (
-                              <label
-                                key={c._id}
-                                className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm ${
-                                  disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer hover:bg-gray-50'
-                                }`}
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={checked}
-                                  disabled={disabled}
-                                  onChange={() => toggleCompanion(c._id)}
-                                  className="shrink-0 accent-[#6aa842]"
-                                />
-                                {c.isFavorite && (
-                                  <Star size={12} className="shrink-0 fill-amber-400 text-amber-400" />
-                                )}
-                                <span className="truncate">
-                                  {c.firstName} {c.lastName}
-                                </span>
-                              </label>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  </>
-                )}
 
                 <label className="mb-1.5 block text-xs font-semibold text-[#868585]">Más</label>
                 <div className="mb-3 flex gap-2">

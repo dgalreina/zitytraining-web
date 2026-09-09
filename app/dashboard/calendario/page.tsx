@@ -213,7 +213,6 @@ export default function CalendarioPage() {
     // aunque se corte, pero el nombre nunca desaparece.
     let candidates: string[] = [];
     let color = FALLBACK_COLOR;
-    let companionNames = '';
 
     if (b.isPrivate) {
       // Sesión personal del entrenador: no lleva clientes, siempre en
@@ -229,17 +228,16 @@ export default function CalendarioPage() {
       candidates = [full, short];
       color = b.trainer?.color || FALLBACK_COLOR;
     } else {
-      // El primero es el cliente principal (a quien se cobra la sesión);
-      // el resto, acompañantes, se muestran aparte en una línea propia.
-      const clientList = b.clients || [];
-      const main = clientList[0];
-      const companions = clientList.slice(1);
-      const full = main ? `${main.firstName} ${main.lastName}` : '';
-      const initials = main ? `${main.firstName} ${main.lastName?.[0] ?? ''}.` : '';
-      const short = main ? main.firstName : '';
+      // Nombres de clientes, color del entrenador de esa sesión concreta
+      // (funciona igual con 1, varios, o todos los entrenadores marcados)
+      const clients = b.clients || [];
+      const full = clients.map((c: any) => `${c.firstName} ${c.lastName}`).join(', ');
+      const initials = clients
+        .map((c: any) => `${c.firstName} ${c.lastName?.[0] ?? ''}.`)
+        .join(', ');
+      const short = clients.map((c: any) => c.firstName).join(', ');
       candidates = [full, initials, short];
       color = b.trainer?.color || FALLBACK_COLOR;
-      companionNames = companions.map((c: any) => c.firstName).join(', ');
     }
 
     candidates = candidates.filter(Boolean);
@@ -251,21 +249,19 @@ export default function CalendarioPage() {
       start: b.startTime,
       end: b.endTime,
       color,
-      extendedProps: { raw: b, candidates, companionNames },
+      extendedProps: { raw: b, candidates },
     };
   }
 
   // Recorta el contenido de un evento del calendario según el espacio real
   // disponible: nombre completo -> solo nombre, dejando que el texto se
   // parta en varias líneas si hace falta (nunca desaparece del todo, como
-  // mucho se corta a medias si de verdad no cabe ni en alto); acompañantes
-  // y hora, en ese orden, se ocultan antes si no cabe (son menos
-  // importantes que el nombre del cliente principal).
+  // mucho se corta a medias si de verdad no cabe ni en alto); hora -> se
+  // oculta si no cabe.
   function fitEventText(el: HTMLElement, event: any) {
     const boxEl = el.querySelector('.ziti-event-box') as HTMLElement | null;
     const nameEl = el.querySelector('.ziti-event-name') as HTMLElement | null;
     const timeEl = el.querySelector('.ziti-event-time') as HTMLElement | null;
-    const companionsEl = el.querySelector('.ziti-event-companions') as HTMLElement | null;
     if (!boxEl || !nameEl) return;
 
     const candidates: string[] = event.extendedProps?.candidates?.length
@@ -283,8 +279,6 @@ export default function CalendarioPage() {
       return false;
     }
 
-    if (companionsEl) companionsEl.style.display = '';
-
     // Hora: si no cabe de ancho, se quita directamente.
     if (timeEl) {
       timeEl.style.display = '';
@@ -295,14 +289,8 @@ export default function CalendarioPage() {
 
     let fits = tryFitName();
 
-    // Acompañantes: lo primero que se sacrifica si no cabe todo en alto.
-    if (!fits && companionsEl) {
-      companionsEl.style.display = 'none';
-      fits = tryFitName();
-    }
-
-    // Si ni así cabe, la hora también se quita: el nombre importa más y
-    // necesita todo el alto disponible.
+    // Si ni el nombre más corto cabe con la hora todavía visible, la
+    // quitamos: el nombre importa más y necesita todo el alto disponible.
     if (!fits && timeEl && timeEl.style.display !== 'none') {
       timeEl.style.display = 'none';
       fits = tryFitName();
@@ -897,14 +885,10 @@ export default function CalendarioPage() {
                       minute: '2-digit',
                     })}`
                   : '';
-              const companionNames = arg.event.extendedProps.companionNames;
               return (
                 <div className="ziti-event-box">
                   <div className="ziti-event-time">{timeStr}</div>
                   <div className="ziti-event-name">{arg.event.title}</div>
-                  {companionNames && (
-                    <div className="ziti-event-companions">+ {companionNames}</div>
-                  )}
                   {isCancelled && viewType !== 'timeGridWeek' && (
                     <span className="ziti-event-cancelled-label">Cancelada</span>
                   )}
