@@ -129,6 +129,7 @@ export default function PlanTab({
         itemId: selectedPlan._id,
         itemLabel,
         price: selectedPlan.monthlyPrice,
+        sessionCount: selectedPlan.sessionCount,
         startDate: assignStartDate,
       };
       if (assignMode === 'punctual') {
@@ -277,7 +278,7 @@ export default function PlanTab({
                   <span className="mb-1 inline-block rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-[#868585]">
                     {item.scheduledEndDate ? 'Puntual' : 'Suscripción'}
                   </span>
-                  {isFreeSessionsPurchase(item) ? (
+                  {isFreeSessionsPurchase(item) && item.sessionCount ? (
                     <>
                       <p className="text-lg font-bold text-[#4b7a1f]">
                         {Math.round((item.price / item.sessionCount) * 100) / 100}€
