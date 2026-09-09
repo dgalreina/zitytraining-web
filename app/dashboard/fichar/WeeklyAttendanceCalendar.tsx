@@ -118,6 +118,10 @@ export default function WeeklyAttendanceCalendar() {
   const cardRef = useRef<HTMLDivElement>(null);
   const calendarWrapperRef = useRef<HTMLDivElement>(null);
   const calendarRef = useRef<FullCalendar>(null);
+  // Igual que en Calendario: deslizamiento congelado de la semana vieja
+  // hacia fuera y la nueva hacia dentro al cambiar de semana.
+  const pendingSlideDirectionRef = useRef<1 | -1 | null>(null);
+  const slideCloneRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -209,7 +213,9 @@ export default function WeeklyAttendanceCalendar() {
 
       const api = calendarRef.current?.getApi();
       if (!api) return;
-      if (dx < 0) api.next();
+      const direction = dx < 0 ? 1 : -1;
+      prepareDaySlide(direction);
+      if (direction > 0) api.next();
       else api.prev();
     }
 
@@ -226,6 +232,76 @@ export default function WeeklyAttendanceCalendar() {
 
   function handleDatesSet(arg: any) {
     setRange({ start: arg.startStr, end: arg.endStr });
+
+    // Si el cambio de semana viene de un swipe, FullCalendar ya ha
+    // terminado de pintar la semana nueva en este punto: es el momento
+    // exacto de deslizar la copia congelada de la vieja hacia fuera y la
+    // nueva hacia dentro.
+    const direction = pendingSlideDirectionRef.current;
+    pendingSlideDirectionRef.current = null;
+    const clone = slideCloneRef.current;
+    slideCloneRef.current = null;
+    if (!direction || !clone) return;
+
+    const container = calendarWrapperRef.current;
+    const harness = container?.querySelector('.fc-view-harness') as HTMLElement | null;
+    if (!container || !harness) {
+      clone.remove();
+      return;
+    }
+
+    harness.style.transition = 'none';
+    harness.style.transform = `translateX(${direction > 0 ? '100%' : '-100%'})`;
+    void harness.offsetWidth; // fuerza reflow antes de animar
+    requestAnimationFrame(() => {
+      harness.style.transition = 'transform 260ms ease-out';
+      harness.style.transform = 'translateX(0)';
+      clone.style.transition = 'transform 260ms ease-out';
+      clone.style.transform = `translateX(${direction > 0 ? '-100%' : '100%'})`;
+    });
+    setTimeout(() => {
+      clone.remove();
+      harness.style.transition = '';
+      harness.style.transform = '';
+    }, 300);
+  }
+
+  // Deja preparada una copia congelada de la vista actual (para deslizarla
+  // fuera) y marca la dirección; la animación de verdad se dispara en
+  // handleDatesSet, una vez FullCalendar ya ha pintado la semana nueva.
+  function prepareDaySlide(direction: 1 | -1): boolean {
+    const container = calendarWrapperRef.current;
+    const harness = container?.querySelector('.fc-view-harness') as HTMLElement | null;
+    if (!container || !harness) return false;
+
+    // Importante: el clon tiene que quedar DENTRO de .fc (como hermano del
+    // .fc-view-harness real), no fuera. El CSS de FullCalendar usa
+    // selectores tipo ".fc .fc-timegrid-event-harness" que exigen un
+    // ancestro con clase "fc" — fuera de ahí pierde esas reglas y el
+    // navegador calcula mal la altura de los eventos (se ven enormes).
+    const fcRoot = harness.parentElement;
+    if (!fcRoot) return false;
+
+    const rect = harness.getBoundingClientRect();
+    const clone = harness.cloneNode(true) as HTMLElement;
+    clone.style.position = 'absolute';
+    clone.style.top = `${harness.offsetTop}px`;
+    clone.style.left = `${harness.offsetLeft}px`;
+    clone.style.width = `${rect.width}px`;
+    clone.style.height = `${rect.height}px`;
+    clone.style.margin = '0';
+    clone.style.zIndex = '20';
+    clone.style.pointerEvents = 'none';
+    clone.style.overflow = 'hidden';
+    clone.style.background = 'white';
+    // cloneNode no copia el scroll interno: si el usuario había bajado a
+    // ver horas más tardías, lo replicamos para que la copia coincida.
+    clone.scrollTop = harness.scrollTop;
+
+    fcRoot.appendChild(clone);
+    slideCloneRef.current = clone;
+    pendingSlideDirectionRef.current = direction;
+    return true;
   }
 
   const selectedTrainer = trainers.find((t) => t._id === selectedTrainerId);

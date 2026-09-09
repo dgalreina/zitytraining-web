@@ -6,7 +6,7 @@ import FullCalendar from '@fullcalendar/react';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import '@/styles/fullcalendar-theme.css';
-import { X, ChevronDown, ChevronUp, Check } from 'lucide-react';
+import { X, ChevronDown, ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import MiniCalendar, { dayKey } from '@/components/MiniCalendar';
 import FilterDropdown from '@/components/FilterDropdown';
 import BookingModal, { ModalState } from './BookingModal';
@@ -825,7 +825,7 @@ export default function CalendarioPage() {
                 title={showWeekendsInWeek ? 'Ocultar fin de semana' : 'Mostrar fin de semana'}
                 className="shrink-0 rounded-lg p-1 text-[#868585] transition hover:bg-gray-100 hover:text-[#2b2b2a]"
               >
-                {showWeekendsInWeek ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                {showWeekendsInWeek ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
               </button>
             )}
           </div>
