@@ -132,6 +132,16 @@ export default function CalendarioPage() {
 
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [events, setEvents] = useState<any[]>([]);
+  // El ResizeObserver de fitEventText necesita los datos MÁS RECIENTES del
+  // evento, no los que había en el momento en que se montó el elemento: si
+  // FullCalendar reutiliza el mismo nodo del DOM tras una edición (en vez
+  // de recrearlo), "info.event" capturado en el closure del observer se
+  // queda con los datos viejos, y un resize posterior (p.ej. al cambiar de
+  // vista) volvía a pintar el texto antiguo encima del ya corregido.
+  const eventsRef = useRef<any[]>([]);
+  useEffect(() => {
+    eventsRef.current = events;
+  }, [events]);
   const [daysWithBookings, setDaysWithBookings] = useState<Set<string>>(new Set());
   const [modal, setModal] = useState<ModalState>(null);
   const [viewTitle, setViewTitle] = useState('');
@@ -304,8 +314,13 @@ export default function CalendarioPage() {
   }
 
   function handleEventDidMount(info: any) {
-    fitEventText(info.el, info.event);
-    const ro = new ResizeObserver(() => fitEventText(info.el, info.event));
+    const eventId = info.event.id;
+    function refit() {
+      const current = eventsRef.current.find((e) => e.id === eventId);
+      fitEventText(info.el, current ?? info.event);
+    }
+    refit();
+    const ro = new ResizeObserver(refit);
     ro.observe(info.el);
     (info.el as any).__zitiResizeObserver = ro;
   }
