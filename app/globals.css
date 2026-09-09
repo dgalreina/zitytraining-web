@@ -18,3 +18,11 @@ body {
   font-family: Arial, Helvetica, sans-serif;
   touch-action: manipulation;
 }
+
+/* Bug conocido de Safari/iOS: <input type="date"> se calcula un ancho
+   mínimo interno que ignora width:100% y se sale de su recuadro en
+   pantallas estrechas. -webkit-min-logical-width es el único que Safari
+   respeta para forzarlo a encogerse de verdad al ancho del contenedor. */
+input[type='date'] {
+  -webkit-min-logical-width: 100%;
+}

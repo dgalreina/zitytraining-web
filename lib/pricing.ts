@@ -1,4 +1,4 @@
-export type TrainingCategory = 'personal' | 'duo' | 'trio';
+export type TrainingCategory = 'personal' | 'duo' | 'trio' | 'sesiones_libres';
 
 export interface RemoteService {
   id: string;
@@ -21,6 +21,12 @@ export const TRAINING_CATEGORIES: { id: TrainingCategory; title: string; descrip
     id: 'trio',
     title: 'Entrenamiento trío',
     description: 'Entrena en grupo de tres, mismo horario y entrenador.',
+  },
+  {
+    id: 'sesiones_libres',
+    title: 'Sesiones libres',
+    description:
+      'Hasta 12 sesiones al mes, cuando quieras, sin un número fijo de personas por sesión.',
   },
 ];
 

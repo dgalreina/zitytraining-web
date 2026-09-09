@@ -14,6 +14,13 @@ import {
 } from '@/lib/api';
 import { TRAINING_CATEGORIES } from '@/lib/pricing';
 
+// La compra no guarda su categoría, pero el itemLabel de "Sesiones
+// libres" lo pone siempre el backend (plans.service.ts), así que sirve
+// para distinguirlas y no mostrarles un total al mes que no existe.
+function isFreeSessionsPurchase(item: any) {
+  return typeof item.itemLabel === 'string' && item.itemLabel.startsWith('Sesiones libres');
+}
+
 function formatDateTime(date: string | Date) {
   return new Date(date).toLocaleString('es-ES', {
     day: 'numeric',
@@ -109,11 +116,18 @@ export default function PlanTab({
     }
 
     try {
+      // El label de "Sesiones libres" ya dice de qué va (no es un número
+      // de sesiones/semana ambiguo como el resto), así que ahí no hace
+      // falta repetir la categoría entre paréntesis.
       const categoryTitle = TRAINING_CATEGORIES.find((c) => c.id === selectedPlan.category)?.title;
+      const itemLabel =
+        selectedPlan.category === 'sesiones_libres'
+          ? selectedPlan.label
+          : `${selectedPlan.label} (${categoryTitle})`;
       const payload = {
         client: id,
         itemId: selectedPlan._id,
-        itemLabel: `${selectedPlan.label} (${categoryTitle})`,
+        itemLabel,
         price: selectedPlan.monthlyPrice,
         startDate: assignStartDate,
       };
@@ -263,16 +277,30 @@ export default function PlanTab({
                   <span className="mb-1 inline-block rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-[#868585]">
                     {item.scheduledEndDate ? 'Puntual' : 'Suscripción'}
                   </span>
-                  <p className="text-lg font-bold text-[#4b7a1f]">
-                    {item.price}€
-                    {item.paymentMode === 'monthly' && (
-                      <span className="text-xs font-normal text-[#868585]"> /mes</span>
-                    )}
-                  </p>
-                  {item.sessionCount && (
-                    <p className="text-xs text-[#868585]">
-                      Bono de {item.sessionCount} sesiones
-                    </p>
+                  {isFreeSessionsPurchase(item) ? (
+                    <>
+                      <p className="text-lg font-bold text-[#4b7a1f]">
+                        {Math.round((item.price / item.sessionCount) * 100) / 100}€
+                        <span className="text-xs font-normal text-[#868585]"> /sesión</span>
+                      </p>
+                      <p className="text-xs text-[#868585]">
+                        Hasta {item.sessionCount} sesiones al mes
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-lg font-bold text-[#4b7a1f]">
+                        {item.price}€
+                        {item.paymentMode === 'monthly' && (
+                          <span className="text-xs font-normal text-[#868585]"> /mes</span>
+                        )}
+                      </p>
+                      {item.sessionCount && (
+                        <p className="text-xs text-[#868585]">
+                          Bono de {item.sessionCount} sesiones
+                        </p>
+                      )}
+                    </>
                   )}
                   {item.activatedAt && (
                     <p className="mt-1 text-xs text-[#868585]">
@@ -402,7 +430,15 @@ export default function PlanTab({
                             {plan.label}
                           </span>
                           <span className="font-bold text-[#4b7a1f]">
-                            {plan.monthlyPrice}€<span className="font-normal text-[#868585]">/mes</span>
+                            {plan.category === 'sesiones_libres' ? (
+                              <>
+                                {plan.sessionPrice}€<span className="font-normal text-[#868585]">/sesión</span>
+                              </>
+                            ) : (
+                              <>
+                                {plan.monthlyPrice}€<span className="font-normal text-[#868585]">/mes</span>
+                              </>
+                            )}
                           </span>
                         </button>
                       ))}
@@ -416,9 +452,24 @@ export default function PlanTab({
 
                 <div className="rounded-lg bg-[#f7f7f5] p-4">
                   <p className="text-lg font-bold text-[#4b7a1f]">
-                    {selectedPlan.monthlyPrice}€
-                    <span className="text-sm font-normal text-[#868585]"> /mes</span>
+                    {selectedPlan.category === 'sesiones_libres' ? (
+                      <>
+                        {selectedPlan.sessionPrice}€
+                        <span className="text-sm font-normal text-[#868585]"> /sesión</span>
+                      </>
+                    ) : (
+                      <>
+                        {selectedPlan.monthlyPrice}€
+                        <span className="text-sm font-normal text-[#868585]"> /mes</span>
+                      </>
+                    )}
                   </p>
+                  {selectedPlan.category === 'sesiones_libres' && (
+                    <p className="mt-1 text-xs text-[#868585]">
+                      Hasta {selectedPlan.sessionCount} sesiones al mes; no se sabe de antemano
+                      cuántas se van a usar, así que no hay un total fijo.
+                    </p>
+                  )}
                   <p className="mt-1 text-xs text-[#868585]">
                     {assignMode === 'punctual'
                       ? 'Plan puntual: pausa el plan activo actual mientras dura, y lo retoma solo al llegar la fecha de fin.'
