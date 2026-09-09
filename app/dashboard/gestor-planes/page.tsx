@@ -29,21 +29,6 @@ function computePreview(sessionsPerWeek: string, monthlyPrice: string) {
   return { sessionCount, sessionPrice };
 }
 
-const FREE_SESSIONS_PER_MONTH = 12;
-
-// El precio de "Sesiones libres" no se introduce a mano: se copia del
-// plan de Entrenamiento personal a 2 días/semana de la misma duración.
-// No se muestra ningún total al mes: no se sabe cuántas sesiones se van
-// a usar, solo hay un tope de 12.
-function computeFreeSessionsPreview(plans: any[], durationMinutes: string) {
-  const duration = Number(durationMinutes);
-  if (!duration) return null;
-  const anchor = plans.find(
-    (p) => p.category === 'personal' && p.sessionsPerWeek === 2 && p.durationMinutes === duration,
-  );
-  if (!anchor) return { missing: true as const };
-  return { missing: false as const, sessionPrice: anchor.sessionPrice, sessionCount: FREE_SESSIONS_PER_MONTH };
-}
 
 export default function GestorPlanesPage() {
   const [plans, setPlans] = useState<any[] | null>(null);
@@ -98,30 +83,17 @@ export default function GestorPlanesPage() {
     const token = localStorage.getItem('token');
     if (!token) return;
 
-    const isFreeSessions = form.category === 'sesiones_libres';
-    const durationMinutes = Number(form.durationMinutes);
-
-    if (isNaN(durationMinutes) || durationMinutes < 1) {
-      setFormError('Elige los minutos por sesión');
-      return;
-    }
-
-    // sessionsPerWeek y monthlyPrice no aplican a Sesiones libres: el
-    // backend los recalcula solos a partir del plan de Entrenamiento
-    // personal a 2 días/semana, así que aquí solo van de relleno.
-    const payload = isFreeSessions
-      ? { category: form.category, sessionsPerWeek: 1, durationMinutes, monthlyPrice: 0 }
-      : {
-          category: form.category,
-          sessionsPerWeek: Number(form.sessionsPerWeek),
-          durationMinutes,
-          monthlyPrice: Number(form.monthlyPrice),
-        };
+    const payload = {
+      category: form.category,
+      sessionsPerWeek: Number(form.sessionsPerWeek),
+      durationMinutes: Number(form.durationMinutes),
+      monthlyPrice: Number(form.monthlyPrice),
+    };
 
     if (
-      !isFreeSessions &&
-      (isNaN(payload.sessionsPerWeek) || payload.sessionsPerWeek < 1 ||
-        isNaN(payload.monthlyPrice) || payload.monthlyPrice < 0)
+      isNaN(payload.sessionsPerWeek) || payload.sessionsPerWeek < 1 ||
+      isNaN(payload.durationMinutes) || payload.durationMinutes < 1 ||
+      isNaN(payload.monthlyPrice) || payload.monthlyPrice < 0
     ) {
       setFormError('Revisa las sesiones/semana, los minutos y el precio mensual');
       return;
@@ -193,7 +165,11 @@ export default function GestorPlanesPage() {
               </div>
 
               {plansByCategory(category.id).length === 0 ? (
-                <p className="text-sm text-gray-400">Todavía no hay planes en esta categoría.</p>
+                <p className="text-sm text-gray-400">
+                  {category.id === 'sesiones_libres'
+                    ? 'Crea antes los planes de Entrenamiento personal a 2 días/semana (40\' y 1h): el precio de Sesiones libres se calcula a partir de esos.'
+                    : 'Todavía no hay planes en esta categoría.'}
+                </p>
               ) : (
                 <div className="flex flex-col gap-3">
                   {plansByCategory(category.id).map((plan) => (
@@ -216,22 +192,24 @@ export default function GestorPlanesPage() {
                           )}
                         </p>
                       </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => openEdit(plan)}
-                          title="Editar"
-                          className="rounded-lg bg-gray-100 p-1.5 text-[#2b2b2a] hover:bg-gray-200"
-                        >
-                          <Pencil size={14} />
-                        </button>
-                        <button
-                          onClick={() => setConfirmDeleteId(plan._id)}
-                          title="Eliminar"
-                          className="rounded-lg bg-red-50 p-1.5 text-red-600 hover:bg-red-100"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
+                      {plan.category !== 'sesiones_libres' && (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => openEdit(plan)}
+                            title="Editar"
+                            className="rounded-lg bg-gray-100 p-1.5 text-[#2b2b2a] hover:bg-gray-200"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeleteId(plan._id)}
+                            title="Eliminar"
+                            className="rounded-lg bg-red-50 p-1.5 text-red-600 hover:bg-red-100"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -263,7 +241,9 @@ export default function GestorPlanesPage() {
               <div>
                 <label className={labelClass}>Categoría</label>
                 <div className="flex flex-wrap gap-2">
-                  {TRAINING_CATEGORIES.map((c) => (
+                  {/* Sesiones libres no se crea a mano: se calcula sola a partir
+                      de Entrenamiento personal, así que no aparece aquí. */}
+                  {TRAINING_CATEGORIES.filter((c) => c.id !== 'sesiones_libres').map((c) => (
                     <button
                       key={c.id}
                       type="button"
@@ -280,88 +260,49 @@ export default function GestorPlanesPage() {
                 </div>
               </div>
 
-              {form.category === 'sesiones_libres' ? (
-                <>
-                  <div>
-                    <label className={labelClass}>Minutos por sesión</label>
-                    <input
-                      type="number"
-                      min={1}
-                      value={form.durationMinutes}
-                      onChange={(e) => setForm({ ...form, durationMinutes: e.target.value })}
-                      className={inputClass}
-                    />
-                  </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={labelClass}>Sesiones/semana</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={form.sessionsPerWeek}
+                    onChange={(e) => setForm({ ...form, sessionsPerWeek: e.target.value })}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label className={labelClass}>Minutos por sesión</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={form.durationMinutes}
+                    onChange={(e) => setForm({ ...form, durationMinutes: e.target.value })}
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className={labelClass}>Precio mensual (€)</label>
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={form.monthlyPrice}
+                  onChange={(e) => setForm({ ...form, monthlyPrice: e.target.value })}
+                  className={inputClass}
+                />
+              </div>
+
+              {(() => {
+                const preview = computePreview(form.sessionsPerWeek, form.monthlyPrice);
+                return preview ? (
                   <p className="text-xs text-[#868585]">
-                    Bono de {FREE_SESSIONS_PER_MONTH} sesiones al mes como mucho. El precio no se
-                    pone a mano: se copia del plan de Entrenamiento personal a 2 días/semana de la
-                    misma duración.
+                    {preview.sessionPrice}€/sesión · {preview.sessionCount} sesiones/mes
                   </p>
-                  {(() => {
-                    const preview = computeFreeSessionsPreview(plans || [], form.durationMinutes);
-                    if (!preview) return null;
-                    if (preview.missing) {
-                      return (
-                        <p className="text-xs font-medium text-red-600">
-                          No existe todavía un plan de Entrenamiento personal a 2 días/semana con
-                          esta duración. Créalo antes para poder calcular este precio.
-                        </p>
-                      );
-                    }
-                    return (
-                      <p className="text-xs text-[#868585]">
-                        {preview.sessionPrice}€/sesión · hasta {preview.sessionCount} al mes
-                      </p>
-                    );
-                  })()}
-                </>
-              ) : (
-                <>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className={labelClass}>Sesiones/semana</label>
-                      <input
-                        type="number"
-                        min={1}
-                        value={form.sessionsPerWeek}
-                        onChange={(e) => setForm({ ...form, sessionsPerWeek: e.target.value })}
-                        className={inputClass}
-                      />
-                    </div>
-                    <div>
-                      <label className={labelClass}>Minutos por sesión</label>
-                      <input
-                        type="number"
-                        min={1}
-                        value={form.durationMinutes}
-                        onChange={(e) => setForm({ ...form, durationMinutes: e.target.value })}
-                        className={inputClass}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className={labelClass}>Precio mensual (€)</label>
-                    <input
-                      type="number"
-                      min={0}
-                      step="0.01"
-                      value={form.monthlyPrice}
-                      onChange={(e) => setForm({ ...form, monthlyPrice: e.target.value })}
-                      className={inputClass}
-                    />
-                  </div>
-
-                  {(() => {
-                    const preview = computePreview(form.sessionsPerWeek, form.monthlyPrice);
-                    return preview ? (
-                      <p className="text-xs text-[#868585]">
-                        {preview.sessionPrice}€/sesión · {preview.sessionCount} sesiones/mes
-                      </p>
-                    ) : null;
-                  })()}
-                </>
-              )}
+                ) : null;
+              })()}
 
               {formError && <p className="text-sm font-medium text-red-600">{formError}</p>}
 

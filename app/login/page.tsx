@@ -4,15 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { X } from 'lucide-react';
-import { login, debugLog as logAuthEvent } from '@/lib/api';
+import { login } from '@/lib/api';
 import PasswordInput from '@/components/PasswordInput';
-
-// TODO: quitar este bloque de depuración (DEBUG_LOG_KEY, debugLog, el
-// useEffect que lo lee y el <pre> que lo pinta) en cuanto se localice
-// por qué a veces se cierra la sesión sola. Sirve para ver en el propio
-// móvil (sin consola a mano) si localStorage estaba vacío o el token
-// realmente había caducado justo antes de que nos mandara aquí.
-const DEBUG_LOG_KEY = 'debug_auth_log';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -21,8 +14,6 @@ export default function LoginPage() {
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotSent, setForgotSent] = useState(false);
-  const [debugLog, setDebugLog] = useState<string | null>(null);
-  const [debugNow, setDebugNow] = useState<Record<string, boolean> | null>(null);
   // Empieza en true para no pintar el formulario ni un instante si
   // resulta que ya hay sesión guardada (evita el parpadeo antes de
   // mandar al calendario). Se pasa a false solo si de verdad hace
@@ -37,23 +28,9 @@ export default function LoginPage() {
     // sentido mostrar el formulario: nos vamos derechos al calendario.
     const token = localStorage.getItem('token');
     if (token) {
-      logAuthEvent('login_page_con_sesion_valida', { redirigido: '/dashboard/calendario' });
       router.push('/dashboard/calendario');
       return;
     }
-
-    // Esto se ve SIEMPRE, aunque el propio log se haya borrado: si el
-    // sistema operativo vació todo el localStorage (ej. al cerrar la
-    // app en iOS), el log de abajo desaparecería con él, y sin esto no
-    // habría forma de distinguir "no ha pasado nada" de "se borró todo".
-    setDebugNow({
-      token: !!localStorage.getItem('token'),
-      refreshToken: !!localStorage.getItem('refreshToken'),
-      user: !!localStorage.getItem('user'),
-      debug_auth_log: !!localStorage.getItem(DEBUG_LOG_KEY),
-    });
-    const raw = localStorage.getItem(DEBUG_LOG_KEY);
-    setDebugLog(raw);
     setCheckingAuth(false);
   }, [router]);
 
@@ -175,47 +152,6 @@ export default function LoginPage() {
             )}
           </div>
 
-          {debugNow && (
-            <div className="mt-4 rounded-xl bg-[#2b2b2a] p-4 text-white">
-              <p className="mb-1 text-xs font-bold uppercase text-gray-400">
-                Debug: estado ahora mismo
-              </p>
-              <p className="text-[11px] leading-relaxed text-[#a2c037]">
-                token: {debugNow.token ? 'sí' : 'NO (vacío)'} · refreshToken:{' '}
-                {debugNow.refreshToken ? 'sí' : 'NO (vacío)'} · user: {debugNow.user ? 'sí' : 'NO (vacío)'}
-              </p>
-              {!debugNow.debug_auth_log && (
-                <p className="mt-1 text-[11px] text-amber-400">
-                  El historial de abajo tampoco existe: si esto pasó justo después de cerrar la
-                  app, todo el localStorage se vació de golpe (no es un 401 nuestro, se borró
-                  entero).
-                </p>
-              )}
-            </div>
-          )}
-
-          {debugLog && (
-            <div className="mt-4 rounded-xl bg-[#2b2b2a] p-4 text-white">
-              <div className="mb-2 flex items-center justify-between">
-                <p className="text-xs font-bold uppercase text-gray-400">
-                  Debug: por qué te ha sacado
-                </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    localStorage.removeItem('debug_auth_log');
-                    setDebugLog(null);
-                  }}
-                  className="text-xs font-semibold text-gray-400 underline"
-                >
-                  Borrar
-                </button>
-              </div>
-              <pre className="max-h-64 overflow-auto whitespace-pre-wrap wrap-break-word text-[10px] leading-relaxed text-[#a2c037]">
-                {JSON.stringify(JSON.parse(debugLog), null, 2)}
-              </pre>
-            </div>
-          )}
         </div>
       </div>
 
