@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Check, X, Clock, Ban } from 'lucide-react';
+import { Check, X, Clock, Ban, Pencil } from 'lucide-react';
 import {
   getPlans,
   getClientPurchases,
@@ -10,6 +10,7 @@ import {
   assignPunctualPlan,
   changePlan,
   cancelPurchase,
+  updatePurchaseDates,
 } from '@/lib/api';
 import { TRAINING_CATEGORIES } from '@/lib/pricing';
 
@@ -63,6 +64,11 @@ export default function PlanTab({
   const [assignSaving, setAssignSaving] = useState(false);
   const [assignError, setAssignError] = useState('');
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [editDatesItem, setEditDatesItem] = useState<any | null>(null);
+  const [editStartDate, setEditStartDate] = useState('');
+  const [editEndDate, setEditEndDate] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState('');
   const router = useRouter();
 
   useEffect(() => {
@@ -149,6 +155,49 @@ export default function PlanTab({
       alert(err.message || 'No se pudo parar el plan');
     } finally {
       setCancellingId(null);
+    }
+  }
+
+  function openEditDates(item: any) {
+    setEditDatesItem(item);
+    setEditStartDate(item.activatedAt ? item.activatedAt.split('T')[0] : '');
+    setEditEndDate(item.scheduledEndDate ? item.scheduledEndDate.split('T')[0] : '');
+    setEditError('');
+  }
+
+  async function handleEditDatesConfirm() {
+    if (!editDatesItem) return;
+    if (!editStartDate) {
+      setEditError('Elige la fecha de inicio');
+      return;
+    }
+    // Solo los puntuales tienen fecha de fin; si este plan no la tiene, no
+    // se manda (no vale la pena convertir una suscripción en puntual desde
+    // aquí, solo corregir fechas que ya existían).
+    if (editDatesItem.scheduledEndDate && !editEndDate) {
+      setEditError('Elige la fecha de fin');
+      return;
+    }
+    setEditSaving(true);
+    setEditError('');
+    const token = localStorage.getItem('token');
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+
+    try {
+      await updatePurchaseDates(token, editDatesItem._id, {
+        startDate: editStartDate,
+        endDate: editDatesItem.scheduledEndDate ? editEndDate : undefined,
+      });
+      const refreshed = await getClientPurchases(token, id);
+      onPurchasesChange(refreshed);
+      setEditDatesItem(null);
+    } catch (err: any) {
+      setEditError(err.message || 'No se pudieron guardar las fechas');
+    } finally {
+      setEditSaving(false);
     }
   }
 
@@ -251,14 +300,23 @@ export default function PlanTab({
                     </p>
                   )}
                   {item.assignedInPerson && (
-                    <button
-                      onClick={() => handleCancelPlan(item._id)}
-                      disabled={cancellingId === item._id}
-                      className="mt-3 flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100 disabled:opacity-60"
-                    >
-                      <Ban size={13} />
-                      {cancellingId === item._id ? 'Parando...' : 'Parar plan'}
-                    </button>
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        onClick={() => openEditDates(item)}
+                        className="flex items-center gap-1.5 rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-semibold text-[#2b2b2a] hover:bg-gray-200"
+                      >
+                        <Pencil size={13} />
+                        Editar fechas
+                      </button>
+                      <button
+                        onClick={() => handleCancelPlan(item._id)}
+                        disabled={cancellingId === item._id}
+                        className="flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100 disabled:opacity-60"
+                      >
+                        <Ban size={13} />
+                        {cancellingId === item._id ? 'Parando...' : 'Parar plan'}
+                      </button>
+                    </div>
                   )}
                 </div>
               ))}
@@ -420,6 +478,82 @@ export default function PlanTab({
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {editDatesItem && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+          onClick={() => setEditDatesItem(null)}
+        >
+          <div
+            className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="font-[family-name:var(--font-work-sans)] text-base font-bold text-[#2b2b2a]">
+                Editar fechas
+              </h3>
+              <button
+                onClick={() => setEditDatesItem(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p className="mb-4 text-sm font-semibold text-[#2b2b2a]">{editDatesItem.itemLabel}</p>
+
+            <div className="mb-4 flex flex-col gap-4">
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-[#868585]">
+                  Fecha de inicio
+                </label>
+                <input
+                  type="date"
+                  value={editStartDate}
+                  onChange={(e) => setEditStartDate(e.target.value)}
+                  className="w-full min-w-0 rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none focus:ring-2 focus:ring-[#a2c037]/20"
+                />
+                {editDatesItem.pausedPlan && (
+                  <p className="mt-1 text-xs text-[#868585]">
+                    Esta fecha es solo informativa: el otro plan ya se pausó en el momento de
+                    asignar este, no se mueve al cambiarla.
+                  </p>
+                )}
+              </div>
+              {editDatesItem.scheduledEndDate && (
+                <div>
+                  <label className="mb-1 block text-xs font-semibold text-[#868585]">
+                    Fecha de fin
+                  </label>
+                  <input
+                    type="date"
+                    value={editEndDate}
+                    min={editStartDate}
+                    onChange={(e) => setEditEndDate(e.target.value)}
+                    className="w-full min-w-0 rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none focus:ring-2 focus:ring-[#a2c037]/20"
+                  />
+                  {editDatesItem.pausedPlan && (
+                    <p className="mt-1 text-xs text-[#868585]">
+                      El plan en pausa se retoma automáticamente en esta fecha.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {editError && <p className="mb-3 text-sm font-medium text-red-600">{editError}</p>}
+
+            <button
+              onClick={handleEditDatesConfirm}
+              disabled={editSaving}
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-[#a2c037] to-[#6aa842] py-2.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
+            >
+              <Check size={16} />
+              {editSaving ? 'Guardando...' : 'Guardar fechas'}
+            </button>
           </div>
         </div>
       )}

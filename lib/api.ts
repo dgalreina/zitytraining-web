@@ -457,6 +457,19 @@ export async function cancelPurchase(token: string, purchaseId: string) {
   return handleResponse(res);
 }
 
+export async function updatePurchaseDates(
+  token: string,
+  purchaseId: string,
+  data: { startDate?: string; endDate?: string },
+) {
+  const res = await apiFetch(`${API_URL}/purchases/${purchaseId}/dates`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(res);
+}
+
 export async function getAllBookings(token: string, from: string, to: string) {
   const query = new URLSearchParams({ scope: 'all', from, to });
   const res = await apiFetch(`${API_URL}/bookings?${query}`, {
