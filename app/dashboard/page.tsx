@@ -77,14 +77,9 @@ export default function DashboardHome() {
                 minute: '2-digit',
               })} – ${end.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`;
 
-              const counterpart =
-                role === 'trainer'
-                  ? (b.clients || [])
-                      .map((c: any) => `${c.firstName} ${c.lastName?.[0] ?? ''}.`)
-                      .join(', ')
-                  : b.trainer
-                    ? `${b.trainer.firstName} ${b.trainer.lastName}`
-                    : 'Entrenador';
+              const trainerName = b.trainer
+                ? `${b.trainer.firstName} ${b.trainer.lastName}`
+                : 'Entrenador';
 
               return (
                 <div
@@ -97,12 +92,21 @@ export default function DashboardHome() {
                       <span className="rounded-full bg-[#fa8072]/15 px-2.5 py-1 text-xs font-semibold text-[#c65a4e]">
                         Privada
                       </span>
-                    ) : (
+                    ) : role !== 'trainer' ? (
                       <span className="rounded-full bg-[#a2c037]/10 px-2.5 py-1 text-xs font-semibold text-[#4b7a1f]">
-                        {counterpart}
+                        {trainerName}
                       </span>
-                    )}
+                    ) : null}
                   </div>
+                  {!b.isPrivate && role === 'trainer' && (
+                    <div className="mb-1 flex flex-col">
+                      {(b.clients || []).map((c: any) => (
+                        <span key={c._id} className="text-sm font-semibold text-[#4b7a1f]">
+                          {c.firstName} {c.lastName}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   {b.notes && (
                     <div className="mt-2 rounded-lg bg-gray-50 px-3 py-2">
                       <p className="mb-0.5 text-xs font-semibold text-[#868585]">Nota</p>
