@@ -161,11 +161,11 @@
 }
 
 .ziti-holiday-label {
-  font-size: 0.6rem;
+  font-size: 0.55rem;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
+  line-height: 1.2;
   color: #c65a4e;
+  white-space: nowrap;
 }
 
 .fc .fc-timegrid-now-indicator-line {
