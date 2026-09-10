@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Search, Plus, ShieldCheck, ChevronDown, Check, RotateCcw, Dumbbell } from 'lucide-react';
-import { getUsers, updateUser } from '@/lib/api';
+import { getUsers, updateUser } from '@/lib/usersApi';
 import { DEFAULT_TRAINER_COLOR } from '@/lib/colors';
 
 type StatusFilter = 'all' | 'active' | 'inactive' | 'deleted';

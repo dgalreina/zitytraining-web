@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Plus, Pencil, Trash2, X, Check, Lock, ChevronDown } from 'lucide-react';
-import { getExercises, createExercise, updateExercise, deleteExercise } from '@/lib/api';
+import { getExercises, createExercise, updateExercise, deleteExercise } from '@/lib/exercisesApi';
 import { EXERCISE_CATEGORIES } from './exerciseCategories';
 
 const DEFAULT_CATEGORY = EXERCISE_CATEGORIES[0].id;

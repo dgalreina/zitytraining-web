@@ -11,7 +11,7 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core';
 import { SortableContext, arrayMove, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { createWorkout, updateWorkout } from '@/lib/api';
+import { createWorkout, updateWorkout } from '@/lib/workoutsApi';
 import { Slot, emptySlot } from './ExerciseSlotInput';
 import SortableExerciseSlot from './SortableExerciseSlot';
 import { computeSlotLabels, groupSlotsForDisplay } from './workoutSlotLabels';

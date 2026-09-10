@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Search, Plus, X, Trash2, GripVertical, Link2, Timer, StickyNote } from 'lucide-react';
-import { searchExercises, createExercise } from '@/lib/api';
+import { searchExercises, createExercise } from '@/lib/exercisesApi';
 
 const DEFAULT_SETS = 4;
 

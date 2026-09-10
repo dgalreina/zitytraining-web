@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Pencil, Trash2 } from 'lucide-react';
 import DateOfBirthPicker from '@/components/DateOfBirthPicker';
-import { updateUser, deleteUser } from '@/lib/api';
+import { updateUser, deleteUser } from '@/lib/usersApi';
 import { inputClass, labelClass } from './shared';
 
 function Switch({ checked, onChange }: { checked: boolean; onChange: () => void }) {

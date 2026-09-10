@@ -3,15 +3,15 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, X, Clock, Ban, Pencil } from 'lucide-react';
+import { getPlans } from '@/lib/plansApi';
 import {
-  getPlans,
   getClientPurchases,
   assignPlan,
   assignPunctualPlan,
   changePlan,
   cancelPurchase,
   updatePurchaseDates,
-} from '@/lib/api';
+} from '@/lib/purchasesApi';
 import { TRAINING_CATEGORIES } from '@/lib/pricing';
 
 // La compra no guarda su categoría, pero el itemLabel de "Sesiones

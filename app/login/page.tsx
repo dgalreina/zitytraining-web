@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { X } from 'lucide-react';
-import { login } from '@/lib/api';
+import { login } from '@/lib/authApi';
 import PasswordInput from '@/components/PasswordInput';
 
 export default function LoginPage() {

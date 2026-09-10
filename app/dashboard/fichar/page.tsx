@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Fingerprint, LogIn, LogOut, AlertTriangle, PenLine, X, Check } from 'lucide-react';
-import { clockIn, clockOut, getAttendanceStatus, getMyAttendance, createManualAttendance } from '@/lib/api';
+import { clockIn, clockOut, getAttendanceStatus, getMyAttendance, createManualAttendance } from '@/lib/attendanceApi';
 import WeeklyAttendanceCalendar from './WeeklyAttendanceCalendar';
 
 type Tab = 'mine' | 'calendar';

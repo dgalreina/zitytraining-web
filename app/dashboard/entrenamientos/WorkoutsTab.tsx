@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
-import { getWorkouts, deleteWorkout } from '@/lib/api';
+import { getWorkouts, deleteWorkout } from '@/lib/workoutsApi';
 import WorkoutFormModal from './WorkoutFormModal';
 import WorkoutSummary from './WorkoutSummary';
 

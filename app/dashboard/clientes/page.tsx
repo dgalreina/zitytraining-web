@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Search, Plus, ChevronDown, Check, RotateCcw, Users, Star } from 'lucide-react';
-import { getUsers, getActiveClients, updateUser, addFavoriteClient, removeFavoriteClient } from '@/lib/api';
+import { getUsers, getActiveClients, updateUser, addFavoriteClient, removeFavoriteClient } from '@/lib/usersApi';
 
 type StatusFilter = 'all' | 'active' | 'inactive' | 'deleted';
 

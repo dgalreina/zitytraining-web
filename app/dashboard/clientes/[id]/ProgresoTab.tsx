@@ -11,7 +11,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { getProgressByClient, createProgressEntry } from '@/lib/api';
+import { getProgressByClient, createProgressEntry } from '@/lib/progressApi';
 import { inputClass, labelClass } from './shared';
 
 const PROGRESS_METRICS: { key: string; label: string; unit: string }[] = [

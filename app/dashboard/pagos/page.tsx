@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Check, Clock, X } from 'lucide-react';
 import { TRAINING_CATEGORIES, REMOTE_SERVICES, RemoteService } from '@/lib/pricing';
-import { createPurchase, createCheckoutSession, getMyPurchases, getPlans } from '@/lib/api';
+import { createPurchase, createCheckoutSession, getMyPurchases, CreatePurchasePayload } from '@/lib/purchasesApi';
+import { getPlans } from '@/lib/plansApi';
 
 type Tab = 'plan' | 'contratar' | 'historial';
 type Selection = { type: 'plan'; item: any } | { type: 'service'; item: RemoteService };
@@ -120,7 +121,7 @@ export default function PagosPage() {
     if (!token) return;
 
     try {
-      const payload =
+      const payload: CreatePurchasePayload =
         selection.type === 'plan'
           ? {
               type: 'plan',

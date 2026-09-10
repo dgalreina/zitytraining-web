@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Check, KeyRound, Pencil } from 'lucide-react';
 import DateOfBirthPicker from '@/components/DateOfBirthPicker';
-import { getMe, updateMe } from '@/lib/api';
+import { getMe, updateMe } from '@/lib/usersApi';
 import { DEFAULT_TRAINER_COLOR, getAvatarGradient } from '@/lib/colors';
 
 const inputClass =

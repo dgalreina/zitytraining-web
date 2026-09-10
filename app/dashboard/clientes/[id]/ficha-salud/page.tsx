@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
-import { getUser, getHealthFormByClient, createHealthForm, updateHealthForm } from '@/lib/api';
+import { getUser } from '@/lib/usersApi';
+import { getHealthFormByClient, createHealthForm, updateHealthForm } from '@/lib/healthFormsApi';
 
 const inputClass =
   'w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none focus:ring-2 focus:ring-[#a2c037]/20';
@@ -199,7 +200,9 @@ export default function FichaSaludPage() {
             cholesterolHdl: existing.cholesterolHdl?.toString() || '',
             spineDeviation: existing.spineDeviation || 'no',
             objectives:
-              existing.objectives?.length > 0 ? [...existing.objectives, '', '', ''].slice(0, 3) : ['', '', ''],
+              existing.objectives && existing.objectives.length > 0
+                ? [...existing.objectives, '', '', ''].slice(0, 3)
+                : ['', '', ''],
           });
         }
       })

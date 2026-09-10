@@ -5,7 +5,9 @@ import FullCalendar from '@fullcalendar/react';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import '@/styles/fullcalendar-theme.css';
 import { ChevronDown, Check } from 'lucide-react';
-import { getUsers, getAllAttendance, getHolidays } from '@/lib/api';
+import { getUsers } from '@/lib/usersApi';
+import { getAllAttendance } from '@/lib/attendanceApi';
+import { getHolidays } from '@/lib/holidaysApi';
 import { DEFAULT_TRAINER_COLOR } from '@/lib/colors';
 import { dayKey } from '@/components/MiniCalendar';
 

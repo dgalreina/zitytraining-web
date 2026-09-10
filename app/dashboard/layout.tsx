@@ -20,7 +20,7 @@ import {
   X,
 } from 'lucide-react';
 import { getAvatarGradient } from '@/lib/colors';
-import { logout } from '@/lib/api';
+import { logout } from '@/lib/authApi';
 
 const ADMIN_ONLY_PREFIXES = [
   '/dashboard/entrenadores',

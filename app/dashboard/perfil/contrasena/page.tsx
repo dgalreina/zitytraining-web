@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
-import { changeMyPassword } from '@/lib/api';
+import { changeMyPassword } from '@/lib/usersApi';
 import PasswordInput from '@/components/PasswordInput';
 
 const inputClass =

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getBookings } from '@/lib/api';
+import { getBookings } from '@/lib/bookingsApi';
 import WorkoutSummary from './entrenamientos/WorkoutSummary';
 
 export default function DashboardHome() {

@@ -10,15 +10,9 @@ import { X, ChevronDown, ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import MiniCalendar, { dayKey } from '@/components/MiniCalendar';
 import FilterDropdown from '@/components/FilterDropdown';
 import BookingModal, { ModalState } from './BookingModal';
-import {
-  getUsers,
-  getMe,
-  getActiveClients,
-  getBookings,
-  getBookingsByTrainers,
-  updateBooking,
-  getHolidays,
-} from '@/lib/api';
+import { getUsers, getMe, getActiveClients } from '@/lib/usersApi';
+import { getBookings, getBookingsByTrainers, updateBooking } from '@/lib/bookingsApi';
+import { getHolidays } from '@/lib/holidaysApi';
 
 const FALLBACK_COLOR = '#868585';
 const PRIVATE_COLOR = '#fa8072';
