@@ -5,9 +5,10 @@ import DatePicker, { registerLocale } from 'react-datepicker';
 import { es } from 'date-fns/locale';
 import 'react-datepicker/dist/react-datepicker.css';
 import '@/styles/datepicker-theme.css';
-import { X, Trash2, ChevronLeft, Ban, RotateCcw, Star } from 'lucide-react';
+import { X, Trash2, ChevronLeft, Ban, RotateCcw, Star, Repeat, CalendarOff } from 'lucide-react';
 import FilterDropdown from '@/components/FilterDropdown';
-import { createBooking, updateBooking, deleteBooking, getWorkouts } from '@/lib/api';
+import { createBooking, updateBooking, deleteBooking, deleteBookingSeries, getWorkouts } from '@/lib/api';
+import { dayKey } from '@/components/MiniCalendar';
 import WorkoutFormModal from '../entrenamientos/WorkoutFormModal';
 import WorkoutSummary from '../entrenamientos/WorkoutSummary';
 
@@ -53,6 +54,7 @@ export default function BookingModal({
   trainers,
   clients,
   defaultTrainerId,
+  holidaysByDate,
   onClose,
   onSaved,
 }: {
@@ -60,6 +62,7 @@ export default function BookingModal({
   trainers: any[];
   clients: any[];
   defaultTrainerId: string;
+  holidaysByDate: Record<string, string>;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -80,6 +83,13 @@ export default function BookingModal({
   const [view, setView] = useState<ModalView>('form');
   const [status, setStatus] = useState<'active' | 'cancelled'>('active');
   const [isPrivate, setIsPrivate] = useState(false);
+  // Solo se elige al crear; una sesión ya creada no se puede convertir en
+  // serie ni al revés desde aquí.
+  const [recurrence, setRecurrence] = useState<'once' | 'weekly'>('once');
+  // Si esta sesión pertenece a una serie y cae en festivo.
+  const [seriesId, setSeriesId] = useState<string | null>(null);
+  const [holidaySkip, setHolidaySkip] = useState(false);
+  const [deleteChoiceOpen, setDeleteChoiceOpen] = useState(false);
 
   // El entrenamiento es un campo mas del formulario: se queda en local
   // hasta que se pulsa "Guardar", igual que las notas o los clientes.
@@ -104,6 +114,8 @@ export default function BookingModal({
     setBookingWorkout(null);
     setPickerOpen(false);
     setWorkoutSearch('');
+    setDeleteChoiceOpen(false);
+    setRecurrence('once');
 
     if (modal.mode === 'edit') {
       const raw = modal.booking;
@@ -114,6 +126,8 @@ export default function BookingModal({
       setStatus(raw.status === 'cancelled' ? 'cancelled' : 'active');
       setIsPrivate(!!raw.isPrivate);
       setBookingWorkout(raw.workout || null);
+      setSeriesId(raw.series ? String(raw.series) : null);
+      setHolidaySkip(!!raw.holidaySkip);
       if (diff === 40) {
         setDurationOption('40');
       } else if (diff === 60) {
@@ -133,6 +147,8 @@ export default function BookingModal({
       setCustomMinutes('60');
       setStatus('active');
       setIsPrivate(false);
+      setSeriesId(null);
+      setHolidaySkip(false);
     }
   }, [modal, defaultTrainerId]);
 
@@ -218,11 +234,13 @@ export default function BookingModal({
           notes: notes || undefined,
           isPrivate,
           workoutId: bookingWorkout?._id,
+          recurrence,
         });
       } else {
         await updateBooking(token, (modal as { mode: 'edit'; booking: any }).booking._id, {
           trainer: modalTrainerId,
           clients: isPrivate ? [] : selectedClientIds,
+          holidaySkip,
           startTime: start.toISOString(),
           endTime: end.toISOString(),
           notes: notes || undefined,
@@ -236,6 +254,17 @@ export default function BookingModal({
     } finally {
       setSaving(false);
     }
+  }
+
+  function handleDeleteClick() {
+    if (modal!.mode !== 'edit') return;
+    // Si es de una serie, primero hay que preguntar si se borra solo esta
+    // sesión o esta y todas las futuras (ver deleteChoiceOpen más abajo).
+    if (seriesId) {
+      setDeleteChoiceOpen(true);
+      return;
+    }
+    handleDelete();
   }
 
   async function handleDelete() {
@@ -255,6 +284,26 @@ export default function BookingModal({
       onSaved();
     } catch (err: any) {
       setError(err.message || 'No se pudo eliminar la sesión');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // Borra esta sesión y todas las futuras de la serie; el pasado ya
+  // generado no se toca, y la serie deja de generar sesiones a partir de
+  // aquí.
+  async function handleDeleteSeriesFrom() {
+    if (modal!.mode !== 'edit') return;
+    setDeleteChoiceOpen(false);
+    setSaving(true);
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+      await deleteBookingSeries(token, modal!.booking._id);
+      onSaved();
+    } catch (err: any) {
+      setError(err.message || 'No se pudo eliminar la serie');
     } finally {
       setSaving(false);
     }
@@ -443,6 +492,55 @@ export default function BookingModal({
                 start.getTime() + getEffectiveDurationMinutes() * 60000,
               ).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
             </p>
+
+            {modal.mode === 'create' && (
+              <>
+                <label className="mb-1.5 block text-xs font-semibold text-[#868585]">
+                  Repetición
+                </label>
+                <div className="mb-3 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setRecurrence('once')}
+                    className={`flex-1 rounded-lg border py-1.5 text-sm font-semibold transition ${
+                      recurrence === 'once'
+                        ? 'border-[#6aa842] bg-[#a2c037]/10 text-[#4b7a1f]'
+                        : 'border-gray-200 text-[#868585] hover:bg-gray-50'
+                    }`}
+                  >
+                    Puntual
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRecurrence('weekly')}
+                    className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg border py-1.5 text-sm font-semibold transition ${
+                      recurrence === 'weekly'
+                        ? 'border-[#6aa842] bg-[#a2c037]/10 text-[#4b7a1f]'
+                        : 'border-gray-200 text-[#868585] hover:bg-gray-50'
+                    }`}
+                  >
+                    <Repeat size={14} />
+                    Cada semana
+                  </button>
+                </div>
+                {recurrence === 'weekly' && (
+                  <p className="mb-3 text-xs text-[#868585]">
+                    Se repite todas las semanas a esta misma hora, sin fecha de fin. Se puede parar
+                    más adelante desde cualquiera de sus sesiones.
+                  </p>
+                )}
+              </>
+            )}
+
+            {modal.mode === 'edit' && holidaysByDate[dayKey(start)] && (
+              <label className="mb-3 flex cursor-pointer items-center justify-between gap-2 rounded-lg border border-gray-200 px-3 py-2">
+                <span className="flex items-center gap-1.5 text-xs font-semibold text-[#868585]">
+                  <CalendarOff size={14} />
+                  No cuenta como sesión dada (cae en {holidaysByDate[dayKey(start)]})
+                </span>
+                <Switch checked={holidaySkip} onChange={() => setHolidaySkip((v) => !v)} />
+              </label>
+            )}
 
             {isPrivate ? (
               <>
@@ -662,7 +760,7 @@ export default function BookingModal({
               )}
               {modal.mode === 'edit' && (
                 <button
-                  onClick={handleDelete}
+                  onClick={handleDeleteClick}
                   disabled={saving}
                   title="Eliminar sesión"
                   className="rounded-lg bg-red-50 px-3 py-2 text-red-600 hover:bg-red-100"
@@ -682,6 +780,52 @@ export default function BookingModal({
         onClose={() => setWorkoutFormOpen(false)}
         onSaved={handleWorkoutCreated}
       />
+    )}
+
+    {deleteChoiceOpen && (
+      <div
+        className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-4"
+        onClick={() => setDeleteChoiceOpen(false)}
+      >
+        <div
+          className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <h3 className="mb-2 font-[family-name:var(--font-work-sans)] text-base font-bold text-[#2b2b2a]">
+            Esta sesión es de una serie
+          </h3>
+          <p className="mb-5 text-sm text-[#868585]">
+            ¿Quieres borrar solo esta sesión, o esta y todas las futuras de la serie? Las sesiones
+            pasadas nunca se borran.
+          </p>
+          <div className="flex flex-col gap-2">
+            <button
+              onClick={() => {
+                setDeleteChoiceOpen(false);
+                handleDelete();
+              }}
+              disabled={saving}
+              className="rounded-lg border border-gray-200 py-2.5 text-sm font-semibold text-[#2b2b2a] hover:bg-gray-50 disabled:opacity-60"
+            >
+              Solo esta sesión
+            </button>
+            <button
+              onClick={handleDeleteSeriesFrom}
+              disabled={saving}
+              className="rounded-lg bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+            >
+              Esta y todas las futuras
+            </button>
+            <button
+              onClick={() => setDeleteChoiceOpen(false)}
+              disabled={saving}
+              className="py-1.5 text-sm font-semibold text-[#868585] hover:underline"
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      </div>
     )}
     </>
   );

@@ -936,9 +936,12 @@ export default function CalendarioPage() {
             slotDuration="00:30:00"
             snapDuration="00:05:00"
             displayEventTime={false}
-            eventClassNames={(arg) =>
-              arg.event.extendedProps.raw?.status === 'cancelled' ? ['ziti-event-cancelled'] : []
-            }
+            eventClassNames={(arg) => {
+              const classes: string[] = [];
+              if (arg.event.extendedProps.raw?.status === 'cancelled') classes.push('ziti-event-cancelled');
+              if (arg.event.extendedProps.raw?.holidaySkip) classes.push('ziti-event-holiday-skip');
+              return classes;
+            }}
             eventContent={(arg) => {
               const raw = arg.event.extendedProps.raw;
               const isCancelled = raw?.status === 'cancelled';
@@ -961,6 +964,9 @@ export default function CalendarioPage() {
                   {isCancelled && viewType !== 'timeGridWeek' && (
                     <span className="ziti-event-cancelled-label">Cancelada</span>
                   )}
+                  {raw?.holidaySkip && viewType !== 'timeGridWeek' && (
+                    <span className="ziti-event-holiday-skip-label">No cuenta (festivo)</span>
+                  )}
                   {raw?.notes && <div className="ziti-event-tooltip">{raw.notes}</div>}
                 </div>
               );
@@ -974,6 +980,7 @@ export default function CalendarioPage() {
         trainers={trainers}
         clients={clients}
         defaultTrainerId={defaultTrainerId}
+        holidaysByDate={holidaysByDate}
         onClose={() => setModal(null)}
         onSaved={handleModalSaved}
       />

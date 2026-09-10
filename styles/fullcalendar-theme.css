@@ -318,6 +318,31 @@
   text-transform: uppercase;
 }
 
+/* Sesión de una serie que cae en festivo: se ve rayada, para que se
+   note a simple vista que no cuenta como sesión dada (se puede
+   desmarcar entrando en ella). */
+.fc-event.ziti-event-holiday-skip {
+  background-image: repeating-linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.35) 0px,
+    rgba(255, 255, 255, 0.35) 4px,
+    transparent 4px,
+    transparent 9px
+  );
+}
+
+.ziti-event-holiday-skip-label {
+  position: absolute;
+  bottom: 2px;
+  left: 4px;
+  font-size: 0.55rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  color: white;
+  text-transform: uppercase;
+}
+
 .ziti-event-tooltip {
   position: absolute;
   bottom: calc(100% + 8px);

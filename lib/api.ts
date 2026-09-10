@@ -377,6 +377,17 @@ export async function deleteBooking(token: string, id: string) {
   return true;
 }
 
+// Borra esta sesión y todas las futuras de su serie (el pasado no se toca).
+export async function deleteBookingSeries(token: string, id: string) {
+  const res = await apiFetch(`${API_URL}/bookings/${id}/series`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (res.status === 401) return handleResponse(res);
+  if (!res.ok) throw new Error(`Error ${res.status}`);
+  return true;
+}
+
 // --- Purchases ---
 
 export async function createPurchase(token: string, data: any) {
