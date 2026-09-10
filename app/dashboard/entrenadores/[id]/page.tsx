@@ -5,43 +5,11 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft, Pencil, ShieldAlert, Check, Trash2 } from 'lucide-react';
 import DateOfBirthPicker from '@/components/DateOfBirthPicker';
+import Switch from '@/components/Switch';
+import { statusBadge } from '@/components/StatusBadge';
 import { getUser, updateUser, deleteUser } from '@/lib/usersApi';
-import { DEFAULT_TRAINER_COLOR, getAvatarGradient } from '@/lib/colors';
-
-const inputClass =
-  'w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none focus:ring-2 focus:ring-[#a2c037]/20 disabled:bg-gray-50 disabled:text-gray-500';
-const labelClass = 'mb-1 block text-xs font-semibold text-[#868585]';
-
-const COLOR_PALETTE = [
-  { name: 'Verde (marca)', value: '#6aa842' },
-  { name: 'Naranja', value: '#e8821e' },
-  { name: 'Marrón', value: '#a4796c' },
-  { name: 'Azul cielo', value: '#29abe2' },
-  { name: 'Mostaza', value: '#e4b443' },
-  { name: 'Turquesa', value: '#16a394' },
-  { name: 'Azul marino', value: '#2e5f8a' },
-  { name: 'Morado', value: '#7e57c2' },
-  { name: 'Beige', value: '#c2a878' },
-  { name: 'Gris pizarra', value: '#64748b' },
-];
-
-function statusBadge(status: string) {
-  const styles: Record<string, string> = {
-    active: 'bg-[#a2c037]/15 text-[#4b7a1f]',
-    inactive: 'bg-gray-100 text-gray-600',
-    deleted: 'bg-red-100 text-red-700',
-  };
-  const labels: Record<string, string> = {
-    active: 'Activo',
-    inactive: 'Inactivo',
-    deleted: 'Eliminado',
-  };
-  return (
-    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${styles[status] || styles.inactive}`}>
-      {labels[status] || status}
-    </span>
-  );
-}
+import { DEFAULT_TRAINER_COLOR, getAvatarGradient, COLOR_PALETTE } from '@/lib/colors';
+import { inputClassDisableable as inputClass, labelClass } from '@/lib/formStyles';
 
 function roleBadge(isAdmin: boolean) {
   return (
@@ -52,33 +20,6 @@ function roleBadge(isAdmin: boolean) {
     >
       {isAdmin ? 'Administrador' : 'Entrenador'}
     </span>
-  );
-}
-
-function Switch({
-  checked,
-  onChange,
-  activeColor = '#6aa842',
-}: {
-  checked: boolean;
-  onChange: () => void;
-  activeColor?: string;
-}) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      onClick={onChange}
-      className="relative h-6 w-11 shrink-0 rounded-full transition-colors duration-300"
-      style={{ backgroundColor: checked ? activeColor : '#d1d5db' }}
-    >
-      <span
-        className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all duration-300 ${
-          checked ? 'left-[22px]' : 'left-0.5'
-        }`}
-      />
-    </button>
   );
 }
 

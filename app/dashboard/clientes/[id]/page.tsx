@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { getUser } from '@/lib/usersApi';
 import { getClientPurchases } from '@/lib/purchasesApi';
+import { statusBadge } from '@/components/StatusBadge';
 import InfoTab from './InfoTab';
 import ProgresoTab from './ProgresoTab';
 import PlanTab from './PlanTab';
@@ -19,24 +20,6 @@ function tabButtonClass(active: boolean) {
       ? 'border-b-2 border-[#6aa842] text-[#4b7a1f]'
       : 'text-[#868585] hover:text-[#2b2b2a]'
   }`;
-}
-
-function statusBadge(status: string) {
-  const styles: Record<string, string> = {
-    active: 'bg-[#a2c037]/15 text-[#4b7a1f]',
-    inactive: 'bg-gray-100 text-gray-600',
-    deleted: 'bg-red-100 text-red-700',
-  };
-  const labels: Record<string, string> = {
-    active: 'Activo',
-    inactive: 'Inactivo',
-    deleted: 'Eliminado',
-  };
-  return (
-    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${styles[status] || styles.inactive}`}>
-      {labels[status] || status}
-    </span>
-  );
 }
 
 export default function DetalleClientePage() {

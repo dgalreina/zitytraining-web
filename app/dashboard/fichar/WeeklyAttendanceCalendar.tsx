@@ -10,6 +10,7 @@ import { getAllAttendance } from '@/lib/attendanceApi';
 import { getHolidays } from '@/lib/holidaysApi';
 import { DEFAULT_TRAINER_COLOR } from '@/lib/colors';
 import { dayKey } from '@/components/MiniCalendar';
+import ColorDot from '@/components/ColorDot';
 
 function hexToRgba(hex: string, alpha: number) {
   const clean = hex.replace('#', '');
@@ -40,14 +41,6 @@ function renderEventContent(arg: any) {
   );
 }
 
-function ColorDot({ color }: { color?: string | null }) {
-  return (
-    <span
-      className="h-2.5 w-2.5 shrink-0 rounded-full"
-      style={{ backgroundColor: color || DEFAULT_TRAINER_COLOR }}
-    />
-  );
-}
 
 function TrainerDropdown({
   trainers,

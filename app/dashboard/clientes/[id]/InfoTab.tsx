@@ -4,27 +4,9 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Pencil, Trash2 } from 'lucide-react';
 import DateOfBirthPicker from '@/components/DateOfBirthPicker';
+import Switch from '@/components/Switch';
 import { updateUser, deleteUser } from '@/lib/usersApi';
-import { inputClass, labelClass } from './shared';
-
-function Switch({ checked, onChange }: { checked: boolean; onChange: () => void }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      onClick={onChange}
-      className="relative h-6 w-11 shrink-0 rounded-full transition-colors duration-300"
-      style={{ backgroundColor: checked ? '#6aa842' : '#d1d5db' }}
-    >
-      <span
-        className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all duration-300 ${
-          checked ? 'left-[22px]' : 'left-0.5'
-        }`}
-      />
-    </button>
-  );
-}
+import { inputClassDisableable as inputClass, labelClass } from '@/lib/formStyles';
 
 export default function InfoTab({
   id,

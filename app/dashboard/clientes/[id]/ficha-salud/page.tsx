@@ -6,10 +6,7 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { getUser } from '@/lib/usersApi';
 import { getHealthFormByClient, createHealthForm, updateHealthForm } from '@/lib/healthFormsApi';
-
-const inputClass =
-  'w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none focus:ring-2 focus:ring-[#a2c037]/20';
-const labelClass = 'mb-1 block text-xs font-semibold text-[#868585]';
+import { inputClass, labelClass } from '@/lib/formStyles';
 
 const WEEKDAYS = [
   { value: 'lunes', label: 'Lunes' },

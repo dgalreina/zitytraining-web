@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Search, Plus, ChevronDown, Check, RotateCcw, Users, Star } from 'lucide-react';
+import { Search, Plus, RotateCcw, Users, Star } from 'lucide-react';
+import StatusFilterDropdown from '@/components/StatusFilterDropdown';
+import { statusBadge } from '@/components/StatusBadge';
 import { getUsers, getActiveClients, updateUser, addFavoriteClient, removeFavoriteClient } from '@/lib/usersApi';
 
 type StatusFilter = 'all' | 'active' | 'inactive' | 'deleted';
@@ -21,90 +23,6 @@ function calculateAge(dateOfBirth: string) {
   const dob = new Date(dateOfBirth);
   const diff = Date.now() - dob.getTime();
   return Math.floor(diff / (1000 * 60 * 60 * 24 * 365.25));
-}
-
-function statusBadge(status: string) {
-  const styles: Record<string, string> = {
-    active: 'bg-[#a2c037]/15 text-[#4b7a1f]',
-    inactive: 'bg-gray-100 text-gray-600',
-    deleted: 'bg-red-100 text-red-700',
-  };
-  const labels: Record<string, string> = {
-    active: 'Activo',
-    inactive: 'Inactivo',
-    deleted: 'Eliminado',
-  };
-  return (
-    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${styles[status] || styles.inactive}`}>
-      {labels[status] || status}
-    </span>
-  );
-}
-
-function StatusFilterDropdown({
-  value,
-  onChange,
-  options,
-}: {
-  value: StatusFilter;
-  onChange: (value: StatusFilter) => void;
-  options: { value: StatusFilter; label: string }[];
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
-        setOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const selected = options.find((o) => o.value === value);
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className="flex w-full items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none sm:w-52"
-      >
-        {selected?.label}
-        <ChevronDown
-          size={15}
-          className={`text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}
-        />
-      </button>
-
-      {open && (
-        <div className="absolute right-0 z-10 mt-1.5 w-full min-w-[180px] rounded-lg border border-gray-200 bg-white p-1 shadow-lg">
-          {options.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => {
-                onChange(option.value);
-                setOpen(false);
-              }}
-              className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition ${
-                option.value === 'deleted' ? 'mt-1 border-t border-gray-100 pt-2' : ''
-              } ${
-                option.value === value
-                  ? 'bg-[#a2c037]/10 font-semibold text-[#4b7a1f]'
-                  : 'text-[#2b2b2a] hover:bg-gray-50'
-              }`}
-            >
-              {option.label}
-              {option.value === value && <Check size={14} />}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
 }
 
 export default function ClientesPage() {

@@ -1,11 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Search, Plus, ShieldCheck, ChevronDown, Check, RotateCcw, Dumbbell } from 'lucide-react';
+import { Search, Plus, ShieldCheck, RotateCcw, Dumbbell } from 'lucide-react';
+import ColorDot from '@/components/ColorDot';
+import StatusFilterDropdown from '@/components/StatusFilterDropdown';
+import { statusBadge } from '@/components/StatusBadge';
 import { getUsers, updateUser } from '@/lib/usersApi';
-import { DEFAULT_TRAINER_COLOR } from '@/lib/colors';
 
 type StatusFilter = 'all' | 'active' | 'inactive' | 'deleted';
 
@@ -17,95 +19,6 @@ const statusOptions: { value: StatusFilter; label: string }[] = [
   { value: 'inactive', label: 'Inactivos' },
   { value: 'deleted', label: 'Eliminados' },
 ];
-
-function statusBadge(status: string) {
-  const styles: Record<string, string> = {
-    active: 'bg-[#a2c037]/15 text-[#4b7a1f]',
-    inactive: 'bg-gray-100 text-gray-600',
-    deleted: 'bg-red-100 text-red-700',
-  };
-  const labels: Record<string, string> = {
-    active: 'Activo',
-    inactive: 'Inactivo',
-    deleted: 'Eliminado',
-  };
-  return (
-    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${styles[status] || styles.inactive}`}>
-      {labels[status] || status}
-    </span>
-  );
-}
-
-function ColorDot({ color }: { color?: string | null }) {
-  return (
-    <span
-      className="h-2.5 w-2.5 shrink-0 rounded-full"
-      style={{ backgroundColor: color || DEFAULT_TRAINER_COLOR }}
-    />
-  );
-}
-
-function StatusFilterDropdown({
-  value,
-  onChange,
-}: {
-  value: StatusFilter;
-  onChange: (value: StatusFilter) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const selected = statusOptions.find((o) => o.value === value);
-
-  return (
-    <div ref={ref} className="relative">
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className="flex w-full items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none sm:w-52"
-      >
-        {selected?.label}
-        <ChevronDown
-          size={15}
-          className={`text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}
-        />
-      </button>
-
-      {open && (
-        <div className="absolute right-0 z-10 mt-1.5 w-full min-w-[180px] rounded-lg border border-gray-200 bg-white p-1 shadow-lg">
-          {statusOptions.map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              onClick={() => {
-                onChange(option.value);
-                setOpen(false);
-              }}
-              className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm transition ${
-                option.value === 'deleted' ? 'mt-1 border-t border-gray-100 pt-2' : ''
-              } ${
-                option.value === value
-                  ? 'bg-[#a2c037]/10 font-semibold text-[#4b7a1f]'
-                  : 'text-[#2b2b2a] hover:bg-gray-50'
-              }`}
-            >
-              {option.label}
-              {option.value === value && <Check size={14} />}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function EntrenadoresPage() {
   const [trainers, setTrainers] = useState<any[]>([]);
@@ -208,7 +121,7 @@ export default function EntrenadoresPage() {
           />
         </div>
 
-        <StatusFilterDropdown value={statusFilter} onChange={setStatusFilter} />
+        <StatusFilterDropdown value={statusFilter} onChange={setStatusFilter} options={statusOptions} />
       </div>
 
       <div className="hidden overflow-hidden rounded-xl bg-white md:block">

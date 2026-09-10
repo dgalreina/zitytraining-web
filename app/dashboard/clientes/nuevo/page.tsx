@@ -6,10 +6,7 @@ import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import DateOfBirthPicker from '@/components/DateOfBirthPicker';
 import { createUserByAdmin } from '@/lib/usersApi';
-
-const inputClass =
-  'w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none focus:ring-2 focus:ring-[#a2c037]/20';
-const labelClass = 'mb-1 block text-xs font-semibold text-[#868585]';
+import { inputClass, labelClass } from '@/lib/formStyles';
 
 export default function NuevoClientePage() {
   const [form, setForm] = useState({

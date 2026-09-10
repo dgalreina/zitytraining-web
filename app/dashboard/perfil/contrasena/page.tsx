@@ -6,16 +6,8 @@ import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
 import { changeMyPassword } from '@/lib/usersApi';
 import PasswordInput from '@/components/PasswordInput';
-
-const inputClass =
-  'w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none focus:ring-2 focus:ring-[#a2c037]/20';
-const labelClass = 'mb-1 block text-xs font-semibold text-[#868585]';
-
-// Misma regla que el backend (IsStrongPassword): al menos 8 caracteres,
-// una mayúscula, una minúscula, un número y un símbolo.
-const STRONG_PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
-const STRONG_PASSWORD_HINT =
-  'Al menos 8 caracteres, con mayúsculas, minúsculas, números y algún símbolo.';
+import { inputClass, labelClass } from '@/lib/formStyles';
+import { STRONG_PASSWORD_REGEX, STRONG_PASSWORD_HINT } from '@/lib/validation';
 
 export default function CambiarContrasenaPage() {
   const [currentPassword, setCurrentPassword] = useState('');

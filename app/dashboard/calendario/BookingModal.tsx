@@ -7,6 +7,7 @@ import 'react-datepicker/dist/react-datepicker.css';
 import '@/styles/datepicker-theme.css';
 import { X, Trash2, ChevronLeft, Ban, RotateCcw, Star, Repeat, CalendarOff } from 'lucide-react';
 import FilterDropdown from '@/components/FilterDropdown';
+import Switch from '@/components/Switch';
 import { createBooking, updateBooking, deleteBooking, deleteBookingSeries } from '@/lib/bookingsApi';
 import { getWorkouts } from '@/lib/workoutsApi';
 import { dayKey } from '@/components/MiniCalendar';
@@ -25,25 +26,6 @@ type ModalView = 'form' | 'notes' | 'training';
 
 function minutesBetween(start: Date, end: Date) {
   return Math.round((end.getTime() - start.getTime()) / 60000);
-}
-
-function Switch({ checked, onChange }: { checked: boolean; onChange: () => void }) {
-  return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={checked}
-      onClick={onChange}
-      className="relative h-4.5 w-8 shrink-0 rounded-full transition-colors duration-300"
-      style={{ backgroundColor: checked ? '#fa8072' : '#d1d5db' }}
-    >
-      <span
-        className={`absolute top-0.5 h-3.5 w-3.5 rounded-full bg-white shadow transition-all duration-300 ${
-          checked ? 'left-4' : 'left-0.5'
-        }`}
-      />
-    </button>
-  );
 }
 
 // Modal de crear/editar sesión. Todo el estado del formulario vive aquí
@@ -364,7 +346,7 @@ export default function BookingModal({
                 </span>
               )}
               <label className="ml-1 flex cursor-pointer items-center gap-1.5">
-                <Switch checked={isPrivate} onChange={() => setIsPrivate((p) => !p)} />
+                <Switch checked={isPrivate} onChange={() => setIsPrivate((p) => !p)} activeColor="#fa8072" size="sm" />
                 <span className="text-[11px] font-semibold text-[#868585]">Privada</span>
               </label>
             </div>
@@ -539,7 +521,7 @@ export default function BookingModal({
                   <CalendarOff size={14} />
                   No cuenta como sesión dada (cae en {holidaysByDate[dayKey(start)]})
                 </span>
-                <Switch checked={holidaySkip} onChange={() => setHolidaySkip((v) => !v)} />
+                <Switch checked={holidaySkip} onChange={() => setHolidaySkip((v) => !v)} activeColor="#fa8072" size="sm" />
               </label>
             )}
 

@@ -7,12 +7,9 @@ import { ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
 import { shift, flip } from '@floating-ui/dom';
 import 'react-datepicker/dist/react-datepicker.css';
 import '@/styles/datepicker-theme.css';
+import { inputClassDisableable as inputClass, labelClass } from '@/lib/formStyles';
 
 registerLocale('es', es);
-
-const inputClass =
-  'w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none focus:ring-2 focus:ring-[#a2c037]/20 disabled:bg-gray-50 disabled:text-gray-500';
-const labelClass = 'mb-1 block text-xs font-semibold text-[#868585]';
 
 interface DateOfBirthPickerProps {
   value: string; // 'yyyy-MM-dd' o cadena vacía

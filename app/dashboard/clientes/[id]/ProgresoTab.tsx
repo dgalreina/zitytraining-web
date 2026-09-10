@@ -12,7 +12,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { getProgressByClient, createProgressEntry } from '@/lib/progressApi';
-import { inputClass, labelClass } from './shared';
+import { inputClass, labelClass } from '@/lib/formStyles';
 
 const PROGRESS_METRICS: { key: string; label: string; unit: string }[] = [
   { key: 'weight', label: 'Peso', unit: 'kg' },

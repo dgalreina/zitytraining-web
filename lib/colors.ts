@@ -1,5 +1,18 @@
 export const DEFAULT_TRAINER_COLOR = '#868585';
 
+export const COLOR_PALETTE = [
+  { name: 'Verde (marca)', value: '#6aa842' },
+  { name: 'Naranja', value: '#e8821e' },
+  { name: 'Marrón', value: '#a4796c' },
+  { name: 'Azul cielo', value: '#29abe2' },
+  { name: 'Mostaza', value: '#e4b443' },
+  { name: 'Turquesa', value: '#16a394' },
+  { name: 'Azul marino', value: '#2e5f8a' },
+  { name: 'Morado', value: '#7e57c2' },
+  { name: 'Beige', value: '#c2a878' },
+  { name: 'Gris pizarra', value: '#64748b' },
+];
+
 export function shadeColor(hex: string, percent: number): string {
   const num = parseInt(hex.replace('#', ''), 16);
   let r = (num >> 16) + percent;
