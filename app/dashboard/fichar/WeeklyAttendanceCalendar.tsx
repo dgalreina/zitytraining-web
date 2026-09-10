@@ -5,8 +5,9 @@ import FullCalendar from '@fullcalendar/react';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import '@/styles/fullcalendar-theme.css';
 import { ChevronDown, Check } from 'lucide-react';
-import { getUsers, getAllAttendance } from '@/lib/api';
+import { getUsers, getAllAttendance, getHolidays } from '@/lib/api';
 import { DEFAULT_TRAINER_COLOR } from '@/lib/colors';
+import { dayKey } from '@/components/MiniCalendar';
 
 function hexToRgba(hex: string, alpha: number) {
   const clean = hex.replace('#', '');
@@ -122,6 +123,29 @@ export default function WeeklyAttendanceCalendar() {
   // hacia fuera y la nueva hacia dentro al cambiar de semana.
   const pendingSlideDirectionRef = useRef<1 | -1 | null>(null);
   const slideCloneRef = useRef<HTMLElement | null>(null);
+  // Igual que en Calendario: "YYYY-MM-DD" -> nombre del festivo.
+  const [holidaysByDate, setHolidaysByDate] = useState<Record<string, string>>({});
+  const loadedHolidayYearsRef = useRef<Set<number>>(new Set());
+
+  function loadHolidaysForYear(year: number) {
+    if (loadedHolidayYearsRef.current.has(year)) return;
+    loadedHolidayYearsRef.current.add(year);
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    getHolidays(token, year)
+      .then((data: any[]) => {
+        setHolidaysByDate((prev) => {
+          const next = { ...prev };
+          data.forEach((h) => {
+            next[h.date.slice(0, 10)] = h.name;
+          });
+          return next;
+        });
+      })
+      .catch(() => {
+        loadedHolidayYearsRef.current.delete(year);
+      });
+  }
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -232,6 +256,10 @@ export default function WeeklyAttendanceCalendar() {
 
   function handleDatesSet(arg: any) {
     setRange({ start: arg.startStr, end: arg.endStr });
+    loadHolidaysForYear(arg.start.getFullYear());
+    if (arg.end.getFullYear() !== arg.start.getFullYear()) {
+      loadHolidaysForYear(arg.end.getFullYear());
+    }
 
     // Si el cambio de semana viene de un swipe, FullCalendar ya ha
     // terminado de pintar la semana nueva en este punto: es el momento
@@ -345,6 +373,22 @@ export default function WeeklyAttendanceCalendar() {
             headerToolbar={{ left: 'prev,next today', center: '', right: '' }}
             buttonText={{ today: 'Esta semana' }}
             dayHeaderFormat={{ weekday: 'short', day: 'numeric' }}
+            dayCellClassNames={(arg) =>
+              holidaysByDate[dayKey(arg.date)] ? ['ziti-day-holiday'] : []
+            }
+            dayHeaderContent={(arg) => {
+              const holidayName = holidaysByDate[dayKey(arg.date)];
+              return (
+                <div className="flex flex-col items-center">
+                  <span>{arg.text}</span>
+                  {holidayName && (
+                    <span className="ziti-holiday-label" title={holidayName}>
+                      Festivo
+                    </span>
+                  )}
+                </div>
+              );
+            }}
             locale="es"
             allDaySlot={false}
             slotMinTime="07:00:00"

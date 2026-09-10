@@ -14,6 +14,7 @@ import {
   Tags,
   Fingerprint,
   ClipboardList,
+  CalendarDays,
   LogOut,
   Menu,
   X,
@@ -25,6 +26,7 @@ const ADMIN_ONLY_PREFIXES = [
   '/dashboard/entrenadores',
   '/dashboard/estadisticas',
   '/dashboard/gestor-planes',
+  '/dashboard/festivos',
 ];
 
 const ADMIN_OR_TRAINER_PREFIXES = ['/dashboard/clientes', '/dashboard/fichar', '/dashboard/entrenamientos'];
@@ -138,6 +140,9 @@ export default function DashboardLayout({
       : []),
     ...(isAdmin
       ? [{ href: '/dashboard/entrenadores', label: 'Entrenadores', icon: Dumbbell }]
+      : []),
+    ...(isAdmin
+      ? [{ href: '/dashboard/festivos', label: 'Festivos', icon: CalendarDays }]
       : []),
   ];
 

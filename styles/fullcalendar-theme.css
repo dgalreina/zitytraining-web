@@ -151,6 +151,23 @@
   color: #868585;
 }
 
+/* Festivos (nacionales, de Castilla y León, o locales añadidos a mano en
+   Festivos): fondo cálido en toda la columna del día, y una etiqueta bajo
+   el nombre del día en la cabecera. Va después del fin de semana para
+   ganarle si coincide un festivo en sábado/domingo. */
+.fc-timegrid-col.ziti-day-holiday,
+.fc-col-header-cell.ziti-day-holiday {
+  background-color: rgba(250, 128, 114, 0.08) !important;
+}
+
+.ziti-holiday-label {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: #c65a4e;
+}
+
 .fc .fc-timegrid-now-indicator-line {
   border-color: #6aa842;
 }

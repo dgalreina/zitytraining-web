@@ -10,7 +10,15 @@ import { X, ChevronDown, ChevronLeft, ChevronRight, Check } from 'lucide-react';
 import MiniCalendar, { dayKey } from '@/components/MiniCalendar';
 import FilterDropdown from '@/components/FilterDropdown';
 import BookingModal, { ModalState } from './BookingModal';
-import { getUsers, getMe, getActiveClients, getBookings, getBookingsByTrainers, updateBooking } from '@/lib/api';
+import {
+  getUsers,
+  getMe,
+  getActiveClients,
+  getBookings,
+  getBookingsByTrainers,
+  updateBooking,
+  getHolidays,
+} from '@/lib/api';
 
 const FALLBACK_COLOR = '#868585';
 const PRIVATE_COLOR = '#fa8072';
@@ -142,6 +150,32 @@ export default function CalendarioPage() {
   useEffect(() => {
     eventsRef.current = events;
   }, [events]);
+
+  // Festivos (nacionales + Castilla y León automáticos, más los locales
+  // que se añadan a mano en /dashboard/festivos): "YYYY-MM-DD" -> nombre.
+  const [holidaysByDate, setHolidaysByDate] = useState<Record<string, string>>({});
+  const loadedHolidayYearsRef = useRef<Set<number>>(new Set());
+
+  function loadHolidaysForYear(year: number) {
+    if (loadedHolidayYearsRef.current.has(year)) return;
+    loadedHolidayYearsRef.current.add(year);
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    getHolidays(token, year)
+      .then((data: any[]) => {
+        setHolidaysByDate((prev) => {
+          const next = { ...prev };
+          data.forEach((h) => {
+            next[h.date.slice(0, 10)] = h.name;
+          });
+          return next;
+        });
+      })
+      .catch(() => {
+        // Silencioso: si falla, simplemente no se marcan festivos ese año.
+        loadedHolidayYearsRef.current.delete(year);
+      });
+  }
   const [daysWithBookings, setDaysWithBookings] = useState<Set<string>>(new Set());
   const [modal, setModal] = useState<ModalState>(null);
   const [viewTitle, setViewTitle] = useState('');
@@ -380,6 +414,10 @@ export default function CalendarioPage() {
     setSelectedDate(info.view.currentStart);
     setViewTitle(info.view.title);
     setViewType(info.view.type);
+    loadHolidaysForYear(info.start.getFullYear());
+    if (info.end.getFullYear() !== info.start.getFullYear()) {
+      loadHolidaysForYear(info.end.getFullYear());
+    }
 
     // Si el cambio de fecha viene de un swipe, FullCalendar ya ha terminado
     // de pintar el día nuevo en este punto: es el momento exacto de deslizar
@@ -848,6 +886,22 @@ export default function CalendarioPage() {
               },
             }}
             dayHeaderFormat={{ weekday: 'short', day: 'numeric' }}
+            dayCellClassNames={(arg) =>
+              holidaysByDate[dayKey(arg.date)] ? ['ziti-day-holiday'] : []
+            }
+            dayHeaderContent={(arg) => {
+              const holidayName = holidaysByDate[dayKey(arg.date)];
+              return (
+                <div className="flex flex-col items-center">
+                  <span>{arg.text}</span>
+                  {holidayName && (
+                    <span className="ziti-holiday-label" title={holidayName}>
+                      Festivo
+                    </span>
+                  )}
+                </div>
+              );
+            }}
             buttonText={{
               today: viewType === 'timeGridWeek' ? 'Esta semana' : 'Hoy',
               day: 'Día',
