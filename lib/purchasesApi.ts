@@ -6,6 +6,10 @@ export interface PurchaseActorRef {
   color?: string;
 }
 
+// Cómo se factura el mes en el que un plan mensual se para o se cambia a
+// mitad de mes (los mensuales no se prorratean por días). Ver purchases.schema.ts.
+export type FinalMonthBilling = 'full_month' | 'sessions';
+
 export interface Purchase {
   _id: string;
   client: string;
@@ -17,6 +21,8 @@ export interface Purchase {
   sessionCount?: number;
   startDate?: string;
   scheduledEndDate?: string;
+  activatedAt?: string;
+  pausedPlan?: string;
   createdAt: string;
   createdBy?: PurchaseActorRef;
   assignedInPerson?: boolean;
@@ -24,6 +30,7 @@ export interface Purchase {
   endedBy?: PurchaseActorRef;
   endReason?: 'changed' | 'cancelled';
   replacedByLabel?: string;
+  finalMonthBilling?: FinalMonthBilling;
 }
 
 export interface CreatePurchasePayload {
@@ -42,6 +49,9 @@ export interface AssignPlanPayload {
   price: number;
   sessionCount?: number;
   startDate: string;
+  // Solo para changePlan: cómo se factura, para el plan que se sustituye,
+  // el mes a mitad del que se hace el cambio.
+  finalMonthBilling?: FinalMonthBilling;
 }
 
 export interface AssignPunctualPlanPayload extends AssignPlanPayload {
@@ -124,10 +134,15 @@ export async function changePlan(token: string, data: AssignPlanPayload): Promis
   return handleResponse(res);
 }
 
-export async function cancelPurchase(token: string, purchaseId: string): Promise<Purchase> {
+export async function cancelPurchase(
+  token: string,
+  purchaseId: string,
+  finalMonthBilling?: FinalMonthBilling,
+): Promise<Purchase> {
   const res = await apiFetch(`${API_URL}/purchases/${purchaseId}/cancel`, {
     method: 'PATCH',
-    headers: { Authorization: `Bearer ${token}` },
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ finalMonthBilling }),
   });
   return handleResponse(res);
 }

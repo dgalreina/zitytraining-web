@@ -11,16 +11,26 @@ import {
   changePlan,
   cancelPurchase,
   updatePurchaseDates,
+  FinalMonthBilling,
 } from '@/lib/purchasesApi';
 import { TRAINING_CATEGORIES } from '@/lib/pricing';
 import AssignPlanModal from './AssignPlanModal';
 import EditDatesModal from './EditDatesModal';
+import FinalMonthBillingModal from './FinalMonthBillingModal';
 
 // La compra no guarda su categoría, pero el itemLabel de "Sesiones
 // libres" lo pone siempre el backend (plans.service.ts), así que sirve
 // para distinguirlas y no mostrarles un total al mes que no existe.
 function isFreeSessionsPurchase(item: any) {
   return typeof item.itemLabel === 'string' && item.itemLabel.startsWith('Sesiones libres');
+}
+
+// Un plan mensual normal (no puntual, no sesiones libres) es el único
+// caso donde parar/cambiar a mitad de mes es ambiguo de facturar: los
+// puntuales ya tienen un precio cerrado para su periodo, y las sesiones
+// libres ya se cobran por sesión.
+function needsFinalMonthChoice(item: any) {
+  return !isFreeSessionsPurchase(item) && !item.scheduledEndDate;
 }
 
 function formatDateTime(date: string | Date) {
@@ -78,6 +88,8 @@ export default function PlanTab({
   const [editEndDate, setEditEndDate] = useState('');
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState('');
+  const [cancelChoiceItem, setCancelChoiceItem] = useState<any | null>(null);
+  const [changeChoiceOpen, setChangeChoiceOpen] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -100,14 +112,31 @@ export default function PlanTab({
   function openAssignModal(plan: any) {
     setSelectedPlan(plan);
     setAssignError('');
+    // Los planes mensuales (todo menos sesiones libres) solo pueden
+    // empezar el día 1: se normaliza en cuanto se elige el plan.
+    if (plan.category !== 'sesiones_libres') {
+      setAssignStartDate((prev) => `${prev.slice(0, 7)}-01`);
+    }
   }
 
-  async function handleAssignConfirm() {
+  async function handleAssignConfirm(finalMonthBilling?: FinalMonthBilling) {
     if (!selectedPlan) return;
     if (assignMode === 'punctual' && !assignEndDate) {
       setAssignError('Elige la fecha de fin del plan puntual');
       return;
     }
+
+    // Al cambiar de plan a mitad de mes, el plan que se sustituye tiene
+    // el mismo problema de facturación que al pararlo: se pregunta antes
+    // de mandar nada, y esta función se vuelve a llamar con la elección.
+    if (assignMode === 'change' && !finalMonthBilling) {
+      const currentPlan = activeItems.find((p) => p.status === 'active');
+      if (currentPlan && needsFinalMonthChoice(currentPlan)) {
+        setChangeChoiceOpen(true);
+        return;
+      }
+    }
+
     setAssignSaving(true);
     setAssignError('');
 
@@ -137,7 +166,7 @@ export default function PlanTab({
       if (assignMode === 'punctual') {
         await assignPunctualPlan(token, { ...payload, endDate: assignEndDate });
       } else if (assignMode === 'change') {
-        await changePlan(token, payload);
+        await changePlan(token, { ...payload, finalMonthBilling });
       } else {
         await assignPlan(token, payload);
       }
@@ -148,6 +177,7 @@ export default function PlanTab({
       onPurchasesChange(refreshed);
       setAssignModalOpen(false);
       setSelectedPlan(null);
+      setChangeChoiceOpen(false);
     } catch (err: any) {
       setAssignError(err.message || 'No se pudo asignar el plan');
     } finally {
@@ -155,19 +185,30 @@ export default function PlanTab({
     }
   }
 
-  async function handleCancelPlan(purchaseId: string) {
-    if (!window.confirm('¿Seguro que quieres parar este plan?')) return;
+  // Los planes mensuales normales no pueden pararse sin decidir cómo se
+  // factura el mes en curso; los puntuales y las sesiones libres ya
+  // tienen un precio cerrado, así que se paran directamente.
+  function requestCancelPlan(item: any) {
+    if (needsFinalMonthChoice(item)) {
+      setCancelChoiceItem(item);
+    } else if (window.confirm('¿Seguro que quieres parar este plan?')) {
+      handleCancelPlan(item._id);
+    }
+  }
+
+  async function handleCancelPlan(purchaseId: string, finalMonthBilling?: FinalMonthBilling) {
     setCancellingId(purchaseId);
     const token = localStorage.getItem('token');
     if (!token) return;
 
     try {
-      await cancelPurchase(token, purchaseId);
+      await cancelPurchase(token, purchaseId, finalMonthBilling);
       // Cancelar un plan puntual retoma el que hubiera pausado, y el
       // registro que vuelve trae el autor sin popular; recargamos del
       // todo en vez de solo sustituir este, para reflejar ambas cosas.
       const refreshed = await getClientPurchases(token, id);
       onPurchasesChange(refreshed);
+      setCancelChoiceItem(null);
     } catch (err: any) {
       alert(err.message || 'No se pudo parar el plan');
     } finally {
@@ -340,7 +381,7 @@ export default function PlanTab({
                         Editar fechas
                       </button>
                       <button
-                        onClick={() => handleCancelPlan(item._id)}
+                        onClick={() => requestCancelPlan(item)}
                         disabled={cancellingId === item._id}
                         className="flex items-center gap-1.5 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100 disabled:opacity-60"
                       >
@@ -392,11 +433,31 @@ export default function PlanTab({
           onEndDateChange={setAssignEndDate}
           saving={assignSaving}
           error={assignError}
-          onConfirm={handleAssignConfirm}
+          onConfirm={() => handleAssignConfirm()}
           onClose={() => {
             setAssignModalOpen(false);
             setSelectedPlan(null);
+            setChangeChoiceOpen(false);
           }}
+        />
+      )}
+
+      {changeChoiceOpen && selectedPlan && (
+        <FinalMonthBillingModal
+          itemLabel={activeItems.find((p) => p.status === 'active')?.itemLabel || ''}
+          onChoose={(choice) => {
+            setChangeChoiceOpen(false);
+            handleAssignConfirm(choice);
+          }}
+          onClose={() => setChangeChoiceOpen(false)}
+        />
+      )}
+
+      {cancelChoiceItem && (
+        <FinalMonthBillingModal
+          itemLabel={cancelChoiceItem.itemLabel}
+          onChoose={(choice) => handleCancelPlan(cancelChoiceItem._id, choice)}
+          onClose={() => setCancelChoiceItem(null)}
         />
       )}
 
