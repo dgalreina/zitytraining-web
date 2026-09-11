@@ -4,10 +4,12 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Wallet, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getAccountingMonth, AccountingMonth, AccountingClientMonth } from '@/lib/accountingApi';
-import { COLOR_PALETTE, DEFAULT_TRAINER_COLOR } from '@/lib/colors';
+import { COLOR_PALETTE } from '@/lib/colors';
 import MonthBreakdownModal from './MonthBreakdownModal';
 
-const DAY_WIDTH = 44;
+const DAY_WIDTH = 40;
+const CLIENT_COL_CLASS = 'w-[108px] sm:w-[236px]';
+const TOTAL_COL_CLASS = 'w-[80px] sm:w-[132px]';
 const WEEKDAY_LETTERS = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
 const FREE_SESSIONS_COLOR = '#868585';
 
@@ -87,7 +89,7 @@ export default function ContabilidadPage() {
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="flex items-center gap-2 font-[family-name:var(--font-work-sans)] text-lg font-bold text-[#2b2b2a]">
-          <Wallet size={20} className="text-[#4b7a1f]" />
+          <Wallet size={20} />
           Contabilidad
         </h2>
 
@@ -138,7 +140,7 @@ export default function ContabilidadPage() {
           <div className="inline-flex min-w-full flex-col">
             {/* Cabecera: dias */}
             <div className="sticky top-0 z-30 flex border-b border-gray-200 bg-white">
-              <div className="sticky left-0 z-10 flex w-[236px] shrink-0 items-center border-r border-gray-200 bg-white px-4">
+              <div className={`sticky left-0 z-10 flex ${CLIENT_COL_CLASS} shrink-0 items-center border-r border-gray-200 bg-white px-3 sm:px-4`}>
                 <span className="text-[11px] font-bold uppercase tracking-wide text-[#868585]">Cliente</span>
               </div>
               {days.map((day) => {
@@ -155,7 +157,7 @@ export default function ContabilidadPage() {
                   </div>
                 );
               })}
-              <div className="sticky right-0 z-10 flex w-[132px] shrink-0 items-center justify-center border-l border-gray-200 bg-white px-2 text-center">
+              <div className={`sticky right-0 z-10 flex ${TOTAL_COL_CLASS} shrink-0 items-center justify-center border-l border-gray-200 bg-white px-2 text-center`}>
                 <span className="text-[11px] font-bold uppercase tracking-wide text-[#868585]">Total mes</span>
               </div>
             </div>
@@ -163,20 +165,11 @@ export default function ContabilidadPage() {
             {/* Filas */}
             {data.clients.map((client) => (
               <div key={client.clientId} className="flex border-b border-gray-50">
-                <div className="sticky left-0 z-20 flex w-[236px] shrink-0 items-center gap-2.5 border-r border-gray-200 bg-white px-4 py-2.5">
-                  <div
-                    className="flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
-                    style={{ background: `linear-gradient(135deg, ${DEFAULT_TRAINER_COLOR}, #1e2a12)` }}
-                  >
-                    {client.firstName[0]}
-                    {client.lastName[0]}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate font-[family-name:var(--font-work-sans)] text-[13px] font-bold text-[#2b2b2a]">
-                      {client.firstName} {client.lastName}
-                    </p>
-                    <p className="mt-0.5 text-[11px] text-[#868585]">{client.sessionCount} sesiones este mes</p>
-                  </div>
+                <div className={`sticky left-0 z-20 flex ${CLIENT_COL_CLASS} shrink-0 flex-col justify-center gap-0.5 border-r border-gray-200 bg-white px-3 py-2.5 sm:px-4`}>
+                  <p className="truncate font-[family-name:var(--font-work-sans)] text-[13px] font-bold text-[#2b2b2a]">
+                    {client.firstName} {client.lastName}
+                  </p>
+                  <p className="truncate text-[11px] text-[#868585]">{client.sessionCount} sesiones este mes</p>
                 </div>
 
                 <div className="flex flex-col">
@@ -223,7 +216,7 @@ export default function ContabilidadPage() {
 
                 <button
                   onClick={() => setSelectedClient(client)}
-                  className="sticky right-0 z-20 flex w-[132px] shrink-0 flex-col items-center justify-center gap-1 border-l border-gray-200 bg-white px-2.5 py-2.5 hover:bg-gray-50"
+                  className={`sticky right-0 z-20 flex ${TOTAL_COL_CLASS} shrink-0 flex-col items-center justify-center gap-1 border-l border-gray-200 bg-white px-2 py-2.5 hover:bg-gray-50`}
                 >
                   <span className="font-[family-name:var(--font-work-sans)] text-[15px] font-bold text-[#4b7a1f]">
                     {client.due}€
