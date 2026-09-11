@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Wallet, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Wallet, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { getAccountingMonth, AccountingMonth, AccountingClientMonth } from '@/lib/accountingApi';
 import { COLOR_PALETTE } from '@/lib/colors';
 import MonthBreakdownModal from './MonthBreakdownModal';
@@ -24,6 +24,7 @@ export default function ContabilidadPage() {
   const [data, setData] = useState<AccountingMonth | null>(null);
   const [error, setError] = useState('');
   const [selectedClient, setSelectedClient] = useState<AccountingClientMonth | null>(null);
+  const [search, setSearch] = useState('');
   const [topOffset, setTopOffset] = useState<number | null>(null);
   const tableWrapRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -85,6 +86,13 @@ export default function ContabilidadPage() {
 
   const days = data ? Array.from({ length: data.daysInMonth }, (_, i) => i + 1) : [];
 
+  const visibleClients = useMemo(() => {
+    if (!data) return [];
+    const query = search.trim().toLowerCase();
+    if (!query) return data.clients;
+    return data.clients.filter((c) => `${c.firstName} ${c.lastName}`.toLowerCase().includes(query));
+  }, [data, search]);
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -125,6 +133,17 @@ export default function ContabilidadPage() {
         </div>
       </div>
 
+      <div className="relative">
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <input
+          type="text"
+          placeholder="Buscar por nombre..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-4 text-sm text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none focus:ring-2 focus:ring-[#a2c037]/20"
+        />
+      </div>
+
       {error && <p className="text-sm font-medium text-red-600">{error}</p>}
 
       {/* Un unico contenedor con scroll en los dos ejes: lo que se queda
@@ -144,8 +163,10 @@ export default function ContabilidadPage() {
       >
         {!data ? (
           <p className="p-6 text-sm text-gray-400">Cargando...</p>
-        ) : data.clients.length === 0 ? (
-          <p className="p-6 text-sm text-gray-400">No hay clientes que mostrar.</p>
+        ) : visibleClients.length === 0 ? (
+          <p className="p-6 text-sm text-gray-400">
+            {search.trim() ? 'Ningún cliente coincide con la búsqueda.' : 'No hay clientes que mostrar.'}
+          </p>
         ) : (
           <table className="w-max border-separate border-spacing-0">
             <colgroup>
@@ -186,7 +207,7 @@ export default function ContabilidadPage() {
             </thead>
 
             <tbody>
-              {data.clients.map((client) => (
+              {visibleClients.map((client) => (
                 <Fragment key={client.clientId}>
                   <tr>
                     <td
