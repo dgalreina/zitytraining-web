@@ -26,7 +26,26 @@ export default function ContabilidadPage() {
   const [selectedClient, setSelectedClient] = useState<AccountingClientMonth | null>(null);
   const [topOffset, setTopOffset] = useState<number | null>(null);
   const tableWrapRef = useRef<HTMLDivElement>(null);
+  const leftColRef = useRef<HTMLDivElement>(null);
+  const midColRef = useRef<HTMLDivElement>(null);
+  const rightColRef = useRef<HTMLDivElement>(null);
+  const syncingScrollRef = useRef(false);
   const router = useRouter();
+
+  // Cliente/días/total son 3 columnas con su propio scroll vertical cada
+  // una (obligado por CSS: una columna con overflow-x distinto de
+  // "visible" no puede dejar overflow-y en "visible", así que las 3
+  // acaban siendo su propio contenedor de scroll). Se sincronizan a mano,
+  // como los paneles congelados de una hoja de cálculo.
+  function syncVerticalScroll(source: HTMLDivElement) {
+    if (syncingScrollRef.current) return;
+    syncingScrollRef.current = true;
+    const top = source.scrollTop;
+    [leftColRef, midColRef, rightColRef].forEach((ref) => {
+      if (ref.current && ref.current !== source) ref.current.scrollTop = top;
+    });
+    syncingScrollRef.current = false;
+  }
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -129,7 +148,7 @@ export default function ContabilidadPage() {
 
       <div
         ref={tableWrapRef}
-        className="relative flex overflow-y-auto overscroll-y-contain rounded-2xl border border-gray-200 bg-white shadow-sm"
+        className="relative flex overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
         style={topOffset !== null ? { height: `calc(100dvh - ${topOffset}px)` } : undefined}
       >
         {!data ? (
@@ -141,7 +160,11 @@ export default function ContabilidadPage() {
             {/* Columna de cliente: fuera del scroll horizontal por completo,
                 no depende de "sticky" (que es justo lo que daba problemas en
                 iOS al combinarlo con el scroll de los días). */}
-            <div className={`flex ${CLIENT_COL_CLASS} shrink-0 flex-col border-r border-gray-200`}>
+            <div
+              ref={leftColRef}
+              onScroll={(e) => syncVerticalScroll(e.currentTarget)}
+              className={`flex ${CLIENT_COL_CLASS} shrink-0 flex-col overflow-y-auto border-r border-gray-200`}
+            >
               <div className="sticky top-0 z-10 flex h-[52px] shrink-0 items-center border-b border-gray-200 bg-white px-3 sm:px-4">
                 <span className="text-[11px] font-bold uppercase tracking-wide text-[#868585]">Cliente</span>
               </div>
@@ -158,8 +181,13 @@ export default function ContabilidadPage() {
               ))}
             </div>
 
-            {/* Columna de dias: la unica que hace scroll horizontal. */}
-            <div className="min-w-0 flex-1 overflow-x-auto overscroll-x-contain">
+            {/* Columna de dias: la unica que hace scroll horizontal (y
+                verticalmente va sincronizada a mano con las otras dos). */}
+            <div
+              ref={midColRef}
+              onScroll={(e) => syncVerticalScroll(e.currentTarget)}
+              className="min-w-0 flex-1 overflow-auto overscroll-contain"
+            >
               <div style={{ width: data.daysInMonth * DAY_WIDTH }}>
                 <div className="sticky top-0 z-10 flex h-[52px] border-b border-gray-200 bg-white">
                   {days.map((day) => {
@@ -228,8 +256,12 @@ export default function ContabilidadPage() {
               </div>
             </div>
 
-            {/* Columna de total: igual que la de cliente, fuera del scroll. */}
-            <div className={`flex ${TOTAL_COL_CLASS} shrink-0 flex-col border-l border-gray-200`}>
+            {/* Columna de total: igual que la de cliente, fuera del scroll horizontal. */}
+            <div
+              ref={rightColRef}
+              onScroll={(e) => syncVerticalScroll(e.currentTarget)}
+              className={`flex ${TOTAL_COL_CLASS} shrink-0 flex-col overflow-y-auto border-l border-gray-200`}
+            >
               <div className="sticky top-0 z-10 flex h-[52px] shrink-0 items-center justify-center border-b border-gray-200 bg-white px-2 text-center">
                 <span className="text-[11px] font-bold uppercase tracking-wide text-[#868585]">Total mes</span>
               </div>
