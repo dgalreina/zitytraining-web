@@ -306,6 +306,50 @@
   font-weight: 400 !important;
 }
 
+/* Selector de mes/año (planes puntuales de categoría mensual): mismo
+   estilo de píldora verde que los días, pero con ancho libre para que
+   quepa el nombre del mes. */
+.react-datepicker__month .react-datepicker__month-text {
+  width: auto;
+  min-width: 3.6rem;
+  padding: 0.4rem 0.6rem;
+  margin: 0.2rem;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  text-transform: capitalize;
+  color: #2b2b2a;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.react-datepicker__month-text:not(.react-datepicker__month-text--disabled):hover {
+  background-color: #a2c037 !important;
+  color: white !important;
+  border-radius: 9999px !important;
+}
+
+.react-datepicker__month-text--selected {
+  background-color: #6aa842 !important;
+  color: white !important;
+  font-weight: 700;
+  border-radius: 9999px !important;
+}
+
+.react-datepicker__month-text--keyboard-selected {
+  background-color: transparent !important;
+  color: #2b2b2a !important;
+  font-weight: 400;
+}
+
+.react-datepicker__month-text--disabled {
+  color: #d4d3cf !important;
+  cursor: not-allowed;
+}
+
+.react-datepicker__month-text--today {
+  font-weight: 700;
+  color: #4b7a1f;
+}
+
 /* Selector de "solo hora" (time picker) con la misma marca */
 .react-datepicker__time-container {
   border-left: 1px solid #e5e7eb;
