@@ -2,7 +2,15 @@
 
 import { Check, X, Clock } from 'lucide-react';
 import { TRAINING_CATEGORIES } from '@/lib/pricing';
-import MonthLockedDatePicker from '@/components/MonthLockedDatePicker';
+
+// Primer mes posterior a `monthStr` ('yyyy-MM'): el puntual retoma el
+// plan pausado el día 1 de su mes de fin, así que ese mes tiene que ser
+// como mínimo el siguiente al de inicio (si no, duraría 0 días).
+function nextMonth(monthStr: string) {
+  const [y, m] = monthStr.split('-').map(Number);
+  const d = new Date(y, m, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
 
 export default function AssignPlanModal({
   mode,
@@ -132,7 +140,7 @@ export default function AssignPlanModal({
                 <label className="mb-1 block text-xs font-semibold text-[#868585]">
                   Fecha de inicio
                 </label>
-                {mode !== 'punctual' && selectedPlan.category !== 'sesiones_libres' ? (
+                {selectedPlan.category !== 'sesiones_libres' ? (
                   <>
                     <input
                       type="month"
@@ -158,11 +166,28 @@ export default function AssignPlanModal({
                   <label className="mb-1 block text-xs font-semibold text-[#868585]">
                     Fecha de fin
                   </label>
-                  <MonthLockedDatePicker
-                    value={endDate}
-                    monthOf={startDate}
-                    onChange={onEndDateChange}
-                  />
+                  {selectedPlan.category !== 'sesiones_libres' ? (
+                    <>
+                      <input
+                        type="month"
+                        value={endDate.slice(0, 7)}
+                        min={nextMonth(startDate.slice(0, 7))}
+                        onChange={(e) => onEndDateChange(`${e.target.value}-01`)}
+                        className="w-full min-w-0 rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none focus:ring-2 focus:ring-[#a2c037]/20"
+                      />
+                      <p className="mt-1 text-xs text-[#868585]">
+                        Se retoma el día 1 de este mes.
+                      </p>
+                    </>
+                  ) : (
+                    <input
+                      type="date"
+                      value={endDate}
+                      min={startDate}
+                      onChange={(e) => onEndDateChange(e.target.value)}
+                      className="w-full min-w-0 rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none focus:ring-2 focus:ring-[#a2c037]/20"
+                    />
+                  )}
                 </div>
               )}
             </div>
