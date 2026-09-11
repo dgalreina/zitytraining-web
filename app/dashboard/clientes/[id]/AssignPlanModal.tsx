@@ -2,7 +2,7 @@
 
 import { Check, X, Clock } from 'lucide-react';
 import { TRAINING_CATEGORIES } from '@/lib/pricing';
-import { lastDayOfMonth } from '@/lib/dateUtils';
+import MonthLockedDatePicker from '@/components/MonthLockedDatePicker';
 
 export default function AssignPlanModal({
   mode,
@@ -158,17 +158,11 @@ export default function AssignPlanModal({
                   <label className="mb-1 block text-xs font-semibold text-[#868585]">
                     Fecha de fin
                   </label>
-                  <input
-                    type="date"
+                  <MonthLockedDatePicker
                     value={endDate}
-                    min={startDate}
-                    max={lastDayOfMonth(startDate)}
-                    onChange={(e) => onEndDateChange(e.target.value)}
-                    className="w-full min-w-0 rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none focus:ring-2 focus:ring-[#a2c037]/20"
+                    monthOf={startDate}
+                    onChange={onEndDateChange}
                   />
-                  <p className="mt-1 text-xs text-[#868585]">
-                    No puede cruzar de mes: si hace falta más tiempo, se hace en tramos.
-                  </p>
                 </div>
               )}
             </div>
