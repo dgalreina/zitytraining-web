@@ -162,13 +162,17 @@ export default function ContabilidadPage() {
           que sincronizar a mano y es imposible que las columnas se
           desalineen mientras se arrastra.
 
+          "isolate" encierra los z-index de las celdas fijas en su propio
+          contexto: si no, competirian con el resto de la app y la
+          cabecera se colaba por encima del menu lateral.
+
           "overscroll-none" quita el rebote de iOS al arrastrar mas alla
           del borde: durante ese rebote el scroll ya esta a 0 y no puede
           ir a menos, asi que las celdas sticky no tienen a que
           reaccionar y se despegan con el contenido. */}
       <div
         ref={tableWrapRef}
-        className="relative overflow-auto overscroll-none rounded-2xl border border-gray-200 bg-white shadow-sm"
+        className="relative isolate overflow-auto overscroll-none rounded-2xl border border-gray-200 bg-white shadow-sm"
         style={topOffset !== null ? { maxHeight: `calc(100dvh - ${topOffset}px)` } : undefined}
       >
         {!data ? (
