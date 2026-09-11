@@ -2,6 +2,7 @@
 
 import { Check, X, Clock } from 'lucide-react';
 import { TRAINING_CATEGORIES } from '@/lib/pricing';
+import MonthYearPicker from '@/components/MonthYearPicker';
 
 // Primer mes posterior a `monthStr` ('yyyy-MM'): el puntual retoma el
 // plan pausado el día 1 de su mes de fin, así que ese mes tiene que ser
@@ -142,11 +143,9 @@ export default function AssignPlanModal({
                 </label>
                 {selectedPlan.category !== 'sesiones_libres' ? (
                   <>
-                    <input
-                      type="month"
+                    <MonthYearPicker
                       value={startDate.slice(0, 7)}
-                      onChange={(e) => onStartDateChange(`${e.target.value}-01`)}
-                      className="w-full min-w-0 rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none focus:ring-2 focus:ring-[#a2c037]/20"
+                      onChange={(value) => onStartDateChange(`${value}-01`)}
                     />
                     <p className="mt-1 text-xs text-[#868585]">
                       Los planes mensuales siempre empiezan el día 1.
@@ -168,12 +167,10 @@ export default function AssignPlanModal({
                   </label>
                   {selectedPlan.category !== 'sesiones_libres' ? (
                     <>
-                      <input
-                        type="month"
+                      <MonthYearPicker
                         value={endDate.slice(0, 7)}
-                        min={nextMonth(startDate.slice(0, 7))}
-                        onChange={(e) => onEndDateChange(`${e.target.value}-01`)}
-                        className="w-full min-w-0 rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none focus:ring-2 focus:ring-[#a2c037]/20"
+                        minMonth={nextMonth(startDate.slice(0, 7))}
+                        onChange={(value) => onEndDateChange(`${value}-01`)}
                       />
                       <p className="mt-1 text-xs text-[#868585]">
                         Se retoma el día 1 de este mes.
