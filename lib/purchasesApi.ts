@@ -7,8 +7,10 @@ export interface PurchaseActorRef {
 }
 
 // Cómo se factura el mes en el que un plan mensual se para o se cambia a
-// mitad de mes (los mensuales no se prorratean por días). Ver purchases.schema.ts.
-export type FinalMonthBilling = 'full_month' | 'sessions';
+// mitad de mes (los mensuales no se prorratean por días). 'none' es para
+// corregir un error del admin (cambio hecho por un click equivocado), no
+// cuenta como una baja/cambio real. Ver purchases.schema.ts.
+export type FinalMonthBilling = 'full_month' | 'sessions' | 'none';
 
 export interface Purchase {
   _id: string;

@@ -445,6 +445,7 @@ export default function PlanTab({
       {changeChoiceOpen && selectedPlan && (
         <FinalMonthBillingModal
           itemLabel={activeItems.find((p) => p.status === 'active')?.itemLabel || ''}
+          showNoChargeOption
           onChoose={(choice) => {
             setChangeChoiceOpen(false);
             handleAssignConfirm(choice);

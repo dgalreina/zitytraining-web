@@ -1,6 +1,6 @@
 'use client';
 
-import { CalendarCheck, Scissors } from 'lucide-react';
+import { CalendarCheck, Scissors, Undo2 } from 'lucide-react';
 import { FinalMonthBilling } from '@/lib/purchasesApi';
 
 // Los planes mensuales no se prorratean por días: si se paran o se
@@ -8,10 +8,12 @@ import { FinalMonthBilling } from '@/lib/purchasesApi';
 // ese mes concreto (de cara a Contabilidad más adelante).
 export default function FinalMonthBillingModal({
   itemLabel,
+  showNoChargeOption,
   onChoose,
   onClose,
 }: {
   itemLabel: string;
+  showNoChargeOption?: boolean;
   onChoose: (choice: FinalMonthBilling) => void;
   onClose: () => void;
 }) {
@@ -46,6 +48,15 @@ export default function FinalMonthBillingModal({
             <Scissors size={16} className="shrink-0 text-[#4b7a1f]" />
             Convertir este mes en sesiones sueltas
           </button>
+          {showNoChargeOption && (
+            <button
+              onClick={() => onChoose('none')}
+              className="flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-3 text-left text-sm font-semibold text-[#2b2b2a] transition hover:border-[#6aa842] hover:bg-[#a2c037]/5"
+            >
+              <Undo2 size={16} className="shrink-0 text-[#4b7a1f]" />
+              No cobrar nada (fue un error al elegir el plan)
+            </button>
+          )}
         </div>
         <button
           onClick={onClose}
