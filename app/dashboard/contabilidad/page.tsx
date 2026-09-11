@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Wallet, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { Wallet, ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
 import { getAccountingMonth, AccountingMonth, AccountingClientMonth } from '@/lib/accountingApi';
 import { COLOR_PALETTE } from '@/lib/colors';
 import MonthBreakdownModal from './MonthBreakdownModal';
@@ -140,8 +140,18 @@ export default function ContabilidadPage() {
           placeholder="Buscar por nombre..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-4 text-sm text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none focus:ring-2 focus:ring-[#a2c037]/20"
+          className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-10 text-sm text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none focus:ring-2 focus:ring-[#a2c037]/20"
         />
+        {search && (
+          <button
+            type="button"
+            onClick={() => setSearch('')}
+            aria-label="Limpiar búsqueda"
+            className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-[#2b2b2a]"
+          >
+            <X size={15} />
+          </button>
+        )}
       </div>
 
       {error && <p className="text-sm font-medium text-red-600">{error}</p>}
@@ -159,7 +169,7 @@ export default function ContabilidadPage() {
       <div
         ref={tableWrapRef}
         className="relative overflow-auto overscroll-none rounded-2xl border border-gray-200 bg-white shadow-sm"
-        style={topOffset !== null ? { height: `calc(100dvh - ${topOffset}px)` } : undefined}
+        style={topOffset !== null ? { maxHeight: `calc(100dvh - ${topOffset}px)` } : undefined}
       >
         {!data ? (
           <p className="p-6 text-sm text-gray-400">Cargando...</p>

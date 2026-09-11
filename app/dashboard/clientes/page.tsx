@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Search, Plus, RotateCcw, Users, Star } from 'lucide-react';
+import { Search, Plus, RotateCcw, Users, Star, X } from 'lucide-react';
 import StatusFilterDropdown from '@/components/StatusFilterDropdown';
 import { statusBadge } from '@/components/StatusBadge';
 import { getUsers, getActiveClients, updateUser, addFavoriteClient, removeFavoriteClient } from '@/lib/usersApi';
@@ -153,8 +153,18 @@ export default function ClientesPage() {
             placeholder="Buscar por nombre o email..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-4 text-sm text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none focus:ring-2 focus:ring-[#a2c037]/20"
+            className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-10 text-sm text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none focus:ring-2 focus:ring-[#a2c037]/20"
           />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              aria-label="Limpiar búsqueda"
+              className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-[#2b2b2a]"
+            >
+              <X size={15} />
+            </button>
+          )}
         </div>
 
         <StatusFilterDropdown value={statusFilter} onChange={setStatusFilter} options={statusFilterOptions} />
