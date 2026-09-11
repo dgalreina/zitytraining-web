@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Wallet, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getAccountingMonth, AccountingMonth, AccountingClientMonth } from '@/lib/accountingApi';
@@ -26,42 +26,7 @@ export default function ContabilidadPage() {
   const [selectedClient, setSelectedClient] = useState<AccountingClientMonth | null>(null);
   const [topOffset, setTopOffset] = useState<number | null>(null);
   const tableWrapRef = useRef<HTMLDivElement>(null);
-  const leftBodyRef = useRef<HTMLDivElement>(null);
-  const midHeaderRef = useRef<HTMLDivElement>(null);
-  const midBodyRef = useRef<HTMLDivElement>(null);
-  const rightBodyRef = useRef<HTMLDivElement>(null);
-  const syncingVRef = useRef(false);
-  const syncingHRef = useRef(false);
   const router = useRouter();
-
-  // La cabecera (fila de "Cliente"/días/"Total mes") vive fuera de
-  // cualquier contenedor con scroll vertical: así nunca necesita
-  // "position: sticky" combinado con scroll (que es justo lo que fallaba
-  // en Safari). Cliente/días/total son 3 cuerpos con su propio scroll
-  // vertical cada uno (obligado por CSS: una columna con overflow-x
-  // distinto de "visible" no puede dejar overflow-y en "visible"),
-  // sincronizados a mano, como los paneles congelados de una hoja de
-  // cálculo. La cabecera de días tiene además su propio scroll
-  // horizontal, sincronizado con el del cuerpo de días.
-  function syncVerticalScroll(source: HTMLDivElement) {
-    if (syncingVRef.current) return;
-    syncingVRef.current = true;
-    const top = source.scrollTop;
-    [leftBodyRef, midBodyRef, rightBodyRef].forEach((ref) => {
-      if (ref.current && ref.current !== source) ref.current.scrollTop = top;
-    });
-    syncingVRef.current = false;
-  }
-
-  function syncHorizontalScroll(source: HTMLDivElement) {
-    if (syncingHRef.current) return;
-    syncingHRef.current = true;
-    const left = source.scrollLeft;
-    [midHeaderRef, midBodyRef].forEach((ref) => {
-      if (ref.current && ref.current !== source) ref.current.scrollLeft = left;
-    });
-    syncingHRef.current = false;
-  }
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -162,9 +127,14 @@ export default function ContabilidadPage() {
 
       {error && <p className="text-sm font-medium text-red-600">{error}</p>}
 
+      {/* Un unico contenedor con scroll en los dos ejes: lo que se queda
+          quieto lo hace con "position: sticky" sobre las propias celdas
+          (nunca sobre <thead>/<tr>, que Safari ignora). Asi no hay nada
+          que sincronizar a mano y es imposible que las columnas se
+          desalineen mientras se arrastra. */}
       <div
         ref={tableWrapRef}
-        className="relative flex overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm"
+        className="relative overflow-auto rounded-2xl border border-gray-200 bg-white shadow-sm"
         style={topOffset !== null ? { height: `calc(100dvh - ${topOffset}px)` } : undefined}
       >
         {!data ? (
@@ -172,103 +142,117 @@ export default function ContabilidadPage() {
         ) : data.clients.length === 0 ? (
           <p className="p-6 text-sm text-gray-400">No hay clientes que mostrar.</p>
         ) : (
-          <>
-            {/* Columna de cliente: cabecera fija (no forma parte de ningún
-                scroll) + cuerpo con su propio scroll vertical, fuera del
-                scroll horizontal por completo. */}
-            <div className={`flex ${CLIENT_COL_CLASS} shrink-0 flex-col border-r border-gray-200`}>
-              <div className="flex h-[52px] shrink-0 items-center border-b border-gray-200 bg-white px-3 sm:px-4">
-                <span className="text-[11px] font-bold uppercase tracking-wide text-[#868585]">Cliente</span>
-              </div>
-              <div
-                ref={leftBodyRef}
-                onScroll={(e) => syncVerticalScroll(e.currentTarget)}
-                className="overflow-y-auto"
-              >
-                {data.clients.map((client) => (
-                  <div
-                    key={client.clientId}
-                    className="flex h-[74px] shrink-0 flex-col justify-center gap-0.5 border-b border-gray-50 bg-white px-3 py-2.5 sm:px-4"
-                  >
-                    <p className="truncate font-[family-name:var(--font-work-sans)] text-[13px] font-bold text-[#2b2b2a]">
-                      {client.firstName} {client.lastName}
-                    </p>
-                    <p className="truncate text-[11px] text-[#868585]">{client.sessionCount} sesiones este mes</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+          <table className="w-max border-separate border-spacing-0">
+            <colgroup>
+              <col className={CLIENT_COL_CLASS} />
+              {days.map((day) => (
+                <col key={day} style={{ width: DAY_WIDTH }} />
+              ))}
+              <col className={TOTAL_COL_CLASS} />
+            </colgroup>
 
-            {/* Columna de dias: cabecera con su propio scroll horizontal
-                (sincronizado con el del cuerpo, nunca con scroll vertical
-                propio) + cuerpo con scroll en las dos direcciones. */}
-            <div className="flex min-w-0 flex-1 flex-col">
-              <div
-                ref={midHeaderRef}
-                onScroll={(e) => syncHorizontalScroll(e.currentTarget)}
-                className="overflow-x-auto overflow-y-hidden overscroll-x-contain"
-              >
-                <div className="flex h-[52px] border-b border-gray-200 bg-white" style={{ width: data.daysInMonth * DAY_WIDTH }}>
-                  {days.map((day) => {
-                    const wd = new Date(year, month - 1, day).getDay();
-                    const isWeekend = wd === 0 || wd === 6;
-                    return (
-                      <div
-                        key={day}
-                        className="flex shrink-0 flex-col items-center justify-center gap-0.5"
-                        style={{ width: DAY_WIDTH, background: isWeekend ? '#f9f9f7' : '#ffffff' }}
-                      >
-                        <span className="text-[9px] font-bold uppercase text-gray-300">{WEEKDAY_LETTERS[wd]}</span>
-                        <span className="text-xs font-bold text-[#2b2b2a]">{day}</span>
+            <thead>
+              <tr>
+                <th
+                  className={`sticky left-0 top-0 z-30 h-[52px] ${CLIENT_COL_CLASS} border-b border-r border-gray-200 bg-white px-3 text-left sm:px-4`}
+                >
+                  <span className="text-[11px] font-bold uppercase tracking-wide text-[#868585]">Cliente</span>
+                </th>
+                {days.map((day) => {
+                  const wd = new Date(year, month - 1, day).getDay();
+                  const isWeekend = wd === 0 || wd === 6;
+                  return (
+                    <th
+                      key={day}
+                      className="sticky top-0 z-20 h-[52px] border-b border-gray-200 p-0 font-normal"
+                      style={{ width: DAY_WIDTH, background: isWeekend ? '#f9f9f7' : '#ffffff' }}
+                    >
+                      <span className="block text-[9px] font-bold uppercase text-gray-300">{WEEKDAY_LETTERS[wd]}</span>
+                      <span className="block text-xs font-bold text-[#2b2b2a]">{day}</span>
+                    </th>
+                  );
+                })}
+                <th
+                  className={`sticky right-0 top-0 z-30 h-[52px] ${TOTAL_COL_CLASS} border-b border-l border-gray-200 bg-white px-2`}
+                >
+                  <span className="text-[11px] font-bold uppercase tracking-wide text-[#868585]">Total mes</span>
+                </th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {data.clients.map((client) => (
+                <Fragment key={client.clientId}>
+                  <tr>
+                    <td
+                      rowSpan={2}
+                      className={`sticky left-0 z-10 ${CLIENT_COL_CLASS} max-w-0 border-b border-r border-gray-200 bg-white px-3 sm:px-4`}
+                    >
+                      <p className="truncate font-[family-name:var(--font-work-sans)] text-[13px] font-bold text-[#2b2b2a]">
+                        {client.firstName} {client.lastName}
+                      </p>
+                      <p className="truncate text-[11px] text-[#868585]">{client.sessionCount} sesiones este mes</p>
+                    </td>
+
+                    {/* Las franjas de plan van sobre un lienzo del ancho
+                        exacto del mes, cada una colocada por su dia: un
+                        hueco o un solape en los datos no puede estirar
+                        la fila mas alla del mes. */}
+                    <td colSpan={data.daysInMonth} className="h-[22px] p-0 align-top">
+                      <div className="relative h-[22px] overflow-hidden" style={{ width: data.daysInMonth * DAY_WIDTH }}>
+                        {client.segments.map((seg, i) => {
+                          const leftPx = (seg.fromDay - 1) * DAY_WIDTH;
+                          const widthPx = (seg.toDay - seg.fromDay + 1) * DAY_WIDTH;
+                          const color = colorForLabel(seg.label, seg.isFreeSessions);
+                          return (
+                            <div
+                              key={i}
+                              className="absolute flex h-4 items-center overflow-hidden rounded-md pl-2"
+                              style={{ left: leftPx + 1, top: 6, width: Math.max(widthPx - 2, 0), background: color }}
+                            >
+                              {widthPx >= 70 && (
+                                <span className="truncate text-[9px] font-bold uppercase tracking-wide text-white">
+                                  {seg.label}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
-                    );
-                  })}
-                </div>
-              </div>
-              <div
-                ref={midBodyRef}
-                onScroll={(e) => {
-                  syncVerticalScroll(e.currentTarget);
-                  syncHorizontalScroll(e.currentTarget);
-                }}
-                className="overflow-auto overscroll-contain"
-              >
-                <div style={{ width: data.daysInMonth * DAY_WIDTH }}>
-                {data.clients.map((client) => (
-                  <div key={client.clientId} className="flex h-[74px] flex-col border-b border-gray-50">
-                    {/* Ancho fijo = días del mes, cada franja posicionada por
-                        su día exacto: así un hueco o un solape en los datos
-                        no puede hacer la fila más ancha que el propio mes. */}
-                    <div className="relative h-[22px] shrink-0 overflow-hidden pt-1.5">
-                      {client.segments.map((seg, i) => {
-                        const leftPx = (seg.fromDay - 1) * DAY_WIDTH;
-                        const widthPx = (seg.toDay - seg.fromDay + 1) * DAY_WIDTH;
-                        const color = colorForLabel(seg.label, seg.isFreeSessions);
-                        return (
-                          <div
-                            key={i}
-                            className="absolute flex h-4 items-center overflow-hidden rounded-md pl-2"
-                            style={{ left: leftPx + 1, top: 6, width: Math.max(widthPx - 2, 0), background: color }}
-                          >
-                            {widthPx >= 70 && (
-                              <span className="truncate text-[9px] font-bold uppercase tracking-wide text-white">
-                                {seg.label}
-                              </span>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <div className="flex h-[52px]">
-                      {client.days.map((d) => (
-                        <div
-                          key={d.day}
-                          className="flex shrink-0 items-center justify-center border-r border-gray-50"
-                          style={{
-                            width: DAY_WIDTH,
-                            background: d.holiday ? '#fffbeb' : '#ffffff',
-                          }}
+                    </td>
+
+                    <td
+                      rowSpan={2}
+                      className={`sticky right-0 z-10 ${TOTAL_COL_CLASS} border-b border-l border-gray-200 bg-white p-0`}
+                    >
+                      <button
+                        onClick={() => setSelectedClient(client)}
+                        className="flex h-[74px] w-full flex-col items-center justify-center gap-1 px-2 hover:bg-gray-50"
+                      >
+                        <span className="font-[family-name:var(--font-work-sans)] text-[15px] font-bold text-[#4b7a1f]">
+                          {client.due}€
+                        </span>
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                            client.payment.received
+                              ? 'bg-[#a2c037]/15 text-[#4b7a1f]'
+                              : 'bg-amber-100 text-amber-700'
+                          }`}
                         >
+                          {client.payment.received ? 'Recibido' : 'Pendiente'}
+                        </span>
+                      </button>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    {client.days.map((d) => (
+                      <td
+                        key={d.day}
+                        className="border-b border-r border-gray-50 p-0"
+                        style={{ width: DAY_WIDTH, background: d.holiday ? '#fffbeb' : '#ffffff' }}
+                      >
+                        <div className="flex h-[52px] items-center justify-center">
                           {d.holiday ? (
                             <span className="rounded-[4px] bg-amber-200 px-1 text-[7px] font-bold text-amber-800">
                               F
@@ -277,48 +261,13 @@ export default function ContabilidadPage() {
                             <span className="h-2.5 w-2.5 rounded-full bg-[#6aa842]" />
                           ) : null}
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Columna de total: igual que la de cliente, cabecera fija +
-                cuerpo con su propio scroll vertical. */}
-            <div className={`flex ${TOTAL_COL_CLASS} shrink-0 flex-col border-l border-gray-200`}>
-              <div className="flex h-[52px] shrink-0 items-center justify-center border-b border-gray-200 bg-white px-2 text-center">
-                <span className="text-[11px] font-bold uppercase tracking-wide text-[#868585]">Total mes</span>
-              </div>
-              <div
-                ref={rightBodyRef}
-                onScroll={(e) => syncVerticalScroll(e.currentTarget)}
-                className="overflow-y-auto"
-              >
-                {data.clients.map((client) => (
-                  <button
-                    key={client.clientId}
-                    onClick={() => setSelectedClient(client)}
-                    className="flex h-[74px] w-full shrink-0 flex-col items-center justify-center gap-1 border-b border-gray-50 bg-white px-2 hover:bg-gray-50"
-                  >
-                    <span className="font-[family-name:var(--font-work-sans)] text-[15px] font-bold text-[#4b7a1f]">
-                      {client.due}€
-                    </span>
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                        client.payment.received
-                          ? 'bg-[#a2c037]/15 text-[#4b7a1f]'
-                          : 'bg-amber-100 text-amber-700'
-                      }`}
-                    >
-                      {client.payment.received ? 'Recibido' : 'Pendiente'}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </>
+                      </td>
+                    ))}
+                  </tr>
+                </Fragment>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
 
