@@ -1,6 +1,7 @@
 'use client';
 
 import { Check, X } from 'lucide-react';
+import { lastDayOfMonth } from '@/lib/dateUtils';
 
 export default function EditDatesModal({
   item,
@@ -70,9 +71,13 @@ export default function EditDatesModal({
                 type="date"
                 value={endDate}
                 min={startDate}
+                max={lastDayOfMonth(startDate)}
                 onChange={(e) => onEndDateChange(e.target.value)}
                 className="w-full min-w-0 rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none focus:ring-2 focus:ring-[#a2c037]/20"
               />
+              <p className="mt-1 text-xs text-[#868585]">
+                No puede cruzar de mes: si hace falta más tiempo, se hace en tramos.
+              </p>
               {item.pausedPlan && (
                 <p className="mt-1 text-xs text-[#868585]">
                   El plan en pausa se retoma automáticamente en esta fecha.
