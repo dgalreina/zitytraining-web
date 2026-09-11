@@ -1,7 +1,9 @@
 'use client';
 
 import { Check, X } from 'lucide-react';
-import MonthYearPicker from '@/components/MonthYearPicker';
+
+const monthInputClass =
+  'block w-full min-w-0 max-w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none focus:ring-2 focus:ring-[#a2c037]/20';
 
 // La compra no guarda su categoría, pero el itemLabel de "Sesiones
 // libres" lo pone siempre el backend (plans.service.ts).
@@ -63,10 +65,14 @@ export default function EditDatesModal({
               Fecha de inicio
             </label>
             {!isFreeSessionsPurchase(item) ? (
-              <MonthYearPicker
-                value={startDate.slice(0, 7)}
-                onChange={(value) => onStartDateChange(`${value}-01`)}
-              />
+              <div className="w-full max-w-full overflow-hidden rounded-lg">
+                <input
+                  type="month"
+                  value={startDate.slice(0, 7)}
+                  onChange={(e) => onStartDateChange(`${e.target.value}-01`)}
+                  className={monthInputClass}
+                />
+              </div>
             ) : (
               <input
                 type="date"
@@ -88,11 +94,15 @@ export default function EditDatesModal({
                 Fecha de fin
               </label>
               {!isFreeSessionsPurchase(item) ? (
-                <MonthYearPicker
-                  value={endDate.slice(0, 7)}
-                  minMonth={nextMonth(startDate.slice(0, 7))}
-                  onChange={(value) => onEndDateChange(`${value}-01`)}
-                />
+                <div className="w-full max-w-full overflow-hidden rounded-lg">
+                  <input
+                    type="month"
+                    value={endDate.slice(0, 7)}
+                    min={nextMonth(startDate.slice(0, 7))}
+                    onChange={(e) => onEndDateChange(`${e.target.value}-01`)}
+                    className={monthInputClass}
+                  />
+                </div>
               ) : (
                 <input
                   type="date"
