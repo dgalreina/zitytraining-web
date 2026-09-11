@@ -10,10 +10,6 @@ import MonthBreakdownModal from './MonthBreakdownModal';
 const DAY_WIDTH = 40;
 const CLIENT_COL_CLASS = 'w-[108px] sm:w-[236px]';
 const TOTAL_COL_CLASS = 'w-[80px] sm:w-[132px]';
-// En iOS Safari, las columnas "sticky" se desincronizan visualmente
-// durante el rebote elástico (rubber-band) al pasarse del límite del
-// scroll; forzarlas a su propia capa evita ese "derrape".
-const STICKY_LAYER_CLASS = '[transform:translateZ(0)] [-webkit-transform:translateZ(0)]';
 const WEEKDAY_LETTERS = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
 const FREE_SESSIONS_COLOR = '#868585';
 
@@ -144,7 +140,7 @@ export default function ContabilidadPage() {
           <div className="inline-flex min-w-full flex-col">
             {/* Cabecera: dias */}
             <div className="sticky top-0 z-30 flex border-b border-gray-200 bg-white">
-              <div className={`sticky left-0 z-10 flex ${CLIENT_COL_CLASS} ${STICKY_LAYER_CLASS} shrink-0 items-center border-r border-gray-200 bg-white px-3 sm:px-4`}>
+              <div className={`sticky left-0 z-10 flex ${CLIENT_COL_CLASS} shrink-0 items-center border-r border-gray-200 bg-white px-3 sm:px-4`}>
                 <span className="text-[11px] font-bold uppercase tracking-wide text-[#868585]">Cliente</span>
               </div>
               {days.map((day) => {
@@ -161,7 +157,7 @@ export default function ContabilidadPage() {
                   </div>
                 );
               })}
-              <div className={`sticky right-0 z-10 flex ${TOTAL_COL_CLASS} ${STICKY_LAYER_CLASS} shrink-0 items-center justify-center border-l border-gray-200 bg-white px-2 text-center`}>
+              <div className={`sticky right-0 z-10 flex ${TOTAL_COL_CLASS} shrink-0 items-center justify-center border-l border-gray-200 bg-white px-2 text-center`}>
                 <span className="text-[11px] font-bold uppercase tracking-wide text-[#868585]">Total mes</span>
               </div>
             </div>
@@ -169,7 +165,7 @@ export default function ContabilidadPage() {
             {/* Filas */}
             {data.clients.map((client) => (
               <div key={client.clientId} className="flex border-b border-gray-50">
-                <div className={`sticky left-0 z-20 flex ${CLIENT_COL_CLASS} ${STICKY_LAYER_CLASS} shrink-0 flex-col justify-center gap-0.5 border-r border-gray-200 bg-white px-3 py-2.5 sm:px-4`}>
+                <div className={`sticky left-0 z-20 flex ${CLIENT_COL_CLASS} shrink-0 flex-col justify-center gap-0.5 border-r border-gray-200 bg-white px-3 py-2.5 sm:px-4`}>
                   <p className="truncate font-[family-name:var(--font-work-sans)] text-[13px] font-bold text-[#2b2b2a]">
                     {client.firstName} {client.lastName}
                   </p>
@@ -220,7 +216,7 @@ export default function ContabilidadPage() {
 
                 <button
                   onClick={() => setSelectedClient(client)}
-                  className={`sticky right-0 z-20 flex ${TOTAL_COL_CLASS} ${STICKY_LAYER_CLASS} shrink-0 flex-col items-center justify-center gap-1 border-l border-gray-200 bg-white px-2 py-2.5 hover:bg-gray-50`}
+                  className={`sticky right-0 z-20 flex ${TOTAL_COL_CLASS} shrink-0 flex-col items-center justify-center gap-1 border-l border-gray-200 bg-white px-2 py-2.5 hover:bg-gray-50`}
                 >
                   <span className="font-[family-name:var(--font-work-sans)] text-[15px] font-bold text-[#4b7a1f]">
                     {client.due}€
