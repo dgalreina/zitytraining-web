@@ -215,7 +215,11 @@ export default function DashboardLayout({
         </div>
       </aside>
 
-      <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-6 md:px-8">
+      {/* "overscroll-none" quita el rebote de iOS al arrastrar mas alla del
+          borde, que separaba el contenido del borde superior dejando una
+          banda gris. Va aqui, en el unico contenedor con scroll del panel,
+          asi que vale para todas sus pantallas. */}
+      <div className="flex-1 overflow-y-auto overscroll-none px-4 py-6 sm:px-6 md:px-8">
         <div className="mb-6 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <button
