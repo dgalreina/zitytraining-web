@@ -6,10 +6,11 @@ import FullCalendar from '@fullcalendar/react';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import '@/styles/fullcalendar-theme.css';
-import { X, ChevronDown, ChevronLeft, ChevronRight, Check } from 'lucide-react';
+import { X, ChevronDown, ChevronLeft, ChevronRight, Check, Send } from 'lucide-react';
 import MiniCalendar, { dayKey } from '@/components/MiniCalendar';
 import FilterDropdown from '@/components/FilterDropdown';
 import BookingModal, { ModalState } from './BookingModal';
+import WhatsAppRemindersModal from './WhatsAppRemindersModal';
 import { getUsers, getMe, getActiveClients } from '@/lib/usersApi';
 import { getBookings, getBookingsByTrainers, updateBooking } from '@/lib/bookingsApi';
 import { getHolidays } from '@/lib/holidaysApi';
@@ -175,6 +176,7 @@ export default function CalendarioPage() {
   const [viewTitle, setViewTitle] = useState('');
   const [viewType, setViewType] = useState('timeGridWeek');
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [remindersOpen, setRemindersOpen] = useState(false);
   // Solo aplica a la vista "Semana": en "Día" el fin de semana se ve
   // siempre. Se pliega por defecto para que la semana entre sin scroll
   // horizontal en la mayoría de móviles; el icono lo despliega.
@@ -840,9 +842,10 @@ export default function CalendarioPage() {
           />
         </div>
 
+        <div className="flex min-w-0 flex-1 flex-col gap-3">
         <div
           ref={calendarWrapperRef}
-          className={`relative flex min-w-0 flex-1 flex-col overflow-hidden rounded-xl bg-white p-4 ${
+          className={`relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl bg-white p-4 ${
             viewType === 'timeGridWeek' ? 'ziti-week-view' : ''
           }`}
         >
@@ -967,7 +970,30 @@ export default function CalendarioPage() {
             }}
           />
         </div>
+
+          {/* En modo cliente el calendario muestra entrenadores, no
+              clientes, asi que no hay a quien recordarle nada. */}
+          {canEdit && (
+            <button
+              type="button"
+              onClick={() => setRemindersOpen(true)}
+              disabled={events.length === 0}
+              className="flex shrink-0 items-center gap-1.5 self-center rounded-lg border border-transparent bg-[#6aa842] px-2 py-1 text-[0.72rem] font-medium text-white hover:bg-[#5c9439] disabled:opacity-40 disabled:hover:bg-[#6aa842] sm:px-2.5 sm:py-1.5 sm:text-base"
+            >
+              <Send size={14} />
+              Enviar recordatorios
+            </button>
+          )}
+        </div>
       </div>
+
+      {remindersOpen && (
+        <WhatsAppRemindersModal
+          events={events}
+          viewType={viewType}
+          onClose={() => setRemindersOpen(false)}
+        />
+      )}
 
       <BookingModal
         modal={modal}
