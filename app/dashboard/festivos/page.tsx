@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { CalendarDays, ChevronLeft, ChevronRight, Plus, RefreshCw, Trash2, X, Check } from 'lucide-react';
 import { getHolidays, createHoliday, resyncHolidays, deleteHoliday } from '@/lib/holidaysApi';
 import { inputClass, labelClass } from '@/lib/formStyles';
+import { useContentHeight } from '@/lib/useContentHeight';
 
 function formatHolidayDate(date: string) {
   return new Date(date).toLocaleDateString('es-ES', {
@@ -16,6 +17,7 @@ function formatHolidayDate(date: string) {
 
 export default function FestivosPage() {
   const [year, setYear] = useState(new Date().getFullYear());
+  const { ref: listRef, style: listStyle } = useContentHeight();
   const [holidays, setHolidays] = useState<any[] | null>(null);
   const [error, setError] = useState('');
   const [syncing, setSyncing] = useState(false);
@@ -159,7 +161,7 @@ export default function FestivosPage() {
 
       {error && <p className="mb-4 text-sm font-medium text-red-600">{error}</p>}
 
-      <div className="rounded-xl bg-white p-6">
+      <div ref={listRef} style={listStyle} className="overflow-y-auto rounded-xl bg-white p-6">
         {holidays === null ? (
           <p className="text-sm text-gray-400">Cargando...</p>
         ) : holidays.length === 0 ? (

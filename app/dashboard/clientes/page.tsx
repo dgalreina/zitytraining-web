@@ -7,6 +7,7 @@ import { Search, Plus, RotateCcw, Users, Star, X } from 'lucide-react';
 import StatusFilterDropdown from '@/components/StatusFilterDropdown';
 import { statusBadge } from '@/components/StatusBadge';
 import { getUsers, getActiveClients, updateUser, addFavoriteClient, removeFavoriteClient } from '@/lib/usersApi';
+import { useContentHeight } from '@/lib/useContentHeight';
 
 type StatusFilter = 'all' | 'active' | 'inactive' | 'deleted';
 
@@ -29,6 +30,7 @@ export default function ClientesPage() {
   const [clients, setClients] = useState<any[]>([]);
   const [deletedClients, setDeletedClients] = useState<any[]>([]);
   const [search, setSearch] = useState('');
+  const { ref: listRef, style: listStyle } = useContentHeight();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('active');
   const [loading, setLoading] = useState(true);
   const [loadingDeleted, setLoadingDeleted] = useState(false);
@@ -170,6 +172,7 @@ export default function ClientesPage() {
         <StatusFilterDropdown value={statusFilter} onChange={setStatusFilter} options={statusFilterOptions} />
       </div>
 
+      <div ref={listRef} style={listStyle} className="overflow-y-auto">
       <div className="hidden overflow-hidden rounded-xl bg-white md:block">
         {isLoadingList ? (
           <p className="p-6 text-sm text-gray-400">Cargando...</p>
@@ -292,6 +295,7 @@ export default function ClientesPage() {
             ))}
           </div>
         )}
+      </div>
       </div>
     </div>
   );
