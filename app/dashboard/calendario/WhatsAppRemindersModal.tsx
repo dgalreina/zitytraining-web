@@ -42,6 +42,22 @@ export function telefonoWhatsApp(bruto?: string | null): string | null {
   return digitos.length >= 11 && digitos.length <= 15 ? digitos : null;
 }
 
+// En el móvil se llama a la app por su propio esquema: iOS la abre sin
+// navegar, así que esta página se queda tal cual y no deja pestañas
+// vacías detrás. En escritorio no hay esquema que valga (puede no haber
+// WhatsApp instalado), así que se abre WhatsApp Web en otra pestaña.
+export function enlaceWhatsApp(
+  telefono: string,
+  mensaje: string,
+  userAgent = typeof navigator === 'undefined' ? '' : navigator.userAgent,
+) {
+  const texto = encodeURIComponent(mensaje);
+  const esMovil = /iPhone|iPad|iPod|Android/i.test(userAgent);
+  return esMovil
+    ? { url: `whatsapp://send?phone=${telefono}&text=${texto}`, nuevaPestana: false }
+    : { url: `https://wa.me/${telefono}?text=${texto}`, nuevaPestana: true };
+}
+
 function redactar(nombre: string, sesiones: Sesion[]) {
   const linea = (s: Sesion) => {
     const mins = Math.round((s.end.getTime() - s.start.getTime()) / 60000);
@@ -130,7 +146,12 @@ export default function WhatsAppRemindersModal({
   // para saber por dónde ibas al volver.
   function enviar(r: Recordatorio) {
     if (!r.telefono) return;
-    window.open(`https://wa.me/${r.telefono}?text=${encodeURIComponent(r.mensaje)}`, '_blank');
+    const { url, nuevaPestana } = enlaceWhatsApp(r.telefono, r.mensaje);
+    if (nuevaPestana) window.open(url, '_blank');
+    // En el móvil NO se abre pestaña: el esquema whatsapp:// lanza la app
+    // y deja esta página intacta. Con window.open, iOS se quedaba con una
+    // pestaña en blanco por cada mensaje enviado.
+    else window.location.href = url;
     setEnviados((prev) => new Set(prev).add(r.clientId));
   }
 
