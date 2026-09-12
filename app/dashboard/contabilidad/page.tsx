@@ -189,6 +189,12 @@ export default function ContabilidadPage() {
           contexto: si no, competirian con el resto de la app y la
           cabecera se colaba por encima del menu lateral.
 
+          El precio de un solo scroller es que cualquier gesto mueve los
+          dos ejes: bajar el dedo por la columna de clientes desviandose
+          un poco de lado tambien desplazaba los dias. De ahi el
+          "touch-pan-y" de las celdas fijas, que no se mueven en
+          horizontal y por tanto solo deben responder al eje vertical.
+
           "overscroll-none" quita el rebote de iOS al arrastrar mas alla
           del borde: durante ese rebote el scroll ya esta a 0 y no puede
           ir a menos, asi que las celdas sticky no tienen a que
@@ -223,7 +229,7 @@ export default function ContabilidadPage() {
             <thead>
               <tr>
                 <th
-                  className={`sticky left-0 top-0 z-30 h-[52px] ${CLIENT_COL_CLASS} border-b border-r border-gray-200 bg-white px-3 text-left sm:px-4`}
+                  className={`sticky left-0 top-0 z-30 h-[52px] ${CLIENT_COL_CLASS} touch-pan-y border-b border-r border-gray-200 bg-white px-3 text-left sm:px-4`}
                 >
                   <span className="text-[11px] font-bold uppercase tracking-wide text-[#868585]">Cliente</span>
                 </th>
@@ -242,7 +248,7 @@ export default function ContabilidadPage() {
                   );
                 })}
                 <th
-                  className={`sticky right-0 top-0 z-30 h-[52px] ${TOTAL_COL_CLASS} border-b border-l border-gray-200 bg-white px-2`}
+                  className={`sticky right-0 top-0 z-30 h-[52px] ${TOTAL_COL_CLASS} touch-pan-y border-b border-l border-gray-200 bg-white px-2`}
                 >
                   <span className="text-[11px] font-bold uppercase tracking-wide text-[#868585]">Total mes</span>
                 </th>
@@ -255,7 +261,7 @@ export default function ContabilidadPage() {
                   <tr>
                     <td
                       rowSpan={2}
-                      className={`sticky left-0 z-10 ${CLIENT_COL_CLASS} max-w-0 border-b border-r border-gray-200 bg-white px-3 sm:px-4`}
+                      className={`sticky left-0 z-10 ${CLIENT_COL_CLASS} max-w-0 touch-pan-y border-b border-r border-gray-200 bg-white px-3 sm:px-4`}
                     >
                       <p className="truncate font-[family-name:var(--font-work-sans)] text-[13px] font-bold text-[#2b2b2a]">
                         {client.firstName} {client.lastName}
@@ -299,7 +305,7 @@ export default function ContabilidadPage() {
 
                     <td
                       rowSpan={2}
-                      className={`sticky right-0 z-10 ${TOTAL_COL_CLASS} border-b border-l border-gray-200 bg-white p-0`}
+                      className={`sticky right-0 z-10 ${TOTAL_COL_CLASS} touch-pan-y border-b border-l border-gray-200 bg-white p-0`}
                     >
                       <button
                         onClick={() => setSelectedClient(client)}
