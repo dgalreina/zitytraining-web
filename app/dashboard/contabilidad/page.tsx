@@ -231,7 +231,14 @@ export default function ContabilidadPage() {
                       <p className="truncate font-[family-name:var(--font-work-sans)] text-[13px] font-bold text-[#2b2b2a]">
                         {client.firstName} {client.lastName}
                       </p>
-                      <p className="truncate text-[11px] text-[#868585]">{client.sessionCount} sesiones este mes</p>
+                      <p className="flex items-center gap-1.5 truncate text-[11px] text-[#868585]">
+                        {client.inactive && (
+                          <span className="shrink-0 rounded-full bg-gray-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-[#868585]">
+                            Baja
+                          </span>
+                        )}
+                        <span className="truncate">{client.sessionCount} sesiones este mes</span>
+                      </p>
                     </td>
 
                     {/* Las franjas de plan van sobre un lienzo del ancho

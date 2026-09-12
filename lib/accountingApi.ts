@@ -1,11 +1,19 @@
 import { API_URL, apiFetch, handleResponse } from './apiClient';
 
+// De dónde sale el importe del tramo: el precio del plan entero, las
+// sesiones dadas dentro del tramo, o nada (no se cobró ese último mes).
+export type AccountingSegmentBasis = 'full_month' | 'sessions' | 'none';
+
 export interface AccountingSegment {
   label: string;
   isFreeSessions: boolean;
   fromDay: number;
   toDay: number;
   amount: number;
+  basis: AccountingSegmentBasis;
+  // Solo con basis 'sessions'; en los demás casos, null.
+  sessions: number | null;
+  pricePerSession: number | null;
 }
 
 export interface AccountingDay {
@@ -23,6 +31,9 @@ export interface AccountingClientMonth {
   clientId: string;
   firstName: string;
   lastName: string;
+  // Dado de baja o borrado: solo sale en los meses en los que dejó
+  // sesiones dadas o dinero pendiente.
+  inactive: boolean;
   segments: AccountingSegment[];
   days: AccountingDay[];
   sessionCount: number;

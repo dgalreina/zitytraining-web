@@ -2,10 +2,21 @@
 
 import { useState } from 'react';
 import { X, Pencil } from 'lucide-react';
-import { AccountingClientMonth, setAccountingPayment } from '@/lib/accountingApi';
+import { AccountingClientMonth, AccountingSegment, setAccountingPayment } from '@/lib/accountingApi';
 
 function monthLabel(year: number, month: number) {
   return new Date(year, month - 1, 1).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+}
+
+// Justifica el importe del tramo. Los días que abarca no lo explican
+// cuando se cobra por sesiones: un tramo de 22 días puede ser 2 clases.
+function billingDetail(seg: AccountingSegment) {
+  if (seg.basis === 'none') return 'sin cobrar';
+  if (seg.basis === 'sessions') {
+    const n = seg.sessions ?? 0;
+    return `${n} ${n === 1 ? 'sesión' : 'sesiones'} × ${seg.pricePerSession}€`;
+  }
+  return 'mes completo';
 }
 
 export default function MonthBreakdownModal({
@@ -88,7 +99,7 @@ export default function MonthBreakdownModal({
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-semibold text-[#2b2b2a]">{seg.label}</p>
                   <p className="mt-0.5 text-xs text-[#868585]">
-                    {seg.fromDay} – {seg.toDay} · {seg.toDay - seg.fromDay + 1} días
+                    {seg.fromDay} – {seg.toDay} · {billingDetail(seg)}
                   </p>
                 </div>
                 <span className="font-[family-name:var(--font-work-sans)] text-sm font-bold text-[#4b7a1f]">
