@@ -8,6 +8,9 @@ import { COLOR_PALETTE } from '@/lib/colors';
 import MonthBreakdownModal from './MonthBreakdownModal';
 
 const DAY_WIDTH = 40;
+const PAGE_SIZE = 30;
+// Hueco que hay que dejarle a los botones de página bajo la tabla.
+const PAGER_HEIGHT = 56;
 const CLIENT_COL_CLASS = 'w-[108px] sm:w-[236px]';
 const TOTAL_COL_CLASS = 'w-[80px] sm:w-[132px]';
 const WEEKDAY_LETTERS = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
@@ -25,6 +28,7 @@ export default function ContabilidadPage() {
   const [error, setError] = useState('');
   const [selectedClient, setSelectedClient] = useState<AccountingClientMonth | null>(null);
   const [search, setSearch] = useState('');
+  const [page, setPage] = useState(0);
   const [topOffset, setTopOffset] = useState<number | null>(null);
   const tableWrapRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -39,6 +43,10 @@ export default function ContabilidadPage() {
       .then(setData)
       .catch((err) => setError(err.message || 'No se pudo cargar Contabilidad'));
   }, [year, month, router]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [search, year, month]);
 
   // Igual que en Entrenamientos/Fichar: solo la tabla hace scroll, no la
   // página entera (el contenedor del dashboard ya hace overflow-y-auto).
@@ -92,6 +100,21 @@ export default function ContabilidadPage() {
     if (!query) return data.clients;
     return data.clients.filter((c) => `${c.firstName} ${c.lastName}`.toLowerCase().includes(query));
   }, [data, search]);
+
+  // Se pagina al pintar, no al pedir: el mes entero ya viene en dos
+  // consultas, lo que cuesta con cien clientes es dibujar un día por
+  // columna para cada uno. Así el buscador sigue mirando el mes entero.
+  const totalPages = Math.max(1, Math.ceil(visibleClients.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages - 1);
+  const pageClients = visibleClients.slice(
+    currentPage * PAGE_SIZE,
+    currentPage * PAGE_SIZE + PAGE_SIZE,
+  );
+
+  function goToPage(next: number) {
+    setPage(next);
+    tableWrapRef.current?.scrollTo({ top: 0 });
+  }
 
   return (
     <div className="flex flex-col gap-4">
@@ -173,7 +196,13 @@ export default function ContabilidadPage() {
       <div
         ref={tableWrapRef}
         className="relative isolate overflow-auto overscroll-none rounded-2xl border border-gray-200 bg-white shadow-sm"
-        style={topOffset !== null ? { maxHeight: `calc(100dvh - ${topOffset}px)` } : undefined}
+        style={
+          topOffset !== null
+            ? {
+                maxHeight: `calc(100dvh - ${topOffset + (totalPages > 1 ? PAGER_HEIGHT : 0)}px)`,
+              }
+            : undefined
+        }
       >
         {!data ? (
           <p className="p-6 text-sm text-gray-400">Cargando...</p>
@@ -221,7 +250,7 @@ export default function ContabilidadPage() {
             </thead>
 
             <tbody>
-              {visibleClients.map((client) => (
+              {pageClients.map((client) => (
                 <Fragment key={client.clientId}>
                   <tr>
                     <td
@@ -317,6 +346,30 @@ export default function ContabilidadPage() {
           </table>
         )}
       </div>
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-2">
+          <button
+            onClick={() => goToPage(currentPage - 1)}
+            disabled={currentPage === 0}
+            aria-label="Página anterior"
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 bg-white text-[#868585] hover:bg-gray-100 disabled:opacity-40 disabled:hover:bg-white"
+          >
+            <ChevronLeft size={15} />
+          </button>
+          <span className="text-[13px] text-[#868585]">
+            {currentPage + 1} de {totalPages} · {visibleClients.length} clientes
+          </span>
+          <button
+            onClick={() => goToPage(currentPage + 1)}
+            disabled={currentPage >= totalPages - 1}
+            aria-label="Página siguiente"
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 bg-white text-[#868585] hover:bg-gray-100 disabled:opacity-40 disabled:hover:bg-white"
+          >
+            <ChevronRight size={15} />
+          </button>
+        </div>
+      )}
 
       {selectedClient && data && (
         <MonthBreakdownModal
