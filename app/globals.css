@@ -19,6 +19,16 @@ body {
   touch-action: manipulation;
 }
 
+/* Quita el rebote de iOS al arrastrar más allá del borde. Hace falta
+   aquí además de en el contenedor del panel: en las pantallas cuyo
+   contenido cabe entero (calendario, contabilidad...) ese contenedor no
+   llega a desbordar, así que el gesto sube hasta el documento y era la
+   página entera la que rebotaba. */
+html,
+body {
+  overscroll-behavior: none;
+}
+
 /* Bug conocido de Safari/iOS: <input type="date"> se calcula un ancho
    mínimo interno que ignora width:100% y se sale de su recuadro en
    pantallas estrechas. -webkit-min-logical-width es el único que Safari
