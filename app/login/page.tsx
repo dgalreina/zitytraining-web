@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { X } from 'lucide-react';
-import { login } from '@/lib/authApi';
+import { login, forgotPassword } from '@/lib/authApi';
 import PasswordInput from '@/components/PasswordInput';
 
 export default function LoginPage() {
@@ -14,6 +14,8 @@ export default function LoginPage() {
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotEmail, setForgotEmail] = useState('');
   const [forgotSent, setForgotSent] = useState(false);
+  const [forgotSending, setForgotSending] = useState(false);
+  const [forgotError, setForgotError] = useState('');
   // Empieza en true para no pintar el formulario ni un instante si
   // resulta que ya hay sesión guardada (evita el parpadeo antes de
   // mandar al calendario). Se pasa a false solo si de verdad hace
@@ -38,14 +40,23 @@ export default function LoginPage() {
     setForgotOpen(false);
     setForgotEmail('');
     setForgotSent(false);
+    setForgotError('');
   }
 
-  // Todavía no hay backend que mande el email de verdad; esto solo
-  // recoge la dirección y lo confirma. El envío real es el siguiente
-  // paso, pendiente de decidir cómo (proveedor de email, plantilla, etc.).
-  function handleForgotSubmit(e: React.FormEvent) {
+  async function handleForgotSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setForgotSent(true);
+    setForgotError('');
+    setForgotSending(true);
+    try {
+      await forgotPassword(forgotEmail);
+      // El backend responde lo mismo exista o no el correo, así que aquí
+      // tampoco se distingue: solo se confirma que se ha pedido.
+      setForgotSent(true);
+    } catch (err: any) {
+      setForgotError(err.message || 'No se pudo enviar el correo');
+    } finally {
+      setForgotSending(false);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -175,8 +186,8 @@ export default function LoginPage() {
 
             {forgotSent ? (
               <p className="text-sm font-medium text-[#4b7a1f]">
-                Si ese email está registrado, te enviaremos instrucciones para recuperar tu
-                contraseña.
+                Si ese email está registrado, te hemos enviado un enlace para elegir una nueva
+                contraseña. Caduca en una hora. Revisa también la carpeta de spam.
               </p>
             ) : (
               <form onSubmit={handleForgotSubmit} className="flex flex-col gap-4">
@@ -193,11 +204,15 @@ export default function LoginPage() {
                     className="w-full rounded-lg border border-gray-200 px-4 py-2.5 text-sm text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none focus:ring-2 focus:ring-[#a2c037]/20"
                   />
                 </div>
+                {forgotError && (
+                  <p className="text-sm font-medium text-red-600">{forgotError}</p>
+                )}
                 <button
                   type="submit"
-                  className="rounded-lg bg-gradient-to-r from-[#a2c037] to-[#6aa842] py-2.5 font-semibold text-white transition hover:opacity-90"
+                  disabled={forgotSending}
+                  className="rounded-lg bg-gradient-to-r from-[#a2c037] to-[#6aa842] py-2.5 font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
                 >
-                  Enviar
+                  {forgotSending ? 'Enviando...' : 'Enviar'}
                 </button>
               </form>
             )}
