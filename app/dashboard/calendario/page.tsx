@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import FullCalendar from '@fullcalendar/react';
 import timeGridPlugin from '@fullcalendar/timegrid';
@@ -10,7 +10,7 @@ import { X, ChevronDown, ChevronLeft, ChevronRight, Check, Send } from 'lucide-r
 import MiniCalendar, { dayKey } from '@/components/MiniCalendar';
 import FilterDropdown from '@/components/FilterDropdown';
 import BookingModal, { ModalState } from './BookingModal';
-import WhatsAppRemindersModal from './WhatsAppRemindersModal';
+import WhatsAppRemindersModal, { construirRecordatorios } from './WhatsAppRemindersModal';
 import { getUsers, getMe, getActiveClients } from '@/lib/usersApi';
 import { getBookings, getBookingsByTrainers, updateBooking } from '@/lib/bookingsApi';
 import { getHolidays } from '@/lib/holidaysApi';
@@ -177,6 +177,7 @@ export default function CalendarioPage() {
   const [viewType, setViewType] = useState('timeGridWeek');
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [remindersOpen, setRemindersOpen] = useState(false);
+  const [weekStart, setWeekStart] = useState('');
   // Solo aplica a la vista "Semana": en "Día" el fin de semana se ve
   // siempre. Se pliega por defecto para que la semana entre sin scroll
   // horizontal en la mayoría de móviles; el icono lo despliega.
@@ -193,6 +194,17 @@ export default function CalendarioPage() {
   const router = useRouter();
 
   const isTrainerPerspective = isAdmin || isTrainer;
+
+  // Se cuentan aquí para saber si el botón de recordatorios tiene algo que
+  // ofrecer: un admin puede estar viendo la semana entera de todos y no
+  // impartir ninguna clase, y entonces no hay nada suyo que mandar.
+  // Va con el resto de hooks, antes del "Cargando..." de más abajo: si se
+  // declara después de ese return, React ve un número distinto de hooks
+  // según la pasada y revienta la página.
+  const misRecordatorios = useMemo(
+    () => construirRecordatorios(events, userId),
+    [events, userId],
+  );
 
   // Se puede crear/editar/borrar mientras no estemos viendo el calendario
   // por cliente (ahí se mantiene solo lectura). El modal siempre pregunta
@@ -408,6 +420,18 @@ export default function CalendarioPage() {
   function handleDatesSet(info: any) {
     loadBookings(info.startStr, info.endStr);
     setSelectedDate(info.view.currentStart);
+    // Identifica la semana en el registro de recordatorios. Es
+    // currentStart y no activeStart porque este último se corre al lunes
+    // cuando el fin de semana está plegado, y entonces la misma semana
+    // cambiaría de identidad según cómo tuvieras puesta la vista.
+    //
+    // Se manda como día suelto y no en ISO porque toISOString() pasa a UTC:
+    // la medianoche del lunes en España es el domingo a las 22:00, y la
+    // semana quedaría archivada con la fecha del día anterior.
+    const lunes = info.view.currentStart as Date;
+    setWeekStart(
+      `${lunes.getFullYear()}-${String(lunes.getMonth() + 1).padStart(2, '0')}-${String(lunes.getDate()).padStart(2, '0')}`,
+    );
     setViewTitle(info.view.title);
     setViewType(info.view.type);
     loadHolidaysForYear(info.start.getFullYear());
@@ -971,13 +995,15 @@ export default function CalendarioPage() {
           />
         </div>
 
-          {/* En modo cliente el calendario muestra entrenadores, no
-              clientes, asi que no hay a quien recordarle nada. */}
-          {canEdit && (
+          {/* Solo en la vista de semana: los recordatorios se mandan de una
+              tacada para toda la semana, no dia a dia. Y en modo cliente el
+              calendario muestra entrenadores, no clientes, asi que ahi no
+              hay a quien recordarle nada. */}
+          {canEdit && viewType === 'timeGridWeek' && (
             <button
               type="button"
               onClick={() => setRemindersOpen(true)}
-              disabled={events.length === 0}
+              disabled={misRecordatorios.length === 0}
               className="flex shrink-0 items-center gap-1.5 self-center rounded-lg border border-transparent bg-[#6aa842] px-2 py-1 text-[0.72rem] font-medium text-white hover:bg-[#5c9439] disabled:opacity-40 disabled:hover:bg-[#6aa842] sm:px-2.5 sm:py-1.5 sm:text-base"
             >
               <Send size={14} />
@@ -990,7 +1016,8 @@ export default function CalendarioPage() {
       {remindersOpen && (
         <WhatsAppRemindersModal
           events={events}
-          viewType={viewType}
+          trainerId={userId}
+          weekStart={weekStart}
           onClose={() => setRemindersOpen(false)}
         />
       )}

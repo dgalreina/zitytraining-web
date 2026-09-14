@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { X, Trash2, Send, Pencil, Check, PhoneOff } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { X, Trash2, Send, Pencil, Check, PhoneOff, AlertTriangle } from 'lucide-react';
+import { getWeekReminders, logReminderSent } from '@/lib/remindersApi';
 
 interface Sesion {
   start: Date;
@@ -13,7 +14,13 @@ export interface Recordatorio {
   nombre: string;
   telefono: string | null;
   mensaje: string;
+  // Resumen de sus días y horas de esa semana. Se guarda al enviar, y al
+  // volver a abrir delata si algo se ha movido desde entonces.
+  huella: string;
 }
+
+// Estado de cada uno frente a lo que ya se mandó.
+type Estado = 'nuevo' | 'enviado' | 'cambiado';
 
 function duracion(minutos: number) {
   if (minutos < 60) return `${minutos} min`;
@@ -77,7 +84,13 @@ function redactar(nombre: string, sesiones: Sesion[]) {
 // Un mensaje por cliente, no por sesión: si alguien entrena tres días esa
 // semana recibe un solo WhatsApp con las tres. Las sesiones privadas del
 // entrenador no llevan cliente, así que se quedan fuera.
-export function construirRecordatorios(events: any[]): Recordatorio[] {
+//
+// Solo cuentan las sesiones que imparte quien está usando la app, aunque
+// el calendario tenga más entrenadores marcados: el mensaje sale de su
+// propio WhatsApp, y sería raro que a un cliente le escriba un entrenador
+// que no es el suyo. A quien entrene esa semana con dos entrenadores le
+// escribe cada uno lo suyo.
+export function construirRecordatorios(events: any[], trainerId: string): Recordatorio[] {
   const porCliente = new Map<
     string,
     { nombre: string; telefono: string | null; sesiones: Sesion[] }
@@ -86,6 +99,8 @@ export function construirRecordatorios(events: any[]): Recordatorio[] {
   for (const evento of events) {
     const reserva = evento?.extendedProps?.raw;
     if (!reserva || reserva.isPrivate) continue;
+    const suEntrenador = reserva.trainer?._id || reserva.trainer;
+    if (!trainerId || String(suEntrenador) !== trainerId) continue;
 
     for (const cliente of reserva.clients || []) {
       const id = typeof cliente === 'string' ? cliente : cliente._id;
@@ -106,28 +121,57 @@ export function construirRecordatorios(events: any[]): Recordatorio[] {
   return Array.from(porCliente.entries())
     .map(([clientId, { nombre, telefono, sesiones }]) => {
       const ordenadas = [...sesiones].sort((a, b) => a.start.getTime() - b.start.getTime());
-      return { clientId, nombre, telefono, mensaje: redactar(nombre, ordenadas) };
+      return {
+        clientId,
+        nombre,
+        telefono,
+        mensaje: redactar(nombre, ordenadas),
+        huella: ordenadas.map((s) => `${s.start.toISOString()}/${s.end.toISOString()}`).join(','),
+      };
     })
     .sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
 }
 
 export default function WhatsAppRemindersModal({
   events,
-  viewType,
+  trainerId,
+  weekStart,
   onClose,
 }: {
   events: any[];
-  viewType: string;
+  trainerId: string;
+  weekStart: string;
   onClose: () => void;
 }) {
   const [recordatorios, setRecordatorios] = useState<Recordatorio[]>(() =>
-    construirRecordatorios(events),
+    construirRecordatorios(events, trainerId),
   );
   const [editando, setEditando] = useState<string | null>(null);
-  const [enviados, setEnviados] = useState<Set<string>>(new Set());
+  // Huella con la que se le escribió por última vez, por cliente. Vacío
+  // mientras se consulta: hasta saberlo, nadie sale marcado.
+  const [huellaEnviada, setHuellaEnviada] = useState<Map<string, string>>(new Map());
+  const [cargando, setCargando] = useState(true);
 
-  const ambito = viewType === 'timeGridDay' ? 'de este día' : 'de esta semana';
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token || !weekStart) {
+      setCargando(false);
+      return;
+    }
+    getWeekReminders(token, weekStart)
+      .then((logs) => setHuellaEnviada(new Map(logs.map((l) => [l.clientId, l.sessionsFingerprint]))))
+      .catch(() => {})
+      .finally(() => setCargando(false));
+  }, [weekStart]);
+
+  function estadoDe(r: Recordatorio): Estado {
+    const anterior = huellaEnviada.get(r.clientId);
+    if (anterior === undefined) return 'nuevo';
+    return anterior === r.huella ? 'enviado' : 'cambiado';
+  }
+
   const conTelefono = recordatorios.filter((r) => r.telefono);
+  const pendientes = conTelefono.filter((r) => estadoDe(r) !== 'enviado').length;
   const sinTelefono = recordatorios.length - conTelefono.length;
 
   function editar(clientId: string, mensaje: string) {
@@ -146,13 +190,26 @@ export default function WhatsAppRemindersModal({
   // para saber por dónde ibas al volver.
   function enviar(r: Recordatorio) {
     if (!r.telefono) return;
+
+    // Se da por enviado en cuanto se abre WhatsApp. No hay forma de saber
+    // si luego se pulsó enviar de verdad, pero para eso está el "volver a
+    // enviar".
+    setHuellaEnviada((prev) => new Map(prev).set(r.clientId, r.huella));
+    const token = localStorage.getItem('token');
+    if (token && weekStart) {
+      logReminderSent(token, {
+        client: r.clientId,
+        weekStart,
+        sessionsFingerprint: r.huella,
+      }).catch(() => {});
+    }
+
     const { url, nuevaPestana } = enlaceWhatsApp(r.telefono, r.mensaje);
     if (nuevaPestana) window.open(url, '_blank');
     // En el móvil NO se abre pestaña: el esquema whatsapp:// lanza la app
     // y deja esta página intacta. Con window.open, iOS se quedaba con una
     // pestaña en blanco por cada mensaje enviado.
     else window.location.href = url;
-    setEnviados((prev) => new Set(prev).add(r.clientId));
   }
 
   return (
@@ -168,8 +225,12 @@ export default function WhatsAppRemindersModal({
             </p>
             <p className="mt-0.5 text-xs text-[#868585]">
               {recordatorios.length === 0
-                ? `No hay clientes ${ambito}`
-                : `${enviados.size} de ${conTelefono.length} enviados · ${ambito}`}
+                ? 'No hay clientes tuyos esta semana'
+                : cargando
+                  ? 'Comprobando a quién ya has avisado...'
+                  : pendientes === 0
+                    ? `Todos avisados · ${conTelefono.length} de esta semana`
+                    : `${pendientes} por avisar de ${conTelefono.length} · tus sesiones de esta semana`}
             </p>
           </div>
           <button onClick={onClose} className="shrink-0 text-gray-400 hover:text-gray-600">
@@ -180,7 +241,7 @@ export default function WhatsAppRemindersModal({
         <div className="flex-1 overflow-y-auto p-5">
           {recordatorios.length === 0 ? (
             <p className="py-6 text-center text-sm text-gray-400">
-              No hay sesiones con clientes en la vista actual.
+              No tienes sesiones con clientes esta semana.
             </p>
           ) : (
             <div className="flex flex-col gap-3">
@@ -193,21 +254,31 @@ export default function WhatsAppRemindersModal({
               )}
 
               {recordatorios.map((r) => {
-                const yaEnviado = enviados.has(r.clientId);
+                const estado = estadoDe(r);
                 return (
                   <div
                     key={r.clientId}
                     className={`rounded-xl border p-3 ${
-                      yaEnviado ? 'border-[#a2c037]/40 bg-[#a2c037]/5' : 'border-gray-100'
+                      estado === 'enviado'
+                        ? 'border-[#a2c037]/40 bg-[#a2c037]/5'
+                        : estado === 'cambiado'
+                          ? 'border-amber-300 bg-amber-50'
+                          : 'border-gray-100'
                     }`}
                   >
                     <div className="mb-2 flex items-center justify-between gap-2">
                       <p className="flex min-w-0 items-center gap-1.5 truncate text-sm font-semibold text-[#2b2b2a]">
                         {r.nombre}
-                        {yaEnviado && (
+                        {estado === 'enviado' && (
                           <span className="flex shrink-0 items-center gap-0.5 rounded-full bg-[#a2c037]/20 px-1.5 py-0.5 text-[10px] font-bold text-[#4b7a1f]">
                             <Check size={10} strokeWidth={3} />
                             Enviado
+                          </span>
+                        )}
+                        {estado === 'cambiado' && (
+                          <span className="flex shrink-0 items-center gap-0.5 rounded-full bg-amber-200 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">
+                            <AlertTriangle size={10} />
+                            Cambió
                           </span>
                         )}
                         {!r.telefono && (
@@ -255,13 +326,17 @@ export default function WhatsAppRemindersModal({
                       onClick={() => enviar(r)}
                       disabled={!r.telefono}
                       className={`mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg py-2 text-[13px] font-bold disabled:opacity-40 ${
-                        yaEnviado
+                        estado === 'enviado'
                           ? 'bg-white text-[#4b7a1f] ring-1 ring-[#a2c037]/50 hover:bg-[#a2c037]/10'
                           : 'bg-[#6aa842] text-white hover:bg-[#5c9439]'
                       }`}
                     >
                       <Send size={14} />
-                      {yaEnviado ? 'Volver a enviar' : 'Enviar'}
+                      {estado === 'enviado'
+                        ? 'Volver a enviar'
+                        : estado === 'cambiado'
+                          ? 'Avisar del cambio'
+                          : 'Enviar'}
                     </button>
                   </div>
                 );
