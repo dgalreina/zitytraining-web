@@ -61,6 +61,7 @@ export default function DashboardLayout({
     let admin = false;
     let trainer = false;
     let client = false;
+    let mustChangePassword = false;
 
     if (storedUser) {
       const parsed = JSON.parse(storedUser);
@@ -70,9 +71,17 @@ export default function DashboardLayout({
       admin = parsed.roles?.includes('admin') ?? false;
       trainer = parsed.roles?.includes('trainer') ?? false;
       client = parsed.roles?.includes('client') ?? false;
+      mustChangePassword = !!parsed.mustChangePassword;
       setIsAdmin(admin);
       setIsTrainer(trainer);
       setIsClient(client);
+    }
+
+    // Con la contrasena del admin todavia puesta, el API rechaza todo
+    // menos cambiarla: no tiene sentido dejarle abrir el panel.
+    if (mustChangePassword) {
+      router.push('/cambiar-contrasena');
+      return;
     }
 
     const isAdminOnlyRoute = ADMIN_ONLY_PREFIXES.some((prefix) =>

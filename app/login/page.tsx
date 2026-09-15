@@ -68,7 +68,11 @@ export default function LoginPage() {
       localStorage.setItem('token', data.access_token);
       localStorage.setItem('refreshToken', data.refresh_token);
       localStorage.setItem('user', JSON.stringify(data.user));
-      router.push('/dashboard/calendario');
+      // Si todavia arrastra la contrasena que le puso el admin, el API le
+      // rechaza cualquier otra cosa: se le lleva directo a cambiarla.
+      router.push(
+        data.user?.mustChangePassword ? '/cambiar-contrasena' : '/dashboard/calendario',
+      );
     } catch (err) {
       setError('Email o contraseña incorrectos');
     }
