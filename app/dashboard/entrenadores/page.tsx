@@ -3,11 +3,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Search, Plus, ShieldCheck, RotateCcw, Dumbbell } from 'lucide-react';
+import { Search, Plus, ShieldCheck, RotateCcw, Dumbbell, X } from 'lucide-react';
 import ColorDot from '@/components/ColorDot';
 import StatusFilterDropdown from '@/components/StatusFilterDropdown';
 import { statusBadge } from '@/components/StatusBadge';
 import { getUsers, updateUser } from '@/lib/usersApi';
+import { useContentHeight } from '@/lib/useContentHeight';
 
 type StatusFilter = 'all' | 'active' | 'inactive' | 'deleted';
 
@@ -24,6 +25,7 @@ export default function EntrenadoresPage() {
   const [trainers, setTrainers] = useState<any[]>([]);
   const [deletedTrainers, setDeletedTrainers] = useState<any[]>([]);
   const [search, setSearch] = useState('');
+  const { ref: listRef, style: listStyle } = useContentHeight();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [loading, setLoading] = useState(true);
   const [loadingDeleted, setLoadingDeleted] = useState(false);
@@ -117,13 +119,24 @@ export default function EntrenadoresPage() {
             placeholder="Buscar por nombre o email..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-4 text-sm text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none focus:ring-2 focus:ring-[#a2c037]/20"
+            className="w-full rounded-lg border border-gray-200 bg-white py-2 pl-9 pr-10 text-sm text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none focus:ring-2 focus:ring-[#a2c037]/20"
           />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch('')}
+              aria-label="Limpiar búsqueda"
+              className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-[#2b2b2a]"
+            >
+              <X size={15} />
+            </button>
+          )}
         </div>
 
         <StatusFilterDropdown value={statusFilter} onChange={setStatusFilter} options={statusOptions} />
       </div>
 
+      <div ref={listRef} style={listStyle} className="overflow-y-auto">
       <div className="hidden overflow-hidden rounded-xl bg-white md:block">
         {isLoadingList ? (
           <p className="p-6 text-sm text-gray-400">Cargando...</p>
@@ -237,6 +250,7 @@ export default function EntrenadoresPage() {
             ))}
           </div>
         )}
+      </div>
       </div>
     </div>
   );
