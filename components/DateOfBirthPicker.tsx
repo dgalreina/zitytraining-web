@@ -15,6 +15,9 @@ interface DateOfBirthPickerProps {
   value: string; // 'yyyy-MM-dd' o cadena vacía
   onChange: (value: string) => void;
   disabled?: boolean;
+  // Marca el campo con el asterisco de obligatorio. No lo es en todas las
+  // pantallas donde se usa este selector (editar perfil, por ejemplo).
+  required?: boolean;
 }
 
 function capitalizeFirst(text: string) {
@@ -69,7 +72,12 @@ function YearMenu({ year, onSelect }: { year: number; onSelect: (y: number) => v
   );
 }
 
-export default function DateOfBirthPicker({ value, onChange, disabled }: DateOfBirthPickerProps) {
+export default function DateOfBirthPicker({
+  value,
+  onChange,
+  disabled,
+  required,
+}: DateOfBirthPickerProps) {
   const selected = value ? new Date(value) : null;
 
   function handleChange(date: Date | null) {
@@ -78,7 +86,10 @@ export default function DateOfBirthPicker({ value, onChange, disabled }: DateOfB
 
   return (
     <div>
-      <label className={labelClass}>Fecha de nacimiento</label>
+      <label className={labelClass}>
+        Fecha de nacimiento
+        {required && <span className="text-red-500"> *</span>}
+      </label>
       <DatePicker
         selected={selected}
         onChange={handleChange}

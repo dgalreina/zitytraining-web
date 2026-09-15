@@ -70,7 +70,7 @@ export default function NuevoClientePage() {
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className={labelClass}>Nombre</label>
+              <label className={labelClass}>Nombre<span className="text-red-500"> *</span></label>
               <input
                 name="firstName"
                 value={form.firstName}
@@ -80,7 +80,7 @@ export default function NuevoClientePage() {
               />
             </div>
             <div>
-              <label className={labelClass}>Apellidos</label>
+              <label className={labelClass}>Apellidos<span className="text-red-500"> *</span></label>
               <input
                 name="lastName"
                 value={form.lastName}
@@ -95,9 +95,10 @@ export default function NuevoClientePage() {
             <DateOfBirthPicker
               value={form.dateOfBirth}
               onChange={(value) => setForm({ ...form, dateOfBirth: value })}
+              required
             />
             <div>
-              <label className={labelClass}>Teléfono</label>
+              <label className={labelClass}>Teléfono<span className="text-red-500"> *</span></label>
               <input
                 name="phone"
                 value={form.phone}

@@ -87,7 +87,7 @@ export default function NuevoEntrenadorPage() {
         <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className={labelClass}>Nombre</label>
+              <label className={labelClass}>Nombre<span className="text-red-500"> *</span></label>
               <input
                 name="firstName"
                 value={form.firstName}
@@ -97,7 +97,7 @@ export default function NuevoEntrenadorPage() {
               />
             </div>
             <div>
-              <label className={labelClass}>Apellidos</label>
+              <label className={labelClass}>Apellidos<span className="text-red-500"> *</span></label>
               <input
                 name="lastName"
                 value={form.lastName}
@@ -112,9 +112,10 @@ export default function NuevoEntrenadorPage() {
             <DateOfBirthPicker
               value={form.dateOfBirth}
               onChange={(value) => setForm({ ...form, dateOfBirth: value })}
+              required
             />
             <div>
-              <label className={labelClass}>Teléfono</label>
+              <label className={labelClass}>Teléfono<span className="text-red-500"> *</span></label>
               <input
                 name="phone"
                 value={form.phone}
@@ -126,7 +127,7 @@ export default function NuevoEntrenadorPage() {
           </div>
 
           <div>
-            <label className={labelClass}>Email</label>
+            <label className={labelClass}>Email<span className="text-red-500"> *</span></label>
             <input
               type="email"
               name="email"
@@ -148,7 +149,7 @@ export default function NuevoEntrenadorPage() {
           </div>
 
           <div>
-            <label className={labelClass}>Contraseña inicial</label>
+            <label className={labelClass}>Contraseña inicial<span className="text-red-500"> *</span></label>
             <PasswordInput
               name="password"
               value={form.password}
@@ -156,7 +157,8 @@ export default function NuevoEntrenadorPage() {
               className={inputClass}
             />
             <p className="mt-1 text-xs text-[#868585]">
-              Al menos 8 caracteres, con mayúsculas, minúsculas, números y algún símbolo.
+              Solo le sirve para entrar la primera vez: al hacerlo, la app le pedirá que elija
+              una suya.
             </p>
           </div>
 
