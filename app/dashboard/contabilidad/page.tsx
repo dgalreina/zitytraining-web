@@ -331,7 +331,7 @@ export default function ContabilidadPage() {
                     {client.days.map((d) => (
                       <td
                         key={d.day}
-                        className="border-b border-r border-gray-50 p-0"
+                        className="border-b border-r border-gray-200 p-0"
                         style={{ width: DAY_WIDTH, background: d.holiday ? '#fffbeb' : '#ffffff' }}
                       >
                         <div className="flex h-[52px] items-center justify-center">
