@@ -6,7 +6,7 @@ import FullCalendar from '@fullcalendar/react';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import '@/styles/fullcalendar-theme.css';
-import { X, ChevronDown, ChevronLeft, ChevronRight, Check, Send } from 'lucide-react';
+import { X, ChevronDown, ChevronLeft, ChevronRight, Check, Send, CalendarDays } from 'lucide-react';
 import MiniCalendar, { dayKey } from '@/components/MiniCalendar';
 import FilterDropdown from '@/components/FilterDropdown';
 import BookingModal, { ModalState } from './BookingModal';
@@ -177,6 +177,7 @@ export default function CalendarioPage() {
   const [viewType, setViewType] = useState('timeGridWeek');
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [remindersOpen, setRemindersOpen] = useState(false);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [weekStart, setWeekStart] = useState('');
   // Solo aplica a la vista "Semana": en "Día" el fin de semana se ve
   // siempre. Se pliega por defecto para que la semana entre sin scroll
@@ -877,6 +878,18 @@ export default function CalendarioPage() {
             <p className="ziti-calendar-title flex-1 text-center font-[family-name:var(--font-work-sans)] text-sm font-bold capitalize text-[#2b2b2a] sm:text-left">
               {viewTitle}
             </p>
+            {/* Solo en móvil: en escritorio ya está el mini calendario de la
+                columna de la izquierda. Sin esto, para llegar a una fecha
+                lejana había que pasar día a día o semana a semana. */}
+            <button
+              type="button"
+              onClick={() => setDatePickerOpen(true)}
+              title="Ir a una fecha"
+              aria-label="Ir a una fecha"
+              className="shrink-0 rounded-lg p-1 text-[#868585] transition hover:bg-gray-100 hover:text-[#2b2b2a] md:hidden"
+            >
+              <CalendarDays size={16} />
+            </button>
             {viewType === 'timeGridWeek' && (
               <button
                 type="button"
@@ -1012,6 +1025,40 @@ export default function CalendarioPage() {
           )}
         </div>
       </div>
+
+      {datePickerOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 md:hidden"
+          onClick={() => setDatePickerOpen(false)}
+        >
+          <div
+            className="w-full max-w-xs rounded-2xl bg-white p-4 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <p className="font-[family-name:var(--font-work-sans)] text-sm font-bold text-[#2b2b2a]">
+                Ir a una fecha
+              </p>
+              <button
+                onClick={() => setDatePickerOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <MiniCalendar
+              selected={selectedDate}
+              onChange={(date) => {
+                handleMiniDateChange(date);
+                setDatePickerOpen(false);
+              }}
+              onMonthChange={handleMiniMonthChange}
+              daysWithBookings={daysWithBookings}
+              highlightWeek={viewType === 'timeGridWeek'}
+            />
+          </div>
+        </div>
+      )}
 
       {remindersOpen && (
         <WhatsAppRemindersModal
