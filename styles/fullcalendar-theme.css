@@ -378,3 +378,10 @@
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
+/* La rejilla de horas tiene su propio contenedor con scroll, aparte del
+   de la página: sin esto rebotaba al arrastrar más allá del borde y
+   dejaba una banda en blanco bajo la cabecera de los días. Es el mismo
+   arreglo que ya lleva el resto de la aplicación. */
+.fc .fc-scroller {
+  overscroll-behavior: none;
+}
