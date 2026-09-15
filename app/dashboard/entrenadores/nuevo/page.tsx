@@ -8,7 +8,6 @@ import DateOfBirthPicker from '@/components/DateOfBirthPicker';
 import PasswordInput from '@/components/PasswordInput';
 import { createUserByAdmin } from '@/lib/usersApi';
 import { inputClass, labelClass } from '@/lib/formStyles';
-import { STRONG_PASSWORD_REGEX, STRONG_PASSWORD_HINT } from '@/lib/validation';
 
 export default function NuevoEntrenadorPage() {
   const [form, setForm] = useState({
@@ -32,19 +31,21 @@ export default function NuevoEntrenadorPage() {
     e.preventDefault();
     setError('');
 
+    // La dirección no se pide: se puede rellenar luego desde su ficha.
     if (
       !form.firstName ||
       !form.lastName ||
       !form.dateOfBirth ||
       !form.email ||
-      !form.phone ||
-      !form.address
+      !form.phone
     ) {
       setError('Rellena todos los campos');
       return;
     }
-    if (!STRONG_PASSWORD_REGEX.test(form.password)) {
-      setError(STRONG_PASSWORD_HINT);
+    // A la contraseña inicial no se le exige fortaleza: es la que usa para
+    // entrar la primera vez. Cuando la cambie él mismo, ahí sí.
+    if (!form.password) {
+      setError('Ponle una contraseña para que pueda entrar la primera vez');
       return;
     }
 
