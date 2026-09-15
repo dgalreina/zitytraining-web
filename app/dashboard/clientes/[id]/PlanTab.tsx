@@ -68,10 +68,14 @@ function purchaseStatusBadge(status: string) {
 export default function PlanTab({
   id,
   purchases,
+  isAdmin,
   onPurchasesChange,
 }: {
   id: string;
   purchases: any[] | null;
+  // Contratar y modificar planes es cosa de administracion: el entrenador
+  // ve el plan en curso de su cliente, pero sin botones para tocarlo.
+  isAdmin: boolean;
   onPurchasesChange: (updated: any[]) => void;
 }) {
   const [plans, setPlans] = useState<any[]>([]);
@@ -274,7 +278,7 @@ export default function PlanTab({
               Plan
             </h3>
             <div className="flex gap-2">
-              {hasActivePlan ? (
+              {isAdmin && (hasActivePlan ? (
                 <>
                   <button
                     onClick={() => openAssignPicker('punctual')}
@@ -298,7 +302,7 @@ export default function PlanTab({
                 >
                   Asignar plan
                 </button>
-              )}
+              ))}
             </div>
           </div>
 
@@ -371,7 +375,7 @@ export default function PlanTab({
                       })}
                     </p>
                   )}
-                  {item.assignedInPerson && (
+                  {isAdmin && item.assignedInPerson && (
                     <div className="mt-3 flex gap-2">
                       <button
                         onClick={() => openEditDates(item)}

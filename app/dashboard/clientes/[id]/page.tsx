@@ -102,9 +102,11 @@ export default function DetalleClientePage() {
         <button onClick={() => setTab('plan')} className={`shrink-0 whitespace-nowrap ${tabButtonClass(tab === 'plan')}`}>
           Plan activo
         </button>
-        <button onClick={() => setTab('historial')} className={`shrink-0 whitespace-nowrap ${tabButtonClass(tab === 'historial')}`}>
-          Historial
-        </button>
+        {isAdmin && (
+          <button onClick={() => setTab('historial')} className={`shrink-0 whitespace-nowrap ${tabButtonClass(tab === 'historial')}`}>
+            Historial
+          </button>
+        )}
       </div>
 
       <div className="h-[calc(100dvh-260px)] overflow-y-auto pr-1">
@@ -113,9 +115,9 @@ export default function DetalleClientePage() {
         )}
         {tab === 'progreso' && <ProgresoTab id={id} />}
         {tab === 'plan' && (
-          <PlanTab id={id} purchases={purchases} onPurchasesChange={setPurchases} />
+          <PlanTab id={id} purchases={purchases} isAdmin={isAdmin} onPurchasesChange={setPurchases} />
         )}
-        {tab === 'historial' && (
+        {tab === 'historial' && isAdmin && (
           <HistorialTab purchases={purchases} clientName={`${form.firstName} ${form.lastName}`} />
         )}
       </div>
