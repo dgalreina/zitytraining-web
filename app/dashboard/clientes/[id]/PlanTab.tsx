@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Ban, Pencil } from 'lucide-react';
+import { Ban, Pencil, Undo2 } from 'lucide-react';
 import { getPlans } from '@/lib/plansApi';
 import {
   getClientPurchases,
@@ -10,6 +10,7 @@ import {
   assignPunctualPlan,
   changePlan,
   cancelPurchase,
+  voidPurchase,
   updatePurchaseDates,
   FinalMonthBilling,
 } from '@/lib/purchasesApi';
@@ -87,6 +88,7 @@ export default function PlanTab({
   const [assignSaving, setAssignSaving] = useState(false);
   const [assignError, setAssignError] = useState('');
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [voidingId, setVoidingId] = useState<string | null>(null);
   const [editDatesItem, setEditDatesItem] = useState<any | null>(null);
   const [editStartDate, setEditStartDate] = useState('');
   const [editEndDate, setEditEndDate] = useState('');
@@ -217,6 +219,31 @@ export default function PlanTab({
       alert(err.message || 'No se pudo parar el plan');
     } finally {
       setCancellingId(null);
+    }
+  }
+
+  // Distinto de "parar": esto es para un plan que no debia existir (plan
+  // o persona equivocados). No factura nada y desaparece de Contabilidad.
+  async function handleVoidPlan(item: any) {
+    const seguro = window.confirm(
+      `¿Anular "${item.itemLabel}"?
+
+No se cobrará nada por él en ningún mes y desaparecerá de Contabilidad. Quedará en el historial como anulado.`,
+    );
+    if (!seguro) return;
+
+    setVoidingId(item._id);
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+      await voidPurchase(token, item._id);
+      const refreshed = await getClientPurchases(token, id);
+      onPurchasesChange(refreshed);
+    } catch (err: any) {
+      alert(err.message || 'No se pudo anular el plan');
+    } finally {
+      setVoidingId(null);
     }
   }
 
@@ -391,6 +418,15 @@ export default function PlanTab({
                       >
                         <Ban size={13} />
                         {cancellingId === item._id ? 'Parando...' : 'Parar plan'}
+                      </button>
+                      <button
+                        onClick={() => handleVoidPlan(item)}
+                        disabled={voidingId === item._id}
+                        title="Para un plan asignado por error: no se cobra nada"
+                        className="flex items-center gap-1.5 rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-semibold text-[#868585] hover:bg-gray-200 hover:text-[#2b2b2a] disabled:opacity-60"
+                      >
+                        <Undo2 size={13} />
+                        {voidingId === item._id ? 'Anulando...' : 'Anular'}
                       </button>
                     </div>
                   )}

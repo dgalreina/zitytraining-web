@@ -30,7 +30,7 @@ export interface Purchase {
   assignedInPerson?: boolean;
   endedAt?: string;
   endedBy?: PurchaseActorRef;
-  endReason?: 'changed' | 'cancelled';
+  endReason?: 'changed' | 'cancelled' | 'voided';
   replacedByLabel?: string;
   finalMonthBilling?: FinalMonthBilling;
 }
@@ -132,6 +132,16 @@ export async function changePlan(token: string, data: AssignPlanPayload): Promis
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(data),
+  });
+  return handleResponse(res);
+}
+
+// Anula un plan asignado por error: no se factura nada y desaparece de
+// Contabilidad. Queda en el historial como anulado.
+export async function voidPurchase(token: string, purchaseId: string): Promise<Purchase> {
+  const res = await apiFetch(`${API_URL}/purchases/${purchaseId}/void`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}` },
   });
   return handleResponse(res);
 }

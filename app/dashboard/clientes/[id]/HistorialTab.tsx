@@ -63,6 +63,15 @@ function buildHistoryEvents(purchases: any[], clientName: string) {
           author: ender,
           authorColor: actorColor(p.endedBy),
         });
+      } else if (p.endReason === 'voided') {
+        events.push({
+          id: `${p._id}-ended`,
+          date: new Date(p.endedAt),
+          itemLabel: p.itemLabel,
+          action: 'anulado (asignado por error, sin cobrar)',
+          author: ender,
+          authorColor: actorColor(p.endedBy),
+        });
       } else if (p.scheduledEndDate) {
         // Plan puntual que llego solo a su fecha de fin, sin que nadie lo parara a mano.
         events.push({
