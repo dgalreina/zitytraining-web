@@ -8,6 +8,12 @@ import { COLOR_PALETTE } from '@/lib/colors';
 import MonthBreakdownModal from './MonthBreakdownModal';
 
 const DAY_WIDTH = 40;
+// Mismo gris que "border-gray-200" de las celdas de dia. La fila de las
+// barras de plan es una unica celda que abarca todo el mes, asi que sus
+// separadores verticales no pueden ser bordes: se pintan con un degradado
+// repetido cada columna, para que la rejilla no se corte en cada cliente.
+const GRID_LINE = '#e5e7eb';
+const DAY_GRID_BACKGROUND = `repeating-linear-gradient(to right, transparent 0 ${DAY_WIDTH - 1}px, ${GRID_LINE} ${DAY_WIDTH - 1}px ${DAY_WIDTH}px)`;
 const PAGE_SIZE = 30;
 // Hueco que hay que dejarle a los botones de página bajo la tabla.
 const PAGER_HEIGHT = 56;
@@ -239,7 +245,7 @@ export default function ContabilidadPage() {
                   return (
                     <th
                       key={day}
-                      className="sticky top-0 z-20 h-[52px] border-b border-gray-200 p-0 font-normal"
+                      className="sticky top-0 z-20 h-[52px] border-b border-r border-gray-200 p-0 font-normal"
                       style={{ width: DAY_WIDTH, background: isWeekend ? '#f9f9f7' : '#ffffff' }}
                     >
                       <span className="block text-[9px] font-bold uppercase text-gray-300">{WEEKDAY_LETTERS[wd]}</span>
@@ -281,7 +287,10 @@ export default function ContabilidadPage() {
                         hueco o un solape en los datos no puede estirar
                         la fila mas alla del mes. */}
                     <td colSpan={data.daysInMonth} className="h-[22px] p-0 align-top">
-                      <div className="relative h-[22px] overflow-hidden" style={{ width: data.daysInMonth * DAY_WIDTH }}>
+                      <div
+                        className="relative h-[22px] overflow-hidden"
+                        style={{ width: data.daysInMonth * DAY_WIDTH, backgroundImage: DAY_GRID_BACKGROUND }}
+                      >
                         {client.segments.map((seg, i) => {
                           const leftPx = (seg.fromDay - 1) * DAY_WIDTH;
                           const widthPx = (seg.toDay - seg.fromDay + 1) * DAY_WIDTH;
