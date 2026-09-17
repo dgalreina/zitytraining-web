@@ -10,11 +10,13 @@ export default function Switch({
   onChange,
   activeColor = '#6aa842',
   size = 'md',
+  disabled = false,
 }: {
   checked: boolean;
   onChange: () => void;
   activeColor?: string;
   size?: 'sm' | 'md';
+  disabled?: boolean;
 }) {
   const s = SIZES[size];
   return (
@@ -23,7 +25,8 @@ export default function Switch({
       role="switch"
       aria-checked={checked}
       onClick={onChange}
-      className={`relative ${s.track} shrink-0 rounded-full transition-colors duration-300`}
+      disabled={disabled}
+      className={`relative ${s.track} shrink-0 rounded-full transition-colors duration-300 disabled:cursor-not-allowed disabled:opacity-40`}
       style={{ backgroundColor: checked ? activeColor : '#d1d5db' }}
     >
       <span

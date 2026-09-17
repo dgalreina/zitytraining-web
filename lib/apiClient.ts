@@ -77,12 +77,26 @@ async function tryRefreshToken(): Promise<string | null> {
   return refreshInFlight;
 }
 
+export const OFFLINE_MESSAGE = 'No hay conexión. Comprueba tu internet y vuelve a intentarlo.';
+
+// Cuando no hay red, fetch() no devuelve respuesta: lanza un TypeError
+// con un texto del navegador ("Failed to fetch" en Chrome, "Load failed"
+// en Safari) que acababa saliendo tal cual en pantalla. Todas las
+// llamadas a la API pasan por aquí para que ese caso se lea en español.
+export async function fetchOrOffline(url: string, options?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(url, options);
+  } catch {
+    throw new Error(OFFLINE_MESSAGE);
+  }
+}
+
 // Todas las llamadas autenticadas pasan por aquí en vez de por fetch()
 // directo: si el access token ya caducó (401), intenta renovarlo solo
 // con el refresh token guardado y repite la petición una vez. Si el
 // refresh también falla, handleResponse se encarga de cerrar la sesión.
 export async function apiFetch(url: string, options: RequestInit = {}): Promise<Response> {
-  const res = await fetch(url, options);
+  const res = await fetchOrOffline(url, options);
   if (res.status !== 401) return res;
 
   debugLog('401_recibido', { url });
@@ -90,7 +104,7 @@ export async function apiFetch(url: string, options: RequestInit = {}): Promise<
   if (!newToken) return res;
 
   const headers = { ...(options.headers as Record<string, string> | undefined), Authorization: `Bearer ${newToken}` };
-  return fetch(url, { ...options, headers });
+  return fetchOrOffline(url, { ...options, headers });
 }
 
 export async function handleResponse(res: Response) {

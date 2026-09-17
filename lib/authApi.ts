@@ -1,7 +1,7 @@
-import { API_URL } from './apiClient';
+import { API_URL, fetchOrOffline } from './apiClient';
 
 export async function login(email: string, password: string) {
-  const res = await fetch(`${API_URL}/auth/login`, {
+  const res = await fetchOrOffline(`${API_URL}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password }),
@@ -17,7 +17,7 @@ export async function login(email: string, password: string) {
 // Responde lo mismo exista o no la dirección, a propósito: así nadie
 // puede usar esto para descubrir qué correos están registrados.
 export async function forgotPassword(email: string) {
-  const res = await fetch(`${API_URL}/auth/forgot-password`, {
+  const res = await fetchOrOffline(`${API_URL}/auth/forgot-password`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email }),
@@ -34,7 +34,7 @@ export async function forgotPassword(email: string) {
 }
 
 export async function resetPassword(token: string, newPassword: string) {
-  const res = await fetch(`${API_URL}/auth/reset-password`, {
+  const res = await fetchOrOffline(`${API_URL}/auth/reset-password`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ token, newPassword }),

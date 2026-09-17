@@ -6,7 +6,7 @@ import { Pencil, Trash2 } from 'lucide-react';
 import DateOfBirthPicker from '@/components/DateOfBirthPicker';
 import Switch from '@/components/Switch';
 import { updateUser, deleteUser } from '@/lib/usersApi';
-import { inputClassDisableable as inputClass, labelClass } from '@/lib/formStyles';
+import { inputClassDisableable as inputClass, labelClass, toggleBoxClass } from '@/lib/formStyles';
 
 export default function InfoTab({
   id,
@@ -177,10 +177,10 @@ export default function InfoTab({
             />
           </div>
 
-          {isAdmin && editing && (
-            <div className="flex items-center justify-between rounded-lg border border-gray-200 px-4 py-3">
+          {isAdmin && (
+            <div className={toggleBoxClass(editing)}>
               <div>
-                <p className="text-sm font-semibold text-[#2b2b2a]">
+                <p className={`text-sm font-semibold ${editing ? 'text-[#2b2b2a]' : 'text-gray-500'}`}>
                   {draft.status === 'active' ? 'Cliente activo' : 'Cliente inhabilitado'}
                 </p>
                 <p className="text-xs text-[#868585]">
@@ -189,7 +189,11 @@ export default function InfoTab({
                     : 'El cliente está inhabilitado.'}
                 </p>
               </div>
-              <Switch checked={draft.status === 'active'} onChange={handleToggleStatus} />
+              <Switch
+                checked={draft.status === 'active'}
+                onChange={handleToggleStatus}
+                disabled={!editing}
+              />
             </div>
           )}
 

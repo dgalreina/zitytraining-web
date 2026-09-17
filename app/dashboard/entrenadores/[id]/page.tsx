@@ -9,7 +9,7 @@ import Switch from '@/components/Switch';
 import { statusBadge } from '@/components/StatusBadge';
 import { getUser, updateUser, deleteUser } from '@/lib/usersApi';
 import { DEFAULT_TRAINER_COLOR, getAvatarGradient, COLOR_PALETTE } from '@/lib/colors';
-import { inputClassDisableable as inputClass, labelClass } from '@/lib/formStyles';
+import { inputClassDisableable as inputClass, labelClass, toggleBoxClass } from '@/lib/formStyles';
 
 function roleBadge(isAdmin: boolean) {
   return (
@@ -272,7 +272,7 @@ export default function DetalleEntrenadorPage() {
                   title="Sin asignar (gris)"
                   disabled={!editing}
                   onClick={() => setForm({ ...form, color: null })}
-                  className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-dashed border-gray-300 transition disabled:cursor-not-allowed"
+                  className="flex h-9 w-9 items-center justify-center rounded-full border-2 border-dashed border-gray-300 transition disabled:cursor-not-allowed disabled:opacity-40"
                   style={{ backgroundColor: DEFAULT_TRAINER_COLOR }}
                 >
                   <Check size={16} className="text-white" />
@@ -285,7 +285,7 @@ export default function DetalleEntrenadorPage() {
                   title={c.name}
                   disabled={!editing}
                   onClick={() => setForm({ ...form, color: c.value })}
-                  className="flex h-9 w-9 items-center justify-center rounded-full transition disabled:cursor-not-allowed"
+                  className="flex h-9 w-9 items-center justify-center rounded-full transition disabled:cursor-not-allowed disabled:opacity-40"
                   style={{ backgroundColor: c.value }}
                 >
                   {form.color === c.value && <Check size={16} className="text-white" />}
@@ -294,35 +294,37 @@ export default function DetalleEntrenadorPage() {
             </div>
           </div>
 
-          {editing && (
-            <>
-              <div className="flex items-center justify-between rounded-lg border border-gray-200 px-4 py-3">
-                <div>
-                  <p className="text-sm font-semibold text-[#2b2b2a]">
-                    {form.status === 'active' ? 'Cuenta activa' : 'Cuenta inactiva'}
-                  </p>
-                  <p className="text-xs text-[#868585]">
-                    {form.status === 'active'
-                      ? 'El entrenador puede acceder con normalidad.'
-                      : 'El entrenador está pausado y no puede acceder.'}
-                  </p>
-                </div>
-                <Switch checked={form.status === 'active'} onChange={handleToggleStatus} />
-              </div>
+          <div className={toggleBoxClass(editing)}>
+            <div>
+              <p className={`text-sm font-semibold ${editing ? 'text-[#2b2b2a]' : 'text-gray-500'}`}>
+                {form.status === 'active' ? 'Cuenta activa' : 'Cuenta inactiva'}
+              </p>
+              <p className="text-xs text-[#868585]">
+                {form.status === 'active'
+                  ? 'El entrenador puede acceder con normalidad.'
+                  : 'El entrenador está pausado y no puede acceder.'}
+              </p>
+            </div>
+            <Switch
+              checked={form.status === 'active'}
+              onChange={handleToggleStatus}
+              disabled={!editing}
+            />
+          </div>
 
-              <div className="flex items-center justify-between rounded-lg border border-gray-200 px-4 py-3">
-                <div>
-                  <p className="text-sm font-semibold text-[#2b2b2a]">Permisos de administrador</p>
-                  <p className="text-xs text-[#868585]">
-                    {isAdmin
-                      ? 'Tiene acceso completo para gestionar la plataforma.'
-                      : 'Solo tiene acceso a sus funciones de entrenador.'}
-                  </p>
-                </div>
-                <Switch checked={isAdmin} onChange={requestAdminToggle} />
-              </div>
-            </>
-          )}
+          <div className={toggleBoxClass(editing)}>
+            <div>
+              <p className={`text-sm font-semibold ${editing ? 'text-[#2b2b2a]' : 'text-gray-500'}`}>
+                Permisos de administrador
+              </p>
+              <p className="text-xs text-[#868585]">
+                {isAdmin
+                  ? 'Tiene acceso completo para gestionar la plataforma.'
+                  : 'Solo tiene acceso a sus funciones de entrenador.'}
+              </p>
+            </div>
+            <Switch checked={isAdmin} onChange={requestAdminToggle} disabled={!editing} />
+          </div>
 
           {error && <p className="text-sm font-medium text-red-600">{error}</p>}
 
