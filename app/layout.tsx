@@ -14,8 +14,19 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  // Necesario para que la imagen de openGraph salga con URL absoluta: sin
+  // ella WhatsApp/iMessage no la encuentran y enseñan un icono genérico.
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://zitytraining-web-6tkjf.ondigitalocean.app"),
   title: "Zitytraining",
   description: "Entrenamiento personal y pilates",
+  openGraph: {
+    title: "Zitytraining",
+    description: "Entrenamiento personal y pilates",
+    siteName: "Zitytraining",
+    locale: "es_ES",
+    type: "website",
+    images: [{ url: "/og-image.png", width: 512, height: 512, alt: "Zitytraining" }],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
