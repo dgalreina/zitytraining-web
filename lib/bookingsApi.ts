@@ -18,6 +18,7 @@ export interface Booking {
   endTime: string;
   status: string;
   isPrivate: boolean;
+  isInterview?: boolean;
   notes?: string;
   workout?: Workout | null;
   series?: string;
@@ -31,6 +32,7 @@ export interface CreateBookingPayload {
   endTime: string;
   notes?: string;
   isPrivate: boolean;
+  isInterview?: boolean;
   workoutId?: string | null;
   recurrence?: string;
 }
@@ -42,6 +44,7 @@ export interface UpdateBookingPayload {
   endTime?: string;
   notes?: string;
   isPrivate?: boolean;
+  isInterview?: boolean;
   workoutId?: string | null;
   holidaySkip?: boolean;
   status?: string;

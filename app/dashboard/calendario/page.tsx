@@ -14,9 +14,9 @@ import WhatsAppRemindersModal, { construirRecordatorios } from './WhatsAppRemind
 import { getUsers, getMe, getActiveClients } from '@/lib/usersApi';
 import { getBookings, getBookingsByTrainers, updateBooking } from '@/lib/bookingsApi';
 import { getHolidays } from '@/lib/holidaysApi';
+import { INTERVIEW_COLOR, PRIVATE_COLOR } from '@/lib/colors';
 
 const FALLBACK_COLOR = '#868585';
-const PRIVATE_COLOR = '#fa8072';
 const ALL_VALUE = 'all';
 
 // Checklist de entrenadores: de ninguno a todos, no una sola opción
@@ -267,7 +267,12 @@ export default function CalendarioPage() {
     let candidates: string[] = [];
     let color = FALLBACK_COLOR;
 
-    if (b.isPrivate) {
+    if (b.isInterview) {
+      // Entrevista con alguien que aún no es cliente: como una privada,
+      // pero en beige para distinguirla.
+      candidates = ['Entrevista'];
+      color = INTERVIEW_COLOR;
+    } else if (b.isPrivate) {
       // Sesión personal del entrenador: no lleva clientes, siempre en
       // salmón (independiente del color que tenga asignado el entrenador),
       // para que se distinga a simple vista de una sesión normal.

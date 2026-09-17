@@ -5,14 +5,23 @@ import DatePicker, { registerLocale } from 'react-datepicker';
 import { es } from 'date-fns/locale';
 import 'react-datepicker/dist/react-datepicker.css';
 import '@/styles/datepicker-theme.css';
-import { X, Trash2, ChevronLeft, Ban, RotateCcw, Star, Repeat, CalendarOff } from 'lucide-react';
+import { X, Trash2, ChevronLeft, ChevronDown, Ban, RotateCcw, Star, Repeat, CalendarOff } from 'lucide-react';
 import FilterDropdown from '@/components/FilterDropdown';
 import Switch from '@/components/Switch';
 import { createBooking, updateBooking, deleteBooking, deleteBookingSeries } from '@/lib/bookingsApi';
 import { getWorkouts } from '@/lib/workoutsApi';
 import { dayKey } from '@/components/MiniCalendar';
+import { INTERVIEW_COLOR, PRIVATE_COLOR } from '@/lib/colors';
 import WorkoutFormModal from '../entrenamientos/WorkoutFormModal';
 import WorkoutSummary from '../entrenamientos/WorkoutSummary';
+
+type BookingKind = 'normal' | 'private' | 'interview';
+
+const KIND_OPTIONS: { value: BookingKind; label: string; color: string }[] = [
+  { value: 'normal', label: 'Normal', color: '#6aa842' },
+  { value: 'private', label: 'Privada', color: PRIVATE_COLOR },
+  { value: 'interview', label: 'Entrevista', color: INTERVIEW_COLOR },
+];
 
 registerLocale('es', es);
 
@@ -65,7 +74,12 @@ export default function BookingModal({
   const [error, setError] = useState('');
   const [view, setView] = useState<ModalView>('form');
   const [status, setStatus] = useState<'active' | 'cancelled'>('active');
-  const [isPrivate, setIsPrivate] = useState(false);
+  // Normal (con clientes), privada (hueco personal del entrenador) o
+  // entrevista (con alguien que aún no es cliente). Las dos últimas no
+  // llevan clientes y solo las ve quien las crea.
+  const [kind, setKind] = useState<BookingKind>('normal');
+  const isPrivate = kind !== 'normal';
+  const kindColor = KIND_OPTIONS.find((o) => o.value === kind)!.color;
   // Solo se elige al crear; una sesión ya creada no se puede convertir en
   // serie ni al revés desde aquí.
   const [recurrence, setRecurrence] = useState<'once' | 'weekly'>('once');
@@ -107,7 +121,7 @@ export default function BookingModal({
       setSelectedClientIds(raw.clients.map((c: any) => c._id));
       setNotes(raw.notes || '');
       setStatus(raw.status === 'cancelled' ? 'cancelled' : 'active');
-      setIsPrivate(!!raw.isPrivate);
+      setKind(raw.isInterview ? 'interview' : raw.isPrivate ? 'private' : 'normal');
       setBookingWorkout(raw.workout || null);
       setSeriesId(raw.series ? String(raw.series) : null);
       setHolidaySkip(!!raw.holidaySkip);
@@ -129,7 +143,7 @@ export default function BookingModal({
       setDurationOption('60');
       setCustomMinutes('60');
       setStatus('active');
-      setIsPrivate(false);
+      setKind('normal');
       setSeriesId(null);
       setHolidaySkip(false);
     }
@@ -216,6 +230,7 @@ export default function BookingModal({
           endTime: end.toISOString(),
           notes: notes || undefined,
           isPrivate,
+          isInterview: kind === 'interview',
           workoutId: bookingWorkout?._id,
           recurrence,
         });
@@ -228,6 +243,7 @@ export default function BookingModal({
           endTime: end.toISOString(),
           notes: notes || undefined,
           isPrivate,
+          isInterview: kind === 'interview',
           workoutId: bookingWorkout?._id || null,
         });
       }
@@ -332,23 +348,35 @@ export default function BookingModal({
           {view === 'form' ? (
             <div className="flex items-center gap-2">
               <h3 className="font-[family-name:var(--font-work-sans)] text-base font-bold text-[#2b2b2a]">
-                {modal.mode === 'create'
-                  ? isPrivate
-                    ? 'Sesión privada'
-                    : 'Nueva sesión'
-                  : isPrivate
-                    ? 'Editar sesión privada'
-                    : 'Editar sesión'}
+                {modal.mode === 'create' ? 'Nueva sesión' : 'Editar sesión'}
               </h3>
               {status === 'cancelled' && (
                 <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700">
                   Cancelada
                 </span>
               )}
-              <label className="ml-1 flex cursor-pointer items-center gap-1.5">
-                <Switch checked={isPrivate} onChange={() => setIsPrivate((p) => !p)} activeColor="#fa8072" size="sm" />
-                <span className="text-[11px] font-semibold text-[#868585]">Privada</span>
-              </label>
+              {/* Desplegable nativo del tamaño del antiguo switch, teñido
+                  del color del tipo: el tipo se ve de un vistazo sin robar
+                  una línea al formulario. Una cancelada es siempre normal
+                  (las privadas se borran, no se cancelan): ahí no se enseña. */}
+              {status !== 'cancelled' && (
+                <span className="relative ml-1 inline-flex items-center">
+                  <select
+                    value={kind}
+                    onChange={(e) => setKind(e.target.value as BookingKind)}
+                    aria-label="Tipo de sesión"
+                    className="h-5 cursor-pointer appearance-none rounded-full border py-0 pl-2 pr-5 text-[11px] font-semibold focus:outline-none"
+                    style={{ color: kindColor, borderColor: kindColor, backgroundColor: `${kindColor}1a` }}
+                  >
+                    {KIND_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown size={12} className="pointer-events-none absolute right-1.5" style={{ color: kindColor }} />
+                </span>
+              )}
             </div>
           ) : (
             <button

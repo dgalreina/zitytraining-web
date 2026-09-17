@@ -88,7 +88,11 @@ export default function DashboardHome() {
                 >
                   <div className="mb-1 flex items-center gap-2">
                     <span className="text-sm font-semibold text-[#2b2b2a]">{timeStr}</span>
-                    {b.isPrivate ? (
+                    {b.isInterview ? (
+                      <span className="rounded-full bg-[#c9ad84]/25 px-2.5 py-1 text-xs font-semibold text-[#8a6d3b]">
+                        Entrevista
+                      </span>
+                    ) : b.isPrivate ? (
                       <span className="rounded-full bg-[#fa8072]/15 px-2.5 py-1 text-xs font-semibold text-[#c65a4e]">
                         Privada
                       </span>
