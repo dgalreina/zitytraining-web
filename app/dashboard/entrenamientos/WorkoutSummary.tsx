@@ -8,6 +8,14 @@ import { computeSlotLabels, groupSlotsForDisplay } from './workoutSlotLabels';
 // nombre + etiqueta (1, 1a, 1b...), repeticiones, RP y notas, agrupando
 // las superseries con el filo verde. La usan la lista de Entrenamientos,
 // la ficha de sesión del calendario y el Dashboard.
+// "12 × 20 kg", o solo la parte que haya.
+function formatSet(set: { reps?: number; weight?: number }): string {
+  const parts: string[] = [];
+  if (set.reps != null) parts.push(String(set.reps));
+  if (set.weight != null) parts.push(`${set.weight} kg`);
+  return parts.join(' × ');
+}
+
 export default function WorkoutSummary({ slots }: { slots: any[] }) {
   const labels = computeSlotLabels(slots);
   const blocks = groupSlotsForDisplay(slots);
@@ -36,14 +44,14 @@ export default function WorkoutSummary({ slots }: { slots: any[] }) {
                     </span>
                   )}
                 </div>
-                {slot.reps?.length > 0 && (
+                {slot.sets?.length > 0 && (
                   <div className="flex flex-wrap gap-1 pl-13">
-                    {slot.reps.map((rep: number, j: number) => (
+                    {slot.sets.map((set: any, j: number) => (
                       <span
                         key={j}
                         className="flex h-6 min-w-6 items-center justify-center rounded-md bg-[#a2c037]/10 px-1.5 text-xs font-semibold text-[#4b7a1f]"
                       >
-                        {rep}
+                        {formatSet(set)}
                       </span>
                     ))}
                   </div>

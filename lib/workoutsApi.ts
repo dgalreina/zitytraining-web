@@ -6,9 +6,15 @@ export interface WorkoutExerciseRef {
   category?: string;
 }
 
+// Una serie: repeticiones y peso (kg), cada uno opcional por separado.
+export interface WorkoutSet {
+  reps?: number;
+  weight?: number;
+}
+
 export interface WorkoutSlot {
   exercise: WorkoutExerciseRef | null;
-  reps: number[];
+  sets: WorkoutSet[];
   linkedToNext?: boolean;
   restPause?: boolean;
   notes?: string;
@@ -22,7 +28,7 @@ export interface Workout {
 
 export interface WorkoutSlotInput {
   exerciseId: string;
-  reps?: number[];
+  sets?: WorkoutSet[];
   linkedToNext?: boolean;
   restPause?: boolean;
   notes?: string;

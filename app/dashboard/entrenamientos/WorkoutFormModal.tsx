@@ -23,7 +23,10 @@ function workoutToSlots(workout: any): Slot[] {
     key: Math.random().toString(36).slice(2),
     exerciseId: s.exercise?._id || null,
     exerciseName: s.exercise?.name || '',
-    reps: (s.reps || []).map((r: number) => String(r)),
+    sets: (s.sets || []).map((set: any) => ({
+      reps: set.reps != null ? String(set.reps) : '',
+      weight: set.weight != null ? String(set.weight) : '',
+    })),
     linkedToNext: !!s.linkedToNext,
     restPause: !!s.restPause,
     notes: s.notes || '',
@@ -132,7 +135,13 @@ export default function WorkoutFormModal({
         name: name.trim(),
         slots: filled.map((s) => ({
           exerciseId: s.exerciseId!,
-          reps: s.reps.map(Number).filter((v) => v > 0),
+          // Una serie sin reps ni peso es un hueco sin rellenar, no una serie.
+          sets: s.sets
+            .map((set) => ({
+              reps: Number(set.reps) > 0 ? Number(set.reps) : undefined,
+              weight: Number(set.weight) > 0 ? Number(set.weight) : undefined,
+            }))
+            .filter((set) => set.reps !== undefined || set.weight !== undefined),
           linkedToNext: s.linkedToNext || undefined,
           restPause: s.restPause || undefined,
           notes: s.notes.trim() || undefined,

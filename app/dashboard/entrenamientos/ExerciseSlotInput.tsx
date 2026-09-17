@@ -6,11 +6,15 @@ import { searchExercises, createExercise } from '@/lib/exercisesApi';
 
 const DEFAULT_SETS = 4;
 
+// Los campos se guardan como texto mientras se editan (ver customMinutes
+// en BookingModal: un number controlado no deja borrar el campo).
+export type SetInput = { reps: string; weight: string };
+
 export type Slot = {
   key: string;
   exerciseId: string | null;
   exerciseName: string;
-  reps: string[];
+  sets: SetInput[];
   linkedToNext: boolean;
   restPause: boolean;
   notes: string;
@@ -21,12 +25,15 @@ export function emptySlot(): Slot {
     key: Math.random().toString(36).slice(2),
     exerciseId: null,
     exerciseName: '',
-    reps: Array.from({ length: DEFAULT_SETS }, () => ''),
+    sets: Array.from({ length: DEFAULT_SETS }, () => ({ reps: '', weight: '' })),
     linkedToNext: false,
     restPause: false,
     notes: '',
   };
 }
+
+const setInputClass =
+  'h-6 w-11 rounded-md border border-gray-200 px-0.5 text-center text-xs text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none disabled:bg-gray-50 disabled:text-gray-300';
 
 function toggleButtonClass(active: boolean) {
   return `flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] font-semibold transition ${
@@ -133,14 +140,14 @@ export default function ExerciseSlotInput({
     setSuggestions([]);
   }
 
-  function updateRep(i: number, value: string) {
-    const next = [...slot.reps];
-    next[i] = value;
-    onChange({ reps: next });
+  function updateSet(i: number, patch: Partial<SetInput>) {
+    const next = [...slot.sets];
+    next[i] = { ...next[i], ...patch };
+    onChange({ sets: next });
   }
 
   function addSet() {
-    onChange({ reps: [...slot.reps, ''] });
+    onChange({ sets: [...slot.sets, { reps: '', weight: '' }] });
   }
 
   // Interruptor de verdad: si ya esta enlazado con el siguiente, apagarlo
@@ -252,26 +259,43 @@ export default function ExerciseSlotInput({
         )}
       </div>
 
-      <div className="mt-2 flex flex-wrap items-center gap-1.5 pl-8">
-        <span className="text-[10px] font-semibold uppercase text-gray-400">Reps</span>
-        {slot.reps.map((rep, i) => (
-          <input
-            key={i}
-            type="number"
-            min={1}
-            value={rep}
-            onChange={(e) => updateRep(i, e.target.value)}
-            disabled={!slot.exerciseId}
-            placeholder={`S${i + 1}`}
-            className="w-12 rounded-md border border-gray-200 px-1 py-1 text-center text-xs text-[#2b2b2a] focus:border-[#6aa842] focus:outline-none disabled:bg-gray-50 disabled:text-gray-300"
-          />
+      {/* Una columna por serie (reps arriba, kg debajo) y el "+" al final,
+          en un scroll horizontal para que muchas series no partan la fila
+          y desalineen reps y kg. */}
+      <div className="mt-2 flex items-center gap-1.5 overflow-x-auto pl-8">
+        <div className="flex shrink-0 flex-col gap-1 text-[10px] font-semibold uppercase text-gray-400">
+          <span className="flex h-6 items-center">Reps</span>
+          <span className="flex h-6 items-center">Kg</span>
+        </div>
+        {slot.sets.map((set, i) => (
+          <div key={i} className="flex shrink-0 flex-col gap-1">
+            <input
+              type="number"
+              min={1}
+              value={set.reps}
+              onChange={(e) => updateSet(i, { reps: e.target.value })}
+              disabled={!slot.exerciseId}
+              placeholder={`S${i + 1}`}
+              className={setInputClass}
+            />
+            <input
+              type="number"
+              min={0}
+              step="0.5"
+              value={set.weight}
+              onChange={(e) => updateSet(i, { weight: e.target.value })}
+              disabled={!slot.exerciseId}
+              placeholder="kg"
+              className={setInputClass}
+            />
+          </div>
         ))}
         <button
           type="button"
           onClick={addSet}
           disabled={!slot.exerciseId}
           title="Añadir serie"
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md border border-dashed border-gray-300 text-gray-400 hover:border-[#6aa842] hover:text-[#4b7a1f] disabled:opacity-40"
+          className="flex h-6 w-6 shrink-0 items-center justify-center self-start rounded-md border border-dashed border-gray-300 text-gray-400 hover:border-[#6aa842] hover:text-[#4b7a1f] disabled:opacity-40"
         >
           <Plus size={12} />
         </button>
