@@ -135,12 +135,9 @@ export default function PlanTab({
     // Al cambiar de plan a mitad de mes, el plan que se sustituye tiene
     // el mismo problema de facturación que al pararlo: se pregunta antes
     // de mandar nada, y esta función se vuelve a llamar con la elección.
-    if (assignMode === 'change' && !finalMonthBilling) {
-      const currentPlan = activeItems.find((p) => p.status === 'active');
-      if (currentPlan && needsFinalMonthChoice(currentPlan)) {
-        setChangeChoiceOpen(true);
-        return;
-      }
+    if (assignMode === 'change' && !finalMonthBilling && planNeedingChoiceOnChange) {
+      setChangeChoiceOpen(true);
+      return;
     }
 
     setAssignSaving(true);
@@ -295,6 +292,20 @@ No se cobrará nada por él en ningún mes y desaparecerá de Contabilidad. Qued
   const endedPlanItems =
     purchases?.filter((p) => p.type === 'plan' && p.status === 'cancelled') || [];
   const hasActivePlan = activeItems.some((p) => p.status === 'active');
+
+  // Al cambiar de plan se cierra el activo y, si este era un puntual,
+  // también el mensual que tenía pausado. El que puede quedar con un mes
+  // cojo es el mensual, así que la pregunta de facturación es sobre él,
+  // esté activo o pausado debajo de un puntual.
+  const currentPlan = activeItems.find((p) => p.status === 'active');
+  const planNeedingChoiceOnChange = (() => {
+    if (!currentPlan) return null;
+    if (needsFinalMonthChoice(currentPlan)) return currentPlan;
+    const paused = currentPlan.pausedPlan
+      ? activeItems.find((p) => p._id === currentPlan.pausedPlan)
+      : null;
+    return paused && needsFinalMonthChoice(paused) ? paused : null;
+  })();
 
   return (
     <>
@@ -453,6 +464,20 @@ No se cobrará nada por él en ningún mes y desaparecerá de Contabilidad. Qued
                       {formatDateTime(item.endedAt)}
                     </p>
                   )}
+                  {/* Un error se puede descubrir tarde (al repasar
+                      Contabilidad), así que se puede anular también un
+                      plan ya parado: deja de cobrarse en todos sus meses. */}
+                  {isAdmin && item.assignedInPerson && (
+                    <button
+                      onClick={() => handleVoidPlan(item)}
+                      disabled={voidingId === item._id}
+                      title="Para un plan asignado por error: no se cobra nada"
+                      className="mt-3 flex items-center gap-1.5 rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-semibold text-[#868585] hover:bg-gray-200 hover:text-[#2b2b2a] disabled:opacity-60"
+                    >
+                      <Undo2 size={13} />
+                      {voidingId === item._id ? 'Anulando...' : 'Anular'}
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -484,7 +509,7 @@ No se cobrará nada por él en ningún mes y desaparecerá de Contabilidad. Qued
 
       {changeChoiceOpen && selectedPlan && (
         <FinalMonthBillingModal
-          itemLabel={activeItems.find((p) => p.status === 'active')?.itemLabel || ''}
+          itemLabel={planNeedingChoiceOnChange?.itemLabel || ''}
           showNoChargeOption
           onChoose={(choice) => {
             setChangeChoiceOpen(false);
