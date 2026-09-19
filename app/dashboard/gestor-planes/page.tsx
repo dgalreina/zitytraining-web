@@ -164,7 +164,7 @@ export default function GestorPlanesPage() {
               {plansByCategory(category.id).length === 0 ? (
                 <p className="text-sm text-gray-400">
                   {category.id === 'sesiones_libres'
-                    ? 'Crea antes los planes de Entrenamiento personal a 2 y 3 días/semana (40\' y 1h): el precio de Sesiones libres se calcula a partir de esos.'
+                    ? 'Crea antes planes de personal, dúo o trío a 2 o 3 días/semana (40\' y 1h): el precio de cada variante de Sesiones libres se calcula a partir del suyo.'
                     : 'Todavía no hay planes en esta categoría.'}
                 </p>
               ) : (
