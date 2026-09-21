@@ -30,6 +30,15 @@ export const TRAINING_CATEGORIES: { id: TrainingCategory; title: string; descrip
   },
 ];
 
+// Subgrupos dentro de "Sesiones libres", para no enseñarlas como una
+// única lista larga: cada variante lleva su anchorCategory (de qué plan
+// normal sale el precio), y esto le pone un título corto al grupo.
+export const FREE_SESSIONS_SUBGROUPS: { id: TrainingCategory; title: string }[] = [
+  { id: 'personal', title: 'Individual' },
+  { id: 'duo', title: 'Dúo' },
+  { id: 'trio', title: 'Trío' },
+];
+
 export const REMOTE_SERVICES: RemoteService[] = [
   { id: 'rutina-dieta', label: 'Rutina + dieta', price: 110 },
   { id: 'trimestre', label: 'Trimestre con seguimiento', price: 240 },

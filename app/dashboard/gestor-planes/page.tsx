@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Plus, Pencil, Trash2, X, Check, Tags } from 'lucide-react';
 import { getPlans, createPlan, updatePlan, deletePlan } from '@/lib/plansApi';
-import { TRAINING_CATEGORIES, TrainingCategory } from '@/lib/pricing';
+import { TRAINING_CATEGORIES, TrainingCategory, FREE_SESSIONS_SUBGROUPS } from '@/lib/pricing';
 import { inputClass, labelClass } from '@/lib/formStyles';
 
 const emptyForm = {
@@ -167,6 +167,40 @@ export default function GestorPlanesPage() {
                     ? 'Crea antes planes de personal, dúo o trío a 2 o 3 días/semana (40\' y 1h): el precio de cada variante de Sesiones libres se calcula a partir del suyo.'
                     : 'Todavía no hay planes en esta categoría.'}
                 </p>
+              ) : category.id === 'sesiones_libres' ? (
+                // Hasta 12 variantes a la vez (personal/dúo/trío × 2 días
+                // de referencia × 2 duraciones): sin subgrupos se ve como
+                // una lista enorme sin ningún orden aparente.
+                <div className="flex flex-col gap-4">
+                  {FREE_SESSIONS_SUBGROUPS.map((group) => {
+                    const groupPlans = plansByCategory(category.id).filter(
+                      (p) => p.anchorCategory === group.id,
+                    );
+                    if (groupPlans.length === 0) return null;
+                    return (
+                      <div key={group.id}>
+                        <h4 className="mb-2 text-xs font-bold uppercase tracking-wide text-[#868585]">
+                          {group.title}
+                        </h4>
+                        <div className="flex flex-col gap-3">
+                          {groupPlans.map((plan) => (
+                            <div
+                              key={plan._id}
+                              className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-100 p-4"
+                            >
+                              <div>
+                                <span className="text-sm font-semibold text-[#2b2b2a]">{plan.label}</span>
+                                <p className="text-xs text-[#868585]">
+                                  {plan.sessionPrice}€/sesión · hasta {plan.sessionCount} al mes
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               ) : (
                 <div className="flex flex-col gap-3">
                   {plansByCategory(category.id).map((plan) => (
@@ -177,36 +211,26 @@ export default function GestorPlanesPage() {
                       <div>
                         <span className="text-sm font-semibold text-[#2b2b2a]">{plan.label}</span>
                         <p className="text-xs text-[#868585]">
-                          {plan.category === 'sesiones_libres' ? (
-                            <>
-                              {plan.sessionPrice}€/sesión · hasta {plan.sessionCount} al mes
-                            </>
-                          ) : (
-                            <>
-                              {plan.monthlyPrice}€/mes · {plan.sessionPrice}€/sesión · bono de{' '}
-                              {plan.sessionCount} sesiones
-                            </>
-                          )}
+                          {plan.monthlyPrice}€/mes · {plan.sessionPrice}€/sesión · bono de{' '}
+                          {plan.sessionCount} sesiones
                         </p>
                       </div>
-                      {plan.category !== 'sesiones_libres' && (
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => openEdit(plan)}
-                            title="Editar"
-                            className="rounded-lg bg-gray-100 p-1.5 text-[#2b2b2a] hover:bg-gray-200"
-                          >
-                            <Pencil size={14} />
-                          </button>
-                          <button
-                            onClick={() => setConfirmDeleteId(plan._id)}
-                            title="Eliminar"
-                            className="rounded-lg bg-red-50 p-1.5 text-red-600 hover:bg-red-100"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      )}
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => openEdit(plan)}
+                          title="Editar"
+                          className="rounded-lg bg-gray-100 p-1.5 text-[#2b2b2a] hover:bg-gray-200"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          onClick={() => setConfirmDeleteId(plan._id)}
+                          title="Eliminar"
+                          className="rounded-lg bg-red-50 p-1.5 text-red-600 hover:bg-red-100"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>

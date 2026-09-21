@@ -10,6 +10,9 @@ export interface Plan {
   monthlyPrice: number;
   sessionCount: number;
   sessionPrice: number;
+  // Solo en "Sesiones libres": de qué categoría normal sale el precio
+  // (personal/dúo/trío). Sirve para agrupar el selector, nada más.
+  anchorCategory?: TrainingCategory;
 }
 
 export interface PlanPayload {

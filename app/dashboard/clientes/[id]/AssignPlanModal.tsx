@@ -1,7 +1,7 @@
 'use client';
 
 import { Check, X, Clock } from 'lucide-react';
-import { TRAINING_CATEGORIES } from '@/lib/pricing';
+import { TRAINING_CATEGORIES, FREE_SESSIONS_SUBGROUPS } from '@/lib/pricing';
 import MonthYearPicker from '@/components/MonthYearPicker';
 
 // Primer mes posterior a `monthStr` ('yyyy-MM'): el puntual retoma el
@@ -75,6 +75,44 @@ export default function AssignPlanModal({
             {TRAINING_CATEGORIES.map((category) => (
               <div key={category.id}>
                 <h4 className="mb-2 text-sm font-bold text-[#2b2b2a]">{category.title}</h4>
+                {category.id === 'sesiones_libres' ? (
+                  // Hasta 12 variantes a la vez (personal/dúo/trío × 2 días
+                  // de referencia × 2 duraciones): sin subgrupos, elegir
+                  // una es buscar en una lista larga sin ningún orden.
+                  <div className="flex flex-col gap-3">
+                    {FREE_SESSIONS_SUBGROUPS.map((group) => {
+                      const groupPlans = plans.filter(
+                        (p) => p.category === category.id && p.anchorCategory === group.id,
+                      );
+                      if (groupPlans.length === 0) return null;
+                      return (
+                        <div key={group.id}>
+                          <h5 className="mb-1.5 text-xs font-bold uppercase tracking-wide text-[#868585]">
+                            {group.title}
+                          </h5>
+                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                            {groupPlans.map((plan) => (
+                              <button
+                                key={plan._id}
+                                onClick={() => onSelectPlan(plan)}
+                                className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2 text-left text-sm transition hover:border-[#6aa842] hover:bg-[#a2c037]/5"
+                              >
+                                <span className="flex items-center gap-1.5 text-[#2b2b2a]">
+                                  <Clock size={14} className="text-[#4b7a1f]" />
+                                  {plan.label}
+                                </span>
+                                <span className="font-bold text-[#4b7a1f]">
+                                  {plan.sessionPrice}€
+                                  <span className="font-normal text-[#868585]">/sesión</span>
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {plans.filter((p) => p.category === category.id).map((plan) => (
                     <button
@@ -87,19 +125,12 @@ export default function AssignPlanModal({
                         {plan.label}
                       </span>
                       <span className="font-bold text-[#4b7a1f]">
-                        {plan.category === 'sesiones_libres' ? (
-                          <>
-                            {plan.sessionPrice}€<span className="font-normal text-[#868585]">/sesión</span>
-                          </>
-                        ) : (
-                          <>
-                            {plan.monthlyPrice}€<span className="font-normal text-[#868585]">/mes</span>
-                          </>
-                        )}
+                        {plan.monthlyPrice}€<span className="font-normal text-[#868585]">/mes</span>
                       </span>
                     </button>
                   ))}
                 </div>
+                )}
               </div>
             ))}
           </div>
