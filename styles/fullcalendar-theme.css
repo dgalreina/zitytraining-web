@@ -274,6 +274,17 @@
   pointer-events: none;
 }
 
+/* El "fantasma" duplicado al arrastrar hasta el borde: al cambiar de
+   página en caliente (con el dedo aún pulsado) FullCalendar recrea el
+   mirror real (.fc-event-mirror) en la página nueva, pero deja también
+   el evento "dragging" de la página anterior sin la clase mirror. Solo
+   pasa cuando los dos existen a la vez; mientras el mirror aún no
+   existe (justo al acercarse al borde, antes de cruzar de página) este
+   otro elemento es el único que hay y no se debe ocultar. */
+.fc:has(.fc-event-mirror) .fc-event-dragging:not(.fc-event-mirror) {
+  display: none !important;
+}
+
 .ziti-event-box {
   position: relative;
   padding: 2px 5px;
