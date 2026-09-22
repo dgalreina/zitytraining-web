@@ -192,6 +192,15 @@ export default function CalendarioPage() {
   const dragStateRef = useRef<{ eventId: string; start: Date; end: Date } | null>(null);
   const edgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const edgeTriggeredRef = useRef(false);
+  // Salto de día/semana "armado" al mantener un arrastre pegado al borde:
+  // solo se aplica al soltar (ver handleEventDragStop), nunca a mitad
+  // del gesto.
+  const edgeArmedRef = useRef<1 | -1 | null>(null);
+  // FullCalendar dispara eventDragStop ANTES que eventDrop (al revés de
+  // lo que dice la intuición): si handleEventDragStop ya resolvió un
+  // salto de borde, hay que decírselo a handleEventDrop de otra forma,
+  // porque para cuando este llega edgeArmedRef ya se ha limpiado.
+  const skipNextEventDropRef = useRef(false);
   const router = useRouter();
 
   const isTrainerPerspective = isAdmin || isTrainer;
@@ -589,77 +598,65 @@ export default function CalendarioPage() {
     openEditModal(clickInfo.event.extendedProps.raw);
   }
 
-  async function handleEventDrop(info: any) {
+  // Guarda el nuevo horario y refresca lo que dependa de él. `jump`, si
+  // se da, además desplaza la vista (el mismo deslizamiento del swipe)
+  // una vez guardado — nunca antes, ver handleDragEnd más abajo.
+  async function commitBookingMove(
+    eventId: string,
+    startTime: Date,
+    endTime: Date,
+    jump: 1 | -1 | null,
+    onError: (message?: string) => void,
+  ) {
     const token = localStorage.getItem('token');
     if (!token) return;
     try {
-      await updateBooking(token, info.event.id, {
-        startTime: info.event.start.toISOString(),
-        endTime: info.event.end.toISOString(),
+      await updateBooking(token, eventId, {
+        startTime: startTime.toISOString(),
+        endTime: endTime.toISOString(),
       });
+
+      const api = calendarRef.current?.getApi();
+      if (jump && api) {
+        prepareDaySlide(jump);
+        if (jump > 0) api.next();
+        else api.prev();
+      }
       // Sin esto, el "raw" que lleva colgado el evento (con la hora vieja)
       // se queda tal cual, y si reabres el modal para editar te sale la
       // hora/día de antes de arrastrar, aunque el evento ya se vea movido.
-      const api = calendarRef.current?.getApi();
       if (api) {
         loadBookings(api.view.activeStart.toISOString(), api.view.activeEnd.toISOString());
       }
-      loadMonthDots(selectedDate);
+      loadMonthDots(api?.getDate() ?? selectedDate);
     } catch (err: any) {
-      alert(err.message || 'No se pudo mover la sesión');
-      info.revert();
+      onError(err.message);
     }
+  }
+
+  // Un arrastre normal (sin llegar al borde): FullCalendar ya sabe dónde
+  // se soltó, así que basta con guardarlo tal cual.
+  function handleEventDrop(info: any) {
+    // Si el arrastre terminó con un salto de borde, ya lo ha resuelto
+    // handleEventDragStop (dispara antes que este eventDrop) y ha
+    // marcado esto: no hay nada más que hacer, y desde luego no guardar
+    // encima la posición donde FullCalendar cree que se soltó (seguía
+    // pegado al mismo borde, dentro del día de siempre).
+    if (skipNextEventDropRef.current) {
+      skipNextEventDropRef.current = false;
+      return;
+    }
+
+    commitBookingMove(info.event.id, info.event.start, info.event.end, null, (message) => {
+      alert(message || 'No se pudo mover la sesión');
+      info.revert();
+    });
   }
 
   function clearEdgeTimer() {
     if (edgeTimerRef.current) {
       clearTimeout(edgeTimerRef.current);
       edgeTimerRef.current = null;
-    }
-  }
-
-  // direction: 1 = siguiente (borde derecho), -1 = anterior (borde izquierdo).
-  // En vista "Semana" se desplaza 7 días (una semana entera) en vez de 1,
-  // para caer en el mismo día de la semana siguiente/anterior.
-  async function advanceDraggedEventByDays(direction: 1 | -1) {
-    edgeTriggeredRef.current = true;
-    clearEdgeTimer();
-
-    const drag = dragStateRef.current;
-    const api = calendarRef.current?.getApi();
-    if (!drag || !api) return;
-
-    const daysShift = viewType === 'timeGridWeek' ? 7 : 1;
-    const newStart = new Date(drag.start);
-    newStart.setDate(newStart.getDate() + direction * daysShift);
-    const newEnd = new Date(drag.end);
-    newEnd.setDate(newEnd.getDate() + direction * daysShift);
-
-    // Avanza/retrocede el calendario visualmente, con el mismo deslizamiento
-    // que usa el swipe.
-    prepareDaySlide(direction);
-    if (direction > 0) api.next();
-    else api.prev();
-    // Usamos la fecha real del calendario (no el estado "selectedDate",
-    // que aquí estaría congelado del primer render) por si el cambio
-    // cruza también a un mes distinto.
-    const currentApiDate = api.getDate();
-
-    const token = localStorage.getItem('token');
-    if (!token) return;
-    try {
-      await updateBooking(token, drag.eventId, {
-        startTime: newStart.toISOString(),
-        endTime: newEnd.toISOString(),
-      });
-      loadMonthDots(currentApiDate);
-    } catch (err: any) {
-      const dirLabel = direction > 0 ? 'siguiente' : 'anterior';
-      const fallback =
-        viewType === 'timeGridWeek'
-          ? `No se pudo mover la sesión a la semana ${dirLabel}`
-          : `No se pudo mover la sesión al día ${dirLabel}`;
-      alert(err.message || fallback);
     }
   }
 
@@ -676,12 +673,16 @@ export default function CalendarioPage() {
     const nearLeftEdge = e.clientX < rect.left + EDGE_PX && e.clientX >= rect.left - 15;
 
     if (nearRightEdge || nearLeftEdge) {
-      // Mantén el cursor ~600ms cerca del borde antes de cambiar de día, para
-      // que un simple roce al pasar por ahí no lo dispare sin querer.
+      // Mantén el cursor ~600ms cerca del borde antes de armar el salto,
+      // para que un simple roce al pasar por ahí no lo dispare sin querer.
       if (!edgeTimerRef.current) {
         const direction = nearRightEdge ? 1 : -1;
         edgeTimerRef.current = setTimeout(() => {
-          advanceDraggedEventByDays(direction);
+          // "Armar" el salto: no toca el calendario todavía, solo queda
+          // anotado para cuando el usuario suelte (ver handleEventDrop).
+          edgeTriggeredRef.current = true;
+          clearEdgeTimer();
+          edgeArmedRef.current = direction;
         }, 600);
       }
     } else {
@@ -710,13 +711,61 @@ export default function CalendarioPage() {
       end: info.event.end,
     };
     edgeTriggeredRef.current = false;
+    edgeArmedRef.current = null;
+    skipNextEventDropRef.current = false;
     window.addEventListener('pointermove', stablePointerMoveHandler);
   }
 
+  // Aquí se resuelve el salto de borde (ver handleDragPointerMoveLogic),
+  // no en eventDrop: este callback se dispara SIEMPRE al soltar (haya
+  // habido o no un destino válido para FullCalendar, y de hecho antes
+  // que el propio eventDrop). Eso último importa sobre todo en la vista
+  // de Día, donde solo se ve una columna: arrastrar hacia el borde no
+  // cruza a ningún día distinto sobre el que FullCalendar pueda calcular
+  // un "drop", así que eventDrop ahí ni llega a dispararse.
+  //
+  // Antes el salto se aplicaba A MITAD del arrastre (al mantener el
+  // cursor 600ms en el borde), moviendo la vista con api.next()/prev()
+  // mientras FullCalendar todavía llevaba la cuenta del gesto activo.
+  // Eso corrompía su seguimiento interno del arrastre y dejaba un
+  // "fantasma" duplicado detrás (además de una carrera: la recarga de
+  // reservas que dispara el cambio de vista podía llegar antes de que el
+  // PATCH terminara de guardarse). Por eso ahora se espera a que el
+  // gesto esté completamente terminado.
   function handleEventDragStop() {
     window.removeEventListener('pointermove', stablePointerMoveHandler);
     clearEdgeTimer();
+
+    const jump = edgeArmedRef.current;
+    const drag = dragStateRef.current;
     dragStateRef.current = null;
+    edgeArmedRef.current = null;
+
+    if (!jump || !drag) return;
+
+    // Como eventDragStop llega antes que eventDrop, hay que avisarle a
+    // este último de que ya está resuelto: si no, procesaría por su
+    // cuenta el sitio donde FullCalendar cree que se soltó (seguía
+    // pegado al mismo borde), deshaciendo o duplicando este salto.
+    skipNextEventDropRef.current = true;
+
+    const daysShift = viewType === 'timeGridWeek' ? 7 : 1;
+    // Milisegundos fijos, no en el huso horario del gimnasio: un solo
+    // arrastre nunca cruza un cambio de horario de verano/invierno, así
+    // que aquí sí es seguro (distinto de las series semanales eternas,
+    // ver bookings/timezone.ts en la API).
+    const shiftMs = jump * daysShift * 24 * 60 * 60 * 1000;
+    const newStart = new Date(drag.start.getTime() + shiftMs);
+    const newEnd = new Date(drag.end.getTime() + shiftMs);
+
+    commitBookingMove(drag.eventId, newStart, newEnd, jump, (message) => {
+      const dirLabel = jump > 0 ? 'siguiente' : 'anterior';
+      const fallback =
+        viewType === 'timeGridWeek'
+          ? `No se pudo mover la sesión a la semana ${dirLabel}`
+          : `No se pudo mover la sesión al día ${dirLabel}`;
+      alert(message || fallback);
+    });
   }
 
   // Swipe táctil para cambiar de día/semana (como Google Calendar), en las
