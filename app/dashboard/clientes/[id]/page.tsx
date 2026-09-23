@@ -11,8 +11,9 @@ import InfoTab from './InfoTab';
 import ProgresoTab from './ProgresoTab';
 import PlanTab from './PlanTab';
 import HistorialTab from './HistorialTab';
+import SesionesTab from './SesionesTab';
 
-type Tab = 'info' | 'progreso' | 'plan' | 'historial';
+type Tab = 'sesiones' | 'info' | 'progreso' | 'plan' | 'historial';
 
 function tabButtonClass(active: boolean) {
   return `px-4 py-2.5 text-sm font-semibold transition ${
@@ -23,7 +24,7 @@ function tabButtonClass(active: boolean) {
 }
 
 export default function DetalleClientePage() {
-  const [tab, setTab] = useState<Tab>('info');
+  const [tab, setTab] = useState<Tab>('sesiones');
   const [form, setForm] = useState<any>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
@@ -87,6 +88,9 @@ export default function DetalleClientePage() {
       </div>
 
       <div className="mb-4 flex gap-1 overflow-x-auto border-b border-gray-200 scrollbar-none">
+        <button onClick={() => setTab('sesiones')} className={`shrink-0 whitespace-nowrap ${tabButtonClass(tab === 'sesiones')}`}>
+          Historial de sesiones
+        </button>
         <button onClick={() => setTab('info')} className={`shrink-0 whitespace-nowrap ${tabButtonClass(tab === 'info')}`}>
           Información
         </button>
@@ -104,12 +108,13 @@ export default function DetalleClientePage() {
         </button>
         {isAdmin && (
           <button onClick={() => setTab('historial')} className={`shrink-0 whitespace-nowrap ${tabButtonClass(tab === 'historial')}`}>
-            Historial
+            Historial de planes
           </button>
         )}
       </div>
 
       <div className="h-[calc(100dvh-260px)] overflow-y-auto pr-1">
+        {tab === 'sesiones' && <SesionesTab id={id} />}
         {tab === 'info' && (
           <InfoTab id={id} client={form} isAdmin={isAdmin} onClientUpdated={setForm} />
         )}
