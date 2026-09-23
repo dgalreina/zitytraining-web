@@ -37,8 +37,6 @@ export default function CalendarioPage() {
   const [selectedClientId, setSelectedClientId] = useState(ALL_VALUE);
   const [loadingLists, setLoadingLists] = useState(false);
 
-  const isClientMode = selectedClientId !== ALL_VALUE;
-
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [events, setEvents] = useState<any[]>([]);
   // El ResizeObserver de fitEventText necesita los datos MÁS RECIENTES del
@@ -108,11 +106,11 @@ export default function CalendarioPage() {
     [events, userId],
   );
 
-  // Se puede crear/editar/borrar mientras no estemos viendo el calendario
-  // por cliente (ahí se mantiene solo lectura). El modal siempre pregunta
+  // Un admin o entrenador puede crear/editar/borrar aunque el filtro esté
+  // acotado a un cliente o entrenador concreto. El modal siempre pregunta
   // a qué entrenador pertenece cada sesión nueva, así que no hace falta
   // tener exactamente uno marcado en el checklist para poder crear.
-  const canEdit = !isClientMode && isTrainerPerspective;
+  const canEdit = isTrainerPerspective;
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -179,13 +177,6 @@ export default function CalendarioPage() {
       // para que se distinga a simple vista de una sesión normal.
       candidates = ['Privada'];
       color = PRIVATE_COLOR;
-    } else if (isClientMode) {
-      // Un cliente puede tener varios entrenadores: mostramos quién es
-      // el entrenador de cada sesión, con su color.
-      const full = b.trainer ? `${b.trainer.firstName} ${b.trainer.lastName}` : 'Entrenador';
-      const short = b.trainer?.firstName || 'Entrenador';
-      candidates = [full, short];
-      color = b.trainer?.color || FALLBACK_COLOR;
     } else {
       // Nombres de clientes, color del entrenador de esa sesión concreta
       // (funciona igual con 1, varios, o todos los entrenadores marcados)
@@ -282,16 +273,26 @@ export default function CalendarioPage() {
     const token = localStorage.getItem('token');
     if (!token) return;
     try {
-      let data: any[] = [];
-      if (isClientMode) {
-        data = await getBookings(token, { client: selectedClientId, from: fromStr, to: toStr });
-      } else if (selectedTrainerIds.length > 0) {
-        data = await getBookingsByTrainers(token, selectedTrainerIds, fromStr, toStr);
-      }
+      const data = await fetchFilteredBookings(token, fromStr, toStr);
       setEvents(data.map(bookingToEvent));
     } catch {
       // silencioso
     }
+  }
+
+  // El backend, cuando se le pide un cliente concreto, devuelve TODAS sus
+  // sesiones sin mirar el filtro de entrenadores (son dos filtros que no
+  // sabe combinar). Si además hay entrenadores marcados, se cruza aquí.
+  async function fetchFilteredBookings(token: string, from: string, to: string): Promise<any[]> {
+    if (selectedClientId !== ALL_VALUE) {
+      if (selectedTrainerIds.length === 0) return [];
+      const data = await getBookings(token, { client: selectedClientId, from, to });
+      return data.filter((b: any) => selectedTrainerIds.includes(b.trainer?._id));
+    }
+    if (selectedTrainerIds.length > 0) {
+      return getBookingsByTrainers(token, selectedTrainerIds, from, to);
+    }
+    return [];
   }
 
   async function loadMonthDots(monthDate: Date) {
@@ -302,21 +303,7 @@ export default function CalendarioPage() {
     const end = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0, 23, 59, 59);
 
     try {
-      let data: any[] = [];
-      if (isClientMode) {
-        data = await getBookings(token, {
-          client: selectedClientId,
-          from: start.toISOString(),
-          to: end.toISOString(),
-        });
-      } else if (selectedTrainerIds.length > 0) {
-        data = await getBookingsByTrainers(
-          token,
-          selectedTrainerIds,
-          start.toISOString(),
-          end.toISOString(),
-        );
-      }
+      const data = await fetchFilteredBookings(token, start.toISOString(), end.toISOString());
       const keys = new Set<string>(data.map((b: any) => dayKey(new Date(b.startTime))));
       setDaysWithBookings(keys);
     } catch {
