@@ -6,11 +6,15 @@ import FullCalendar from '@fullcalendar/react';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import '@/styles/fullcalendar-theme.css';
-import { X, ChevronDown, ChevronLeft, ChevronRight, Check, Send, CalendarDays } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Send, CalendarDays } from 'lucide-react';
 import MiniCalendar, { dayKey } from '@/components/MiniCalendar';
 import FilterDropdown from '@/components/FilterDropdown';
 import BookingModal, { ModalState } from './BookingModal';
 import WhatsAppRemindersModal, { construirRecordatorios } from './WhatsAppRemindersModal';
+import TrainerMultiSelect from './TrainerMultiSelect';
+import { useCalendarDaySlide } from './useCalendarDaySlide';
+import { useEdgeDragNavigation } from './useEdgeDragNavigation';
+import { useSwipeNavigation } from './useSwipeNavigation';
 import { getUsers, getMe, getActiveClients } from '@/lib/usersApi';
 import { getBookings, getBookingsByTrainers, updateBooking } from '@/lib/bookingsApi';
 import { getHolidays } from '@/lib/holidaysApi';
@@ -18,104 +22,6 @@ import { INTERVIEW_COLOR, PRIVATE_COLOR } from '@/lib/colors';
 
 const FALLBACK_COLOR = '#868585';
 const ALL_VALUE = 'all';
-
-// Checklist de entrenadores: de ninguno a todos, no una sola opción
-function TrainerMultiSelect({
-  trainers,
-  selectedIds,
-  onChange,
-}: {
-  trainers: any[];
-  selectedIds: string[];
-  onChange: (ids: string[]) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const allSelected = trainers.length > 0 && selectedIds.length === trainers.length;
-  const noneSelected = selectedIds.length === 0;
-
-  function toggleOne(id: string) {
-    onChange(
-      selectedIds.includes(id) ? selectedIds.filter((i) => i !== id) : [...selectedIds, id],
-    );
-  }
-
-  let summary = 'Ningún entrenador';
-  if (allSelected) summary = 'Todos los entrenadores';
-  else if (!noneSelected) {
-    const names = trainers
-      .filter((t) => selectedIds.includes(t._id))
-      .map((t) => t.firstName);
-    summary = names.length <= 2 ? names.join(', ') : `${names.length} entrenadores`;
-  }
-
-  return (
-    <div ref={ref} className="relative w-full sm:w-56">
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className="flex w-full items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-[#2b2b2a]"
-      >
-        <span className="truncate">{summary}</span>
-        <ChevronDown
-          size={15}
-          className={`shrink-0 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}
-        />
-      </button>
-
-      {open && (
-        <div className="absolute left-0 z-10 mt-1.5 max-h-80 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white p-1 shadow-lg">
-          <div className="flex gap-1 border-b border-gray-100 px-2 py-1.5">
-            <button
-              type="button"
-              onClick={() => onChange(trainers.map((t) => t._id))}
-              className="text-xs font-semibold text-[#4b7a1f] hover:underline"
-            >
-              Todos
-            </button>
-            <span className="text-xs text-gray-300">·</span>
-            <button
-              type="button"
-              onClick={() => onChange([])}
-              className="text-xs font-semibold text-[#868585] hover:underline"
-            >
-              Ninguno
-            </button>
-          </div>
-          {trainers.map((t) => {
-            const isChecked = selectedIds.includes(t._id);
-            return (
-              <button
-                key={t._id}
-                type="button"
-                onClick={() => toggleOne(t._id)}
-                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm text-[#2b2b2a] hover:bg-gray-50"
-              >
-                <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded border border-gray-400 bg-white">
-                  {isChecked && <Check size={12} className="text-[#2b2b2a]" strokeWidth={3} />}
-                </span>
-                <span
-                  className="h-2.5 w-2.5 shrink-0 rounded-full"
-                  style={{ backgroundColor: t.color || FALLBACK_COLOR }}
-                />
-                {t.firstName} {t.lastName}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function CalendarioPage() {
   const [userId, setUserId] = useState('');
@@ -186,12 +92,7 @@ export default function CalendarioPage() {
   const [topOffset, setTopOffset] = useState<number | null>(null);
   const calendarRef = useRef<FullCalendar>(null);
   const calendarWrapperRef = useRef<HTMLDivElement>(null);
-  const pendingSlideDirectionRef = useRef<1 | -1 | null>(null);
-  const slideCloneRef = useRef<HTMLElement | null>(null);
   const gridRowRef = useRef<HTMLDivElement>(null);
-  const dragStateRef = useRef<{ eventId: string; start: Date; end: Date } | null>(null);
-  const edgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const edgeTriggeredRef = useRef(false);
   const router = useRouter();
 
   const isTrainerPerspective = isAdmin || isTrainer;
@@ -445,85 +346,14 @@ export default function CalendarioPage() {
       loadHolidaysForYear(info.end.getFullYear());
     }
 
-    // Si el cambio de fecha viene de un swipe, FullCalendar ya ha terminado
-    // de pintar el día nuevo en este punto: es el momento exacto de deslizar
-    // la copia congelada del día viejo hacia fuera y el día nuevo hacia dentro.
-    const direction = pendingSlideDirectionRef.current;
-    pendingSlideDirectionRef.current = null;
-    const clone = slideCloneRef.current;
-    slideCloneRef.current = null;
-    if (!direction || !clone) return;
-
-    const container = calendarWrapperRef.current;
-    const harness = container?.querySelector('.fc-view-harness') as HTMLElement | null;
-    if (!container || !harness) {
-      clone.remove();
-      return;
-    }
-
-    harness.style.transition = 'none';
-    harness.style.transform = `translateX(${direction > 0 ? '100%' : '-100%'})`;
-    void harness.offsetWidth; // fuerza reflow antes de animar
-    requestAnimationFrame(() => {
-      harness.style.transition = 'transform 260ms ease-out';
-      harness.style.transform = 'translateX(0)';
-      clone.style.transition = 'transform 260ms ease-out';
-      clone.style.transform = `translateX(${direction > 0 ? '-100%' : '100%'})`;
-    });
-    setTimeout(() => {
-      clone.remove();
-      harness.style.transition = '';
-      harness.style.transform = '';
-    }, 300);
+    // Si el cambio de fecha viene de un swipe o de arrastrar hasta el
+    // borde, FullCalendar ya ha terminado de pintar la vista nueva en este
+    // punto: es el momento exacto de deslizar la copia congelada de la
+    // vista vieja hacia fuera y la nueva hacia dentro.
+    runPendingSlideAnimation();
   }
 
-  // Deja preparada una copia congelada de la vista actual (para deslizarla
-  // fuera) y marca la dirección; la animación de verdad se dispara en
-  // handleDatesSet, una vez FullCalendar ya ha pintado el día nuevo. La usan
-  // tanto el swipe como el arrastre de un evento al borde. Devuelve si pudo
-  // prepararla (si no, el cambio de día sigue funcionando, solo sin animar).
-  function prepareDaySlide(direction: 1 | -1): boolean {
-    const container = calendarWrapperRef.current;
-    const harness = container?.querySelector('.fc-view-harness') as HTMLElement | null;
-    if (!container || !harness) return false;
-
-    // Importante: el clon tiene que quedar DENTRO de .fc (como hermano del
-    // .fc-view-harness real), no fuera. El CSS de FullCalendar usa
-    // selectores tipo ".fc .fc-timegrid-event-harness" que exigen un
-    // ancestro con clase "fc" — fuera de ahí pierde esas reglas y el
-    // navegador calcula mal la altura de los eventos (se ven enormes).
-    const fcRoot = harness.parentElement;
-    if (!fcRoot) return false;
-
-    const rect = harness.getBoundingClientRect();
-    const clone = harness.cloneNode(true) as HTMLElement;
-    clone.style.position = 'absolute';
-    clone.style.top = `${harness.offsetTop}px`;
-    clone.style.left = `${harness.offsetLeft}px`;
-    clone.style.width = `${rect.width}px`;
-    clone.style.height = `${rect.height}px`;
-    clone.style.margin = '0';
-    clone.style.zIndex = '20';
-    clone.style.pointerEvents = 'none';
-    clone.style.overflow = 'hidden';
-    clone.style.background = 'white';
-    // cloneNode no copia el scroll interno: si el usuario había bajado a
-    // ver horas más tardías, lo replicamos para que la copia coincida.
-    clone.scrollTop = harness.scrollTop;
-
-    fcRoot.appendChild(clone);
-    slideCloneRef.current = clone;
-    pendingSlideDirectionRef.current = direction;
-    return true;
-  }
-
-  function startDaySlide(direction: 1 | -1) {
-    const api = calendarRef.current?.getApi();
-    if (!api) return;
-    prepareDaySlide(direction);
-    if (direction > 0) api.next();
-    else api.prev();
-  }
+  const { prepareDaySlide, runPendingSlideAnimation } = useCalendarDaySlide(calendarWrapperRef);
 
   useEffect(() => {
     if (roleReady && calendarRef.current) {
@@ -611,182 +441,18 @@ export default function CalendarioPage() {
     }
   }
 
-  function clearEdgeTimer() {
-    if (edgeTimerRef.current) {
-      clearTimeout(edgeTimerRef.current);
-      edgeTimerRef.current = null;
-    }
-  }
-
-  // direction: 1 = siguiente (borde derecho), -1 = anterior (borde izquierdo).
-  // En vista "Semana" se desplaza 7 días (una semana entera) en vez de 1,
-  // para caer en el mismo día de la semana siguiente/anterior.
-  async function advanceDraggedEventByDays(direction: 1 | -1) {
-    edgeTriggeredRef.current = true;
-    clearEdgeTimer();
-
-    const drag = dragStateRef.current;
-    const api = calendarRef.current?.getApi();
-    if (!drag || !api) return;
-
-    const daysShift = viewType === 'timeGridWeek' ? 7 : 1;
-    const newStart = new Date(drag.start);
-    newStart.setDate(newStart.getDate() + direction * daysShift);
-    const newEnd = new Date(drag.end);
-    newEnd.setDate(newEnd.getDate() + direction * daysShift);
-
-    // Avanza/retrocede el calendario visualmente, con el mismo deslizamiento
-    // que usa el swipe.
-    prepareDaySlide(direction);
-    if (direction > 0) api.next();
-    else api.prev();
-    // Usamos la fecha real del calendario (no el estado "selectedDate",
-    // que aquí estaría congelado del primer render) por si el cambio
-    // cruza también a un mes distinto.
-    const currentApiDate = api.getDate();
-
-    const token = localStorage.getItem('token');
-    if (!token) return;
-    try {
-      await updateBooking(token, drag.eventId, {
-        startTime: newStart.toISOString(),
-        endTime: newEnd.toISOString(),
-      });
-      loadMonthDots(currentApiDate);
-    } catch (err: any) {
-      const dirLabel = direction > 0 ? 'siguiente' : 'anterior';
-      const fallback =
-        viewType === 'timeGridWeek'
-          ? `No se pudo mover la sesión a la semana ${dirLabel}`
-          : `No se pudo mover la sesión al día ${dirLabel}`;
-      alert(err.message || fallback);
-    }
-  }
-
-  function handleDragPointerMoveLogic(e: PointerEvent) {
-    if (viewType !== 'timeGridDay' && viewType !== 'timeGridWeek') return;
-    if (!dragStateRef.current || edgeTriggeredRef.current) return;
-
-    const wrapper = calendarWrapperRef.current;
-    if (!wrapper) return;
-
-    const rect = wrapper.getBoundingClientRect();
-    const EDGE_PX = 36;
-    const nearRightEdge = e.clientX > rect.right - EDGE_PX && e.clientX <= rect.right + 15;
-    const nearLeftEdge = e.clientX < rect.left + EDGE_PX && e.clientX >= rect.left - 15;
-
-    if (nearRightEdge || nearLeftEdge) {
-      // Mantén el cursor ~600ms cerca del borde antes de cambiar de día, para
-      // que un simple roce al pasar por ahí no lo dispare sin querer.
-      if (!edgeTimerRef.current) {
-        const direction = nearRightEdge ? 1 : -1;
-        edgeTimerRef.current = setTimeout(() => {
-          advanceDraggedEventByDays(direction);
-        }, 600);
-      }
-    } else {
-      clearEdgeTimer();
-    }
-  }
-
-  // Patrón "última versión siempre fresca": guardamos la lógica de arriba
-  // (que sí depende de estado/props actuales) en una ref que se actualiza
-  // en cada render. El listener que de verdad se engancha a window es un
-  // envoltorio con identidad ESTABLE para siempre, que simplemente delega
-  // a lo que haya en la ref en ese momento — así addEventListener y
-  // removeEventListener siempre coinciden, y la lógica nunca queda obsoleta.
-  const latestPointerMoveRef = useRef(handleDragPointerMoveLogic);
-  useEffect(() => {
-    latestPointerMoveRef.current = handleDragPointerMoveLogic;
+  // Arrastrar una sesión hasta el borde de la pantalla cambia de día/semana
+  // con el dedo aún pulsado; el swipe táctil hace lo mismo con un gesto.
+  // Ambos comparten la animación de deslizamiento de useCalendarDaySlide.
+  const { handleEventDragStart, handleEventDragStop } = useEdgeDragNavigation({
+    calendarRef,
+    calendarWrapperRef,
+    viewType,
+    prepareDaySlide,
+    loadMonthDots,
   });
-  const stablePointerMoveHandler = useRef((e: PointerEvent) => {
-    latestPointerMoveRef.current(e);
-  }).current;
 
-  function handleEventDragStart(info: any) {
-    dragStateRef.current = {
-      eventId: info.event.id,
-      start: info.event.start,
-      end: info.event.end,
-    };
-    edgeTriggeredRef.current = false;
-    window.addEventListener('pointermove', stablePointerMoveHandler);
-  }
-
-  function handleEventDragStop() {
-    window.removeEventListener('pointermove', stablePointerMoveHandler);
-    clearEdgeTimer();
-    dragStateRef.current = null;
-  }
-
-  // Swipe táctil para cambiar de día/semana (como Google Calendar), en las
-  // vistas "Día" y "Semana". Solo móvil: son eventos touch, un ratón no los
-  // dispara. Si el gesto no se decide como horizontal en los primeros
-  // ~180ms, lo soltamos sin tocar nada, para no interferir con el
-  // long-press que ya usa FullCalendar para seleccionar un hueco o
-  // arrastrar un evento.
-  useEffect(() => {
-    const el = calendarWrapperRef.current;
-    if (!el || (viewType !== 'timeGridDay' && viewType !== 'timeGridWeek')) return;
-
-    const DIRECTION_THRESHOLD = 10; // px para empezar a decidir la dirección
-    const DECIDE_TIME_LIMIT = 180; // ms; pasado esto, se lo dejamos a FullCalendar
-    const SWIPE_THRESHOLD = 60; // px para que cuente como swipe de verdad
-
-    let start: { x: number; y: number; time: number } | null = null;
-    let decided: 'horizontal' | 'vertical' | 'abandoned' | null = null;
-
-    function handleTouchStart(e: TouchEvent) {
-      if (e.touches.length !== 1) return;
-      start = { x: e.touches[0].clientX, y: e.touches[0].clientY, time: Date.now() };
-      decided = null;
-    }
-
-    function handleTouchMove(e: TouchEvent) {
-      if (!start || decided === 'abandoned') return;
-      const touch = e.touches[0];
-      const dx = touch.clientX - start.x;
-      const dy = touch.clientY - start.y;
-
-      if (!decided) {
-        if (Date.now() - start.time > DECIDE_TIME_LIMIT) {
-          decided = 'abandoned';
-          return;
-        }
-        if (Math.abs(dx) < DIRECTION_THRESHOLD && Math.abs(dy) < DIRECTION_THRESHOLD) return;
-        decided = Math.abs(dx) > Math.abs(dy) * 1.3 ? 'horizontal' : 'vertical';
-      }
-
-      if (decided === 'horizontal') {
-        e.preventDefault();
-      }
-    }
-
-    function handleTouchEnd(e: TouchEvent) {
-      const wasHorizontal = decided === 'horizontal';
-      const startPoint = start;
-      start = null;
-      decided = null;
-      if (!wasHorizontal || !startPoint) return;
-
-      const touch = e.changedTouches[0];
-      const dx = touch.clientX - startPoint.x;
-      if (Math.abs(dx) < SWIPE_THRESHOLD) return;
-
-      const direction = dx < 0 ? 1 : -1;
-      startDaySlide(direction);
-    }
-
-    el.addEventListener('touchstart', handleTouchStart, { passive: true });
-    el.addEventListener('touchmove', handleTouchMove, { passive: false });
-    el.addEventListener('touchend', handleTouchEnd, { passive: true });
-
-    return () => {
-      el.removeEventListener('touchstart', handleTouchStart);
-      el.removeEventListener('touchmove', handleTouchMove);
-      el.removeEventListener('touchend', handleTouchEnd);
-    };
-  }, [viewType]);
+  useSwipeNavigation({ calendarWrapperRef, calendarRef, viewType, prepareDaySlide });
 
   // El modal se encarga de crear/editar/borrar por su cuenta; solo nos
   // avisa cuando ha terminado con éxito, para cerrarlo y recargar.
