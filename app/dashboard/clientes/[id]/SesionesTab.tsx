@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { getBookings, Booking } from '@/lib/bookingsApi';
 import { DEFAULT_TRAINER_COLOR } from '@/lib/colors';
+import MonthYearPicker from '@/components/MonthYearPicker';
 
 function monthLabel(year: number, month: number) {
   const label = new Date(year, month - 1, 1).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
@@ -77,6 +78,12 @@ export default function SesionesTab({ id }: { id: string }) {
     setYear(y);
   }
 
+  function handleMonthYearChange(value: string) {
+    const [y, m] = value.split('-').map(Number);
+    setYear(y);
+    setMonth(m);
+  }
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-center gap-1 self-center rounded-lg border border-gray-200 bg-white p-1">
@@ -95,6 +102,12 @@ export default function SesionesTab({ id }: { id: string }) {
         >
           <ChevronRight size={15} />
         </button>
+        <span className="mx-0.5 h-4 w-px bg-gray-200" />
+        <MonthYearPicker
+          value={`${year}-${String(month).padStart(2, '0')}`}
+          onChange={handleMonthYearChange}
+          trigger="icon"
+        />
       </div>
 
       <div className="rounded-xl bg-white p-6">
