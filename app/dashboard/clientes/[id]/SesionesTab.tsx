@@ -86,28 +86,32 @@ export default function SesionesTab({ id }: { id: string }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-center gap-1 self-center rounded-lg border border-gray-200 bg-white p-1">
-        <button
-          onClick={() => changeMonth(-1)}
-          className="flex h-7 w-7 items-center justify-center rounded-full text-[#868585] hover:bg-gray-100"
-        >
-          <ChevronLeft size={15} />
-        </button>
-        <span className="font-[family-name:var(--font-work-sans)] px-1 text-[13px] font-bold text-[#2b2b2a]">
-          {monthLabel(year, month)}
-        </span>
-        <button
-          onClick={() => changeMonth(1)}
-          className="flex h-7 w-7 items-center justify-center rounded-full text-[#868585] hover:bg-gray-100"
-        >
-          <ChevronRight size={15} />
-        </button>
-        <span className="mx-0.5 h-4 w-px bg-gray-200" />
-        <MonthYearPicker
-          value={`${year}-${String(month).padStart(2, '0')}`}
-          onChange={handleMonthYearChange}
-          trigger="icon"
-        />
+      {/* Fijo arriba mientras se hace scroll por la lista: solo las
+          sesiones deben desplazarse, el selector de mes no. */}
+      <div className="sticky top-0 z-10 flex justify-center bg-[#f7f7f5] pb-2">
+        <div className="flex items-center justify-center gap-1 rounded-lg border border-gray-200 bg-white p-1">
+          <button
+            onClick={() => changeMonth(-1)}
+            className="flex h-7 w-7 items-center justify-center rounded-full text-[#868585] hover:bg-gray-100"
+          >
+            <ChevronLeft size={15} />
+          </button>
+          <span className="font-[family-name:var(--font-work-sans)] px-1 text-[13px] font-bold text-[#2b2b2a]">
+            {monthLabel(year, month)}
+          </span>
+          <button
+            onClick={() => changeMonth(1)}
+            className="flex h-7 w-7 items-center justify-center rounded-full text-[#868585] hover:bg-gray-100"
+          >
+            <ChevronRight size={15} />
+          </button>
+          <span className="mx-0.5 h-4 w-px bg-gray-200" />
+          <MonthYearPicker
+            value={`${year}-${String(month).padStart(2, '0')}`}
+            onChange={handleMonthYearChange}
+            trigger="icon"
+          />
+        </div>
       </div>
 
       <div className="rounded-xl bg-white p-6">
