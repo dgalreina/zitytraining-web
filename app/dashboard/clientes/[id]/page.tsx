@@ -113,7 +113,7 @@ export default function DetalleClientePage() {
         )}
       </div>
 
-      <div className="h-[calc(100dvh-260px)] overflow-y-auto pr-1">
+      <div className="h-[calc(100dvh-260px)] overflow-y-auto overscroll-none pr-1">
         {tab === 'sesiones' && <SesionesTab id={id} />}
         {tab === 'info' && (
           <InfoTab id={id} client={form} isAdmin={isAdmin} onClientUpdated={setForm} />
