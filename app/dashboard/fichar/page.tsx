@@ -353,7 +353,7 @@ export default function FicharPage() {
                           <button
                             onClick={() => handleDeleteEntry(entry)}
                             aria-label="Borrar fichaje"
-                            className="text-[#868585] transition hover:text-red-600"
+                            className="text-red-600 transition hover:text-red-700"
                           >
                             <Trash2 size={14} />
                           </button>
