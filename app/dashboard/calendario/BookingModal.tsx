@@ -333,12 +333,12 @@ export default function BookingModal({
     `${c.firstName} ${c.lastName}`.toLowerCase().includes(clientSearch.trim().toLowerCase()),
   );
 
-  // El centro cierra a las 22:00; 21:20 es la última hora de inicio que deja
-  // sitio a la sesión más corta (40 min) antes del cierre.
+  // El centro cierra a las 22:00, pero a veces la sesión se alarga más
+  // allá del cierre, así que se deja empezar hasta las 23:00.
   const minStartTime = new Date(start);
   minStartTime.setHours(7, 0, 0, 0);
   const maxStartTime = new Date(start);
-  maxStartTime.setHours(21, 20, 0, 0);
+  maxStartTime.setHours(23, 0, 0, 0);
 
   return (
     <>

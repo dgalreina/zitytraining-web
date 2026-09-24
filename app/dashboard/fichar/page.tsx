@@ -2,8 +2,16 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Fingerprint, LogIn, LogOut, AlertTriangle, PenLine, X, Check } from 'lucide-react';
-import { clockIn, clockOut, getAttendanceStatus, getMyAttendance, createManualAttendance } from '@/lib/attendanceApi';
+import { Fingerprint, LogIn, LogOut, AlertTriangle, PenLine, X, Check, Pencil, Trash2 } from 'lucide-react';
+import {
+  clockIn,
+  clockOut,
+  getAttendanceStatus,
+  getMyAttendance,
+  createManualAttendance,
+  updateAttendance,
+  deleteAttendance,
+} from '@/lib/attendanceApi';
 import WeeklyAttendanceCalendar from './WeeklyAttendanceCalendar';
 
 type Tab = 'mine' | 'calendar';
@@ -22,6 +30,19 @@ function formatTime(date: string | Date) {
 
 function formatDate(date: string | Date) {
   return new Date(date).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+}
+
+function toDateInputValue(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function toTimeInputValue(date: Date) {
+  const h = String(date.getHours()).padStart(2, '0');
+  const m = String(date.getMinutes()).padStart(2, '0');
+  return `${h}:${m}`;
 }
 
 function formatDuration(ms: number) {
@@ -51,6 +72,13 @@ export default function FicharPage() {
   const [manualEnd, setManualEnd] = useState('');
   const [manualSaving, setManualSaving] = useState(false);
   const [manualError, setManualError] = useState('');
+
+  const [editingEntry, setEditingEntry] = useState<any | null>(null);
+  const [editDate, setEditDate] = useState('');
+  const [editStart, setEditStart] = useState('');
+  const [editEnd, setEditEnd] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState('');
 
   function load(token: string) {
     getAttendanceStatus(token).then(setStatus).catch(() => setStatus({ clockedIn: false }));
@@ -158,6 +186,62 @@ export default function FicharPage() {
     }
   }
 
+  function openEditModal(entry: any) {
+    setEditingEntry(entry);
+    setEditDate(toDateInputValue(new Date(entry.clockIn)));
+    setEditStart(toTimeInputValue(new Date(entry.clockIn)));
+    setEditEnd(entry.clockOut ? toTimeInputValue(new Date(entry.clockOut)) : '');
+    setEditError('');
+  }
+
+  function closeEditModal() {
+    setEditingEntry(null);
+    setEditDate('');
+    setEditStart('');
+    setEditEnd('');
+    setEditError('');
+  }
+
+  async function handleUpdateEntry(e: React.FormEvent) {
+    e.preventDefault();
+    setEditError('');
+
+    if (!editDate || !editStart) {
+      setEditError('Rellena al menos la fecha y la hora de entrada');
+      return;
+    }
+
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    setEditSaving(true);
+    try {
+      await updateAttendance(token, editingEntry._id, {
+        clockIn: `${editDate}T${editStart}`,
+        clockOut: editEnd ? `${editDate}T${editEnd}` : undefined,
+      });
+      closeEditModal();
+      load(token);
+    } catch (err: any) {
+      setEditError(err.message || 'No se pudo guardar el fichaje');
+    } finally {
+      setEditSaving(false);
+    }
+  }
+
+  async function handleDeleteEntry(entry: any) {
+    if (!window.confirm('¿Seguro que quieres borrar este fichaje? No se puede deshacer.')) {
+      return;
+    }
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    try {
+      await deleteAttendance(token, entry._id);
+      load(token);
+    } catch (err: any) {
+      setError(err.message || 'No se pudo borrar el fichaje');
+    }
+  }
+
   const clockedIn = status?.clockedIn ?? false;
 
   return (
@@ -253,11 +337,27 @@ export default function FicharPage() {
                             </span>
                           )}
                         </span>
-                        {entry.clockOut && (
-                          <span className="text-xs font-medium text-[#4b7a1f]">
-                            {formatDuration(new Date(entry.clockOut).getTime() - new Date(entry.clockIn).getTime())}
-                          </span>
-                        )}
+                        <span className="flex items-center gap-2">
+                          {entry.clockOut && (
+                            <span className="text-xs font-medium text-[#4b7a1f]">
+                              {formatDuration(new Date(entry.clockOut).getTime() - new Date(entry.clockIn).getTime())}
+                            </span>
+                          )}
+                          <button
+                            onClick={() => openEditModal(entry)}
+                            aria-label="Editar fichaje"
+                            className="text-[#868585] transition hover:text-[#4b7a1f]"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteEntry(entry)}
+                            aria-label="Borrar fichaje"
+                            className="text-[#868585] transition hover:text-red-600"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </span>
                       </div>
                       <p className="mt-1 text-xs text-[#868585]">
                         {formatTime(entry.clockIn)} – {entry.clockOut ? formatTime(entry.clockOut) : 'en curso'}
@@ -353,6 +453,64 @@ export default function FicharPage() {
               >
                 <Check size={16} />
                 {manualSaving ? 'Guardando...' : 'Guardar fichaje'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {editingEntry && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="font-[family-name:var(--font-work-sans)] text-sm font-bold text-[#2b2b2a]">
+                Editar fichaje
+              </h3>
+              <button
+                onClick={closeEditModal}
+                className="text-[#868585] transition hover:text-[#2b2b2a]"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={handleUpdateEntry} className="flex flex-col gap-3">
+              <label className="flex flex-col gap-1 text-xs font-medium text-[#868585]">
+                Fecha
+                <input
+                  type="date"
+                  value={editDate}
+                  onChange={(e) => setEditDate(e.target.value)}
+                  className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-[#2b2b2a]"
+                />
+              </label>
+              <div className="flex gap-3">
+                <label className="flex flex-1 flex-col gap-1 text-xs font-medium text-[#868585]">
+                  Entrada
+                  <input
+                    type="time"
+                    value={editStart}
+                    onChange={(e) => setEditStart(e.target.value)}
+                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-[#2b2b2a]"
+                  />
+                </label>
+                <label className="flex flex-1 flex-col gap-1 text-xs font-medium text-[#868585]">
+                  Salida
+                  <input
+                    type="time"
+                    value={editEnd}
+                    onChange={(e) => setEditEnd(e.target.value)}
+                    className="rounded-lg border border-gray-200 px-3 py-2 text-sm text-[#2b2b2a]"
+                  />
+                </label>
+              </div>
+              {editError && <p className="text-sm font-medium text-red-600">{editError}</p>}
+              <button
+                type="submit"
+                disabled={editSaving}
+                className="mt-1 flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-[#a2c037] to-[#6aa842] px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+              >
+                <Check size={16} />
+                {editSaving ? 'Guardando...' : 'Guardar cambios'}
               </button>
             </form>
           </div>

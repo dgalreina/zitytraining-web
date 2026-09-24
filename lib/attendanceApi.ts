@@ -64,6 +64,32 @@ export async function getMyAttendance(token: string): Promise<AttendanceEntry[]>
   return handleResponse(res);
 }
 
+export async function updateAttendance(
+  token: string,
+  id: string,
+  data: ManualAttendancePayload,
+): Promise<AttendanceEntry> {
+  const res = await apiFetch(`${API_URL}/attendance/${id}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
+  return handleResponse(res);
+}
+
+export async function deleteAttendance(token: string, id: string): Promise<true> {
+  const res = await apiFetch(`${API_URL}/attendance/${id}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (res.status === 401) return handleResponse(res);
+  if (!res.ok) throw new Error(`Error ${res.status}`);
+  return true;
+}
+
 export async function getAllAttendance(
   token: string,
   from?: string,

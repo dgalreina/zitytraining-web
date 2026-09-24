@@ -602,7 +602,7 @@ export default function CalendarioPage() {
             locale="es"
             allDaySlot={false}
             slotMinTime="07:00:00"
-            slotMaxTime="22:00:00"
+            slotMaxTime="23:59:00"
             height="100%"
             expandRows
             selectable={canEdit}
