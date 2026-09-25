@@ -14,12 +14,18 @@ export default function FilterDropdown({
   value,
   onChange,
   showColorDot,
+  widthClassName = 'w-full sm:w-56',
 }: {
   label: string;
   options: { id: string; name: string; color?: string }[];
   value: string;
   onChange: (id: string) => void;
   showColorDot?: boolean;
+  // Por defecto ocupa toda la fila en móvil y 224px en escritorio (como
+  // en los filtros de Calendario); un caller que necesite un tamaño fijo
+  // más compacto en las dos anchuras (p.ej. junto a un selector de mes)
+  // puede pasar el suyo.
+  widthClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -35,7 +41,7 @@ export default function FilterDropdown({
   const selected = options.find((o) => o.id === value);
 
   return (
-    <div ref={ref} className="relative w-full sm:w-56">
+    <div ref={ref} className={`relative ${widthClassName}`}>
       <button
         type="button"
         onClick={() => setOpen(!open)}

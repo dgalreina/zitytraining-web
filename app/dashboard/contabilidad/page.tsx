@@ -5,7 +5,15 @@ import { useRouter } from 'next/navigation';
 import { Wallet, ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
 import { getAccountingMonth, AccountingMonth, AccountingClientMonth } from '@/lib/accountingApi';
 import { COLOR_PALETTE } from '@/lib/colors';
+import FilterDropdown from '@/components/FilterDropdown';
 import MonthBreakdownModal from './MonthBreakdownModal';
+
+const ALL_VALUE = 'all';
+const PAYMENT_FILTER_OPTIONS = [
+  { id: ALL_VALUE, name: 'Todos' },
+  { id: 'paid', name: 'Pagado' },
+  { id: 'pending', name: 'Pendiente' },
+];
 
 const DAY_WIDTH = 40;
 // Mismo gris que "border-gray-200" de las celdas de dia. La fila de las
@@ -34,6 +42,7 @@ export default function ContabilidadPage() {
   const [error, setError] = useState('');
   const [selectedClient, setSelectedClient] = useState<AccountingClientMonth | null>(null);
   const [search, setSearch] = useState('');
+  const [paymentFilter, setPaymentFilter] = useState(ALL_VALUE);
   const [page, setPage] = useState(0);
   const [topOffset, setTopOffset] = useState<number | null>(null);
   const tableWrapRef = useRef<HTMLDivElement>(null);
@@ -52,7 +61,7 @@ export default function ContabilidadPage() {
 
   useEffect(() => {
     setPage(0);
-  }, [search, year, month]);
+  }, [search, year, month, paymentFilter]);
 
   // Igual que en Entrenamientos/Fichar: solo la tabla hace scroll, no la
   // página entera (el contenedor del dashboard ya hace overflow-y-auto).
@@ -103,9 +112,13 @@ export default function ContabilidadPage() {
   const visibleClients = useMemo(() => {
     if (!data) return [];
     const query = search.trim().toLowerCase();
-    if (!query) return data.clients;
-    return data.clients.filter((c) => `${c.firstName} ${c.lastName}`.toLowerCase().includes(query));
-  }, [data, search]);
+    return data.clients.filter((c) => {
+      if (query && !`${c.firstName} ${c.lastName}`.toLowerCase().includes(query)) return false;
+      if (paymentFilter === 'paid' && !c.payment.received) return false;
+      if (paymentFilter === 'pending' && c.payment.received) return false;
+      return true;
+    });
+  }, [data, search, paymentFilter]);
 
   // Se pagina al pintar, no al pedir: el mes entero ya viene en dos
   // consultas, lo que cuesta con cien clientes es dibujar un día por
@@ -130,17 +143,14 @@ export default function ContabilidadPage() {
           Contabilidad
         </h2>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 text-xs text-[#868585]">
-            <span className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full bg-[#6aa842]" />
-              Con clase
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-[3px] bg-amber-100" />
-              Festivo
-            </span>
-          </div>
+        <div className="flex w-full items-center justify-between gap-2 sm:w-auto">
+          <FilterDropdown
+            label="Todos"
+            options={PAYMENT_FILTER_OPTIONS}
+            value={paymentFilter}
+            onChange={setPaymentFilter}
+            widthClassName="w-28 sm:w-36"
+          />
 
           <div className="flex items-center gap-1 rounded-lg border border-gray-200 bg-white p-1">
             <button
@@ -220,7 +230,9 @@ export default function ContabilidadPage() {
           <p className="p-6 text-sm text-gray-400">Cargando...</p>
         ) : visibleClients.length === 0 ? (
           <p className="p-6 text-sm text-gray-400">
-            {search.trim() ? 'Ningún cliente coincide con la búsqueda.' : 'No hay clientes que mostrar.'}
+            {search.trim() || paymentFilter !== ALL_VALUE
+              ? 'Ningún cliente coincide con la búsqueda o el filtro.'
+              : 'No hay clientes que mostrar.'}
           </p>
         ) : (
           <table className="w-max border-separate border-spacing-0">
