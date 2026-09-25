@@ -30,7 +30,7 @@ export type ModalState =
   | { mode: 'edit'; booking: any; start: Date }
   | null;
 
-type DurationOption = '40' | '60' | 'custom';
+type DurationOption = '40' | '60' | 'custom' | 'endTime';
 type ModalView = 'form' | 'notes' | 'training';
 
 function minutesBetween(start: Date, end: Date) {
@@ -70,6 +70,12 @@ export default function BookingModal({
   // siguiente tecleo), lo que impedia escribir p.ej. "70" sin que
   // quedara "070". Se convierte a numero solo donde hace falta.
   const [customMinutes, setCustomMinutes] = useState('60');
+  // Hora de finalización cuando se elige la opción "endTime"
+  const [endTime, setEndTime] = useState<Date>(() => {
+    const d = new Date(modal?.start ?? new Date());
+    d.setHours(d.getHours() + 1);
+    return d;
+  });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [view, setView] = useState<ModalView>('form');
@@ -191,6 +197,7 @@ export default function BookingModal({
   function getEffectiveDurationMinutes() {
     if (durationOption === '40') return 40;
     if (durationOption === '60') return 60;
+    if (durationOption === 'endTime') return minutesBetween(start, endTime);
     return Number(customMinutes) || 0;
   }
 
@@ -467,42 +474,39 @@ export default function BookingModal({
               </button>
               <button
                 type="button"
-                onClick={() => setDurationOption('custom')}
+                onClick={() => setDurationOption('endTime')}
                 className={`flex-1 rounded-lg border py-1.5 text-sm font-semibold transition ${
-                  durationOption === 'custom'
+                  durationOption === 'endTime'
                     ? 'border-[#6aa842] bg-[#a2c037]/10 text-[#4b7a1f]'
                     : 'border-gray-200 text-[#868585] hover:bg-gray-50'
                 }`}
               >
-                Otra
+                Hora fin
               </button>
             </div>
 
-            {durationOption === 'custom' && (
+            {durationOption === 'endTime' && (
               <div className="mb-3">
                 <label className="mb-1 block text-xs font-semibold text-[#868585]">
-                  Minutos
+                  Termina a las
                 </label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={customMinutes}
-                  onChange={(e) => {
-                    const digits = e.target.value.replace(/\D/g, '');
-                    setCustomMinutes(digits.replace(/^0+(?=\d)/, ''));
+                <DatePicker
+                  selected={endTime}
+                  onChange={(date: Date | null) => {
+                    if (date) setEndTime(date);
                   }}
+                  showTimeSelect
+                  showTimeSelectOnly
+                  timeIntervals={5}
+                  timeCaption="Hora"
+                  dateFormat="HH:mm"
+                  locale="es"
+                  minTime={start}
                   className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#6aa842] focus:outline-none"
+                  wrapperClassName="mb-0 w-full block"
                 />
               </div>
             )}
-
-            <p className="mb-3 text-xs text-[#868585]">
-              Termina a las{' '}
-              {new Date(
-                start.getTime() + getEffectiveDurationMinutes() * 60000,
-              ).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
-            </p>
 
             {modal.mode === 'create' && (
               <>
