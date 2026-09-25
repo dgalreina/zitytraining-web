@@ -122,7 +122,8 @@ export default function BookingModal({
 
     if (modal.mode === 'edit') {
       const raw = modal.booking;
-      const diff = minutesBetween(modal.start, new Date(raw.endTime));
+      const rawEnd = new Date(raw.endTime);
+      const diff = minutesBetween(modal.start, rawEnd);
       setModalTrainerId(raw.trainer?._id || raw.trainer || '');
       setSelectedClientIds(raw.clients.map((c: any) => c._id));
       setNotes(raw.notes || '');
@@ -131,6 +132,7 @@ export default function BookingModal({
       setBookingWorkout(raw.workout || null);
       setSeriesId(raw.series ? String(raw.series) : null);
       setHolidaySkip(!!raw.holidaySkip);
+      setEndTime(rawEnd);
       if (diff === 40) {
         setDurationOption('40');
       } else if (diff === 60) {
@@ -152,6 +154,9 @@ export default function BookingModal({
       setKind('normal');
       setSeriesId(null);
       setHolidaySkip(false);
+      const defaultEnd = new Date(modal.start);
+      defaultEnd.setMinutes(defaultEnd.getMinutes() + 60);
+      setEndTime(defaultEnd);
     }
   }, [modal, defaultTrainerId]);
 
@@ -203,6 +208,14 @@ export default function BookingModal({
 
   function handleStartTimeChange(date: Date | null) {
     if (!date) return;
+    // Si la hora de fin quedara antes (o igual) que la nueva hora de
+    // inicio, se desplaza con ella manteniendo la misma duración: si no,
+    // el picker de "Hora fin" queda con un valor fuera de su propio
+    // rango permitido (minTime=start) y se rompe al abrirlo.
+    if (endTime.getTime() <= date.getTime()) {
+      const durationMs = endTime.getTime() - start.getTime();
+      setEndTime(new Date(date.getTime() + Math.max(durationMs, 5 * 60000)));
+    }
     setStart(date);
   }
 
