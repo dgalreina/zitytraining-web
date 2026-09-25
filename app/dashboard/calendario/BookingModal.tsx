@@ -359,6 +359,11 @@ export default function BookingModal({
   minStartTime.setHours(7, 0, 0, 0);
   const maxStartTime = new Date(start);
   maxStartTime.setHours(23, 0, 0, 0);
+  // react-datepicker exige minTime y maxTime juntos: el de "Hora fin" no
+  // tiene un mínimo natural más que "después de empezar", así que se le
+  // da el mismo margen que a la franja visible del calendario.
+  const maxEndTime = new Date(start);
+  maxEndTime.setHours(23, 59, 0, 0);
 
   return (
     <>
@@ -515,6 +520,7 @@ export default function BookingModal({
                   dateFormat="HH:mm"
                   locale="es"
                   minTime={start}
+                  maxTime={maxEndTime}
                   className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#6aa842] focus:outline-none"
                   wrapperClassName="mb-0 w-full block"
                 />
