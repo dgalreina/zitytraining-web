@@ -222,7 +222,7 @@ export default function BookingModal({
       return;
     }
 
-    const end = new Date(start.getTime() + duration * 60000);
+    const end = durationOption === 'endTime' ? endTime : new Date(start.getTime() + duration * 60000);
     setSaving(true);
     setError('');
     const token = localStorage.getItem('token');
