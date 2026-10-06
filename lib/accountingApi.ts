@@ -1,8 +1,10 @@
 import { API_URL, apiFetch, handleResponse } from './apiClient';
 
-// De dónde sale el importe del tramo: el precio del plan entero, las
-// sesiones dadas dentro del tramo, o nada (no se cobró ese último mes).
-export type AccountingSegmentBasis = 'full_month' | 'sessions' | 'none';
+// De dónde sale el importe del tramo: el precio del plan entero, el
+// precio del plan entero más las sesiones de más que no entraban en su
+// cupo semanal (cobradas como sueltas), las sesiones dadas dentro del
+// tramo, o nada (no se cobró ese último mes).
+export type AccountingSegmentBasis = 'full_month' | 'full_month_plus_extra' | 'sessions' | 'none';
 
 export interface AccountingSegment {
   label: string;
@@ -11,9 +13,14 @@ export interface AccountingSegment {
   toDay: number;
   amount: number;
   basis: AccountingSegmentBasis;
-  // Solo con basis 'sessions'; en los demás casos, null.
+  // Con basis 'sessions': sesiones del tramo. Con 'full_month_plus_extra':
+  // total de sesiones dadas (cupo + extra). En los demás casos, null.
   sessions: number | null;
+  // Con basis 'sessions' o 'full_month_plus_extra'; en los demás, null.
   pricePerSession: number | null;
+  // Solo con basis 'full_month_plus_extra'.
+  extraSessions: number | null;
+  extraAmount: number | null;
 }
 
 export interface AccountingDay {

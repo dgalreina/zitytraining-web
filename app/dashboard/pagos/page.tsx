@@ -131,7 +131,10 @@ export default function PagosPage() {
               })`,
               paymentMode: planPaymentMode === 'monthly' ? 'monthly' : 'sessions',
               price: getModalPrice(),
-              sessionCount: planPaymentMode === 'sessions' ? selection.item.sessionCount : undefined,
+              // También en modo mensual: Contabilidad lo usa como cupo de
+              // sesiones del plan, para saber cuándo cobrar las de más
+              // como sueltas (ver accounting.service.ts).
+              sessionCount: selection.item.sessionCount,
             }
           : {
               type: 'service',

@@ -16,6 +16,10 @@ function billingDetail(seg: AccountingSegment) {
     const n = seg.sessions ?? 0;
     return `${n} ${n === 1 ? 'sesión' : 'sesiones'} × ${seg.pricePerSession}€`;
   }
+  if (seg.basis === 'full_month_plus_extra') {
+    const n = seg.extraSessions ?? 0;
+    return `mes completo + ${n} ${n === 1 ? 'suelta' : 'sueltas'} × ${seg.pricePerSession}€`;
+  }
   return 'mes completo';
 }
 
