@@ -454,7 +454,13 @@ export default function CalendarioPage() {
     recalcOffset();
     window.addEventListener('resize', recalcOffset);
     return () => window.removeEventListener('resize', recalcOffset);
-  }, [roleReady, loadingLists]);
+    // isOnline/pendingQueue.length: el banner de "Sin conexión" (montado en
+    // el layout, por encima de este componente) ocupa una línea más y
+    // empuja el calendario hacia abajo; sin esto, el alto se quedaba
+    // calculado como si el banner no estuviera, tapando el botón de
+    // "Enviar recordatorios".
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roleReady, loadingLists, isOnline, pendingQueue.length]);
 
   function handleMiniDateChange(date: Date | null) {
     if (!date) return;
@@ -489,10 +495,18 @@ export default function CalendarioPage() {
     const token = localStorage.getItem('token');
     if (!token) return;
     try {
-      await updateBookingOrQueue(token, info.event.id, {
+      const result: any = await updateBookingOrQueue(token, info.event.id, {
         startTime: info.event.start.toISOString(),
         endTime: info.event.end.toISOString(),
       });
+      // Si se quedó en cola (sin conexión), FullCalendar ya movió este
+      // evento a mano por el propio arrastre, así que displayEvents no lo
+      // "cambia" de verdad (mismo id, misma hora) y a veces no vuelve a
+      // pasar por eventClassNames hasta el siguiente remontado. Marcándolo
+      // aquí, directo por la API del evento, se ve el filo al momento.
+      if (result?._pendingSync) {
+        info.event.setExtendedProp('pendingSync', true);
+      }
       // Sin esto, el "raw" que lleva colgado el evento (con la hora vieja)
       // se queda tal cual, y si reabres el modal para editar te sale la
       // hora/día de antes de arrastrar, aunque el evento ya se vea movido.
@@ -596,7 +610,7 @@ export default function CalendarioPage() {
 
       <div
         ref={gridRowRef}
-        className="flex h-[calc(100dvh-190px)] gap-5"
+        className="flex h-[calc(100dvh-190px)] gap-5 transition-[height] duration-300 ease-out"
         style={topOffset !== null ? { height: `calc(100dvh - ${topOffset}px)` } : undefined}
       >
         <div className="hidden w-64 shrink-0 self-start overflow-y-auto rounded-xl bg-white p-4 md:block">
@@ -743,9 +757,6 @@ export default function CalendarioPage() {
                   )}
                   {raw?.holidaySkip && viewType !== 'timeGridWeek' && (
                     <span className="ziti-event-holiday-skip-label">No cuenta (festivo)</span>
-                  )}
-                  {arg.event.extendedProps.pendingSync && (
-                    <span className="ziti-event-pending-sync-label">Sin sincronizar</span>
                   )}
                   {raw?.notes && <div className="ziti-event-tooltip">{raw.notes}</div>}
                 </div>

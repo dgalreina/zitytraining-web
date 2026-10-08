@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { WifiOff, RefreshCw, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { WifiOff, RefreshCw, X, CheckCircle2 } from 'lucide-react';
 import { OFFLINE_MESSAGE } from '@/lib/apiClient';
 import { useOnlineStatus } from '@/lib/useOnlineStatus';
 import {
@@ -42,6 +42,15 @@ export default function OfflineSyncBanner() {
   const [pendingCount, setPendingCount] = useState(0);
   const [syncing, setSyncing] = useState(false);
   const [failures, setFailures] = useState<string[]>([]);
+  // Tras vaciar la cola del todo: unos segundos en verde, luego se
+  // desvanece sola en vez de desaparecer de golpe.
+  const [justSynced, setJustSynced] = useState(false);
+  const [fadingOut, setFadingOut] = useState(false);
+  const fadeTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  useEffect(() => {
+    return () => fadeTimers.current.forEach(clearTimeout);
+  }, []);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user');
@@ -69,6 +78,7 @@ export default function OfflineSyncBanner() {
     setSyncing(true);
     const localIdMap = new Map<string, string>();
     const newFailures: string[] = [];
+    let stillOffline = false;
 
     for (const entry of queue) {
       try {
@@ -78,6 +88,7 @@ export default function OfflineSyncBanner() {
         if (err?.message === OFFLINE_MESSAGE) {
           // Seguimos sin red de verdad (falso positivo del evento "online"
           // o se cortó otra vez): se deja el resto en cola para luego.
+          stillOffline = true;
           break;
         }
         // Otro fallo (p.ej. la sesión ya no existe): se aparta, sin
@@ -90,6 +101,19 @@ export default function OfflineSyncBanner() {
 
     setSyncing(false);
     if (newFailures.length > 0) setFailures((prev) => [...prev, ...newFailures]);
+
+    if (!stillOffline) {
+      fadeTimers.current.forEach(clearTimeout);
+      setFadingOut(false);
+      setJustSynced(true);
+      fadeTimers.current = [
+        setTimeout(() => setFadingOut(true), 2500),
+        setTimeout(() => {
+          setJustSynced(false);
+          setFadingOut(false);
+        }, 2900),
+      ];
+    }
   }
 
   useEffect(() => {
@@ -97,11 +121,14 @@ export default function OfflineSyncBanner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOnline]);
 
-  if (isOnline && pendingCount === 0 && failures.length === 0) return null;
+  const showPendingOrOffline = !isOnline || (isAdmin && pendingCount > 0);
+  const showSuccess = isOnline && isAdmin && justSynced && pendingCount === 0;
+
+  if (!showPendingOrOffline && !showSuccess && failures.length === 0) return null;
 
   return (
     <div className="mb-4 flex flex-col gap-1.5">
-      {(!isOnline || (isAdmin && pendingCount > 0)) && (
+      {showPendingOrOffline && (
         <div className="flex flex-wrap items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
           <WifiOff size={14} className="shrink-0" />
           <span>
@@ -119,6 +146,17 @@ export default function OfflineSyncBanner() {
               Sincronizar ahora
             </button>
           )}
+        </div>
+      )}
+
+      {showSuccess && (
+        <div
+          className={`flex items-center gap-2 rounded-lg bg-[#a2c037]/15 px-3 py-2 text-xs font-medium text-[#4b7a1f] transition-opacity duration-500 ${
+            fadingOut ? 'opacity-0' : 'opacity-100'
+          }`}
+        >
+          <CheckCircle2 size={14} className="shrink-0" />
+          <span>Todo sincronizado</span>
         </div>
       )}
 
