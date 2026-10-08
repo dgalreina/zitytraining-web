@@ -8,7 +8,12 @@ import '@/styles/datepicker-theme.css';
 import { X, Trash2, ChevronLeft, ChevronDown, Ban, RotateCcw, Star, Repeat, CalendarOff } from 'lucide-react';
 import FilterDropdown from '@/components/FilterDropdown';
 import Switch from '@/components/Switch';
-import { createBooking, updateBooking, deleteBooking, deleteBookingSeries } from '@/lib/bookingsApi';
+import {
+  createBookingOrQueue as createBooking,
+  updateBookingOrQueue as updateBooking,
+  deleteBookingOrQueue as deleteBooking,
+  deleteBookingSeriesOrQueue as deleteBookingSeries,
+} from '@/lib/offlineBookings';
 import { getWorkouts } from '@/lib/workoutsApi';
 import { dayKey } from '@/components/MiniCalendar';
 import { INTERVIEW_COLOR, PRIVATE_COLOR } from '@/lib/colors';

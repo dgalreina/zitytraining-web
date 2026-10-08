@@ -317,6 +317,14 @@
   border: 2px solid #ef4444 !important;
 }
 
+/* Hecho sin conexión y aún en la cola local, pendiente de mandarse al
+   servidor en cuanto vuelva la red (ver lib/offlineQueue.ts). */
+.fc-event.ziti-event-pending-sync {
+  outline: 2px dashed #6aa842;
+  outline-offset: -2px;
+  opacity: 0.85;
+}
+
 .ziti-event-cancelled-label {
   position: absolute;
   bottom: 2px;
@@ -346,6 +354,18 @@
   position: absolute;
   bottom: 2px;
   left: 4px;
+  font-size: 0.55rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  color: white;
+  text-transform: uppercase;
+}
+
+.ziti-event-pending-sync-label {
+  position: absolute;
+  top: 2px;
+  right: 4px;
   font-size: 0.55rem;
   font-weight: 700;
   line-height: 1;

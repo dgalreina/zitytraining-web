@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { getAvatarGradient } from '@/lib/colors';
 import { logout } from '@/lib/authApi';
+import OfflineSyncBanner from '@/components/OfflineSyncBanner';
 
 const ADMIN_ONLY_PREFIXES = [
   '/dashboard/entrenadores',
@@ -229,6 +230,7 @@ export default function DashboardLayout({
           banda gris. Va aqui, en el unico contenedor con scroll del panel,
           asi que vale para todas sus pantallas. */}
       <div className="flex-1 overflow-y-auto overscroll-none px-4 py-6 sm:px-6 md:px-8">
+        <OfflineSyncBanner />
         <div className="mb-6 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <button

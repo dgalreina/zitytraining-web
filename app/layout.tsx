@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Work_Sans, Inter } from "next/font/google";
+import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
 import "./globals.css";
 
 const workSans = Work_Sans({
@@ -50,6 +51,7 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className={`${workSans.variable} ${inter.variable} antialiased`}>
+        <ServiceWorkerRegister />
         {children}
       </body>
     </html>

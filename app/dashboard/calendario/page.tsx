@@ -16,7 +16,10 @@ import { useCalendarDaySlide } from './useCalendarDaySlide';
 import { useEdgeDragNavigation } from './useEdgeDragNavigation';
 import { useSwipeNavigation } from './useSwipeNavigation';
 import { getUsers, getMe, getActiveClients } from '@/lib/usersApi';
-import { getBookings, getBookingsByTrainers, updateBooking } from '@/lib/bookingsApi';
+import { getBookings, getBookingsByTrainers } from '@/lib/bookingsApi';
+import { updateBookingOrQueue } from '@/lib/offlineBookings';
+import { getQueue, PendingBookingEntry, QUEUE_CHANGED_EVENT } from '@/lib/offlineQueue';
+import { useOnlineStatus } from '@/lib/useOnlineStatus';
 import { getHolidays } from '@/lib/holidaysApi';
 import { INTERVIEW_COLOR, PRIVATE_COLOR } from '@/lib/colors';
 
@@ -39,6 +42,20 @@ export default function CalendarioPage() {
 
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [events, setEvents] = useState<any[]>([]);
+  const isOnline = useOnlineStatus();
+  // Acciones hechas sin conexión (solo admin) que aún no se han mandado al
+  // servidor; se mezclan sobre "events" para que se vean al momento (ver
+  // applyPendingQueueToEvents) y las consume de verdad OfflineSyncBanner al
+  // recuperar conexión.
+  const [pendingQueue, setPendingQueue] = useState<PendingBookingEntry[]>([]);
+  function refreshPendingQueue() {
+    getQueue().then(setPendingQueue).catch(() => {});
+  }
+  useEffect(() => {
+    refreshPendingQueue();
+    window.addEventListener(QUEUE_CHANGED_EVENT, refreshPendingQueue);
+    return () => window.removeEventListener(QUEUE_CHANGED_EVENT, refreshPendingQueue);
+  }, []);
   // El ResizeObserver de fitEventText necesita los datos MÁS RECIENTES del
   // evento, no los que había en el momento en que se montó el elemento: si
   // FullCalendar reutiliza el mismo nodo del DOM tras una edición (en vez
@@ -46,9 +63,6 @@ export default function CalendarioPage() {
   // queda con los datos viejos, y un resize posterior (p.ej. al cambiar de
   // vista) volvía a pintar el texto antiguo encima del ya corregido.
   const eventsRef = useRef<any[]>([]);
-  useEffect(() => {
-    eventsRef.current = events;
-  }, [events]);
 
   // Festivos (nacionales + Castilla y León automáticos, más los locales
   // que se añadan a mano en /dashboard/festivos): "YYYY-MM-DD" -> nombre.
@@ -111,6 +125,9 @@ export default function CalendarioPage() {
   // a qué entrenador pertenece cada sesión nueva, así que no hace falta
   // tener exactamente uno marcado en el checklist para poder crear.
   const canEdit = isTrainerPerspective;
+  // Sin conexión solo el admin puede seguir creando/moviendo/borrando
+  // sesiones (se guardan en cola); el resto de roles pasan a solo lectura.
+  const canEditOffline = isOnline ? canEdit : isAdmin;
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -202,6 +219,68 @@ export default function CalendarioPage() {
       extendedProps: { raw: b, candidates },
     };
   }
+
+  // Un payload de la cola offline lleva ids en crudo (trainer: string,
+  // clients: string[]); bookingToEvent espera los objetos ya poblados, así
+  // que se resuelven aquí contra las listas que ya tenemos en memoria para
+  // los desplegables de filtro.
+  function resolveTrainerRef(id: string | undefined) {
+    return trainers.find((t) => t._id === id) || { _id: id, firstName: '', lastName: '', color: FALLBACK_COLOR };
+  }
+  function resolveClientRefs(ids: string[] | undefined) {
+    return (ids || []).map((cid) => clients.find((c) => c._id === cid) || { _id: cid, firstName: '', lastName: '' });
+  }
+
+  // Aplica, por orden, la cola de acciones sin sincronizar sobre la lista
+  // de eventos ya cargada: añade las creadas offline, parchea las editadas
+  // y quita las borradas. Así el admin ve al momento lo que ha hecho sin
+  // conexión, sin esperar a que sincronice de verdad.
+  function applyPendingQueueToEvents(baseEvents: any[], queue: PendingBookingEntry[]) {
+    let result = baseEvents;
+    for (const entry of queue) {
+      if (entry.action === 'create') {
+        const raw = {
+          _id: entry.localId,
+          trainer: resolveTrainerRef(entry.payload.trainer),
+          clients: resolveClientRefs(entry.payload.clients),
+          startTime: entry.payload.startTime,
+          endTime: entry.payload.endTime,
+          notes: entry.payload.notes,
+          isPrivate: entry.payload.isPrivate,
+          isInterview: entry.payload.isInterview,
+          status: 'active',
+        };
+        const ev: any = bookingToEvent(raw);
+        ev.extendedProps = { ...ev.extendedProps, pendingSync: true };
+        result = [...result, ev];
+      } else if (entry.action === 'update') {
+        result = result.map((ev) => {
+          if (ev.id !== entry.targetId) return ev;
+          const mergedRaw = { ...ev.extendedProps.raw, ...entry.payload };
+          if (entry.payload.trainer) mergedRaw.trainer = resolveTrainerRef(entry.payload.trainer);
+          if (entry.payload.clients) mergedRaw.clients = resolveClientRefs(entry.payload.clients);
+          const merged: any = bookingToEvent(mergedRaw);
+          merged.extendedProps = { ...merged.extendedProps, pendingSync: true };
+          return merged;
+        });
+      } else if (entry.action === 'delete' || entry.action === 'deleteSeries') {
+        result = result.filter((ev) => ev.id !== entry.targetId);
+      }
+    }
+    return result;
+  }
+
+  const displayEvents = useMemo(
+    () => applyPendingQueueToEvents(events, pendingQueue),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [events, pendingQueue, trainers, clients],
+  );
+  // El ResizeObserver de fitEventText necesita los datos MÁS RECIENTES
+  // (incluidos los pendientes de sincronizar), no los que había cuando se
+  // montó el elemento (ver el comentario junto a eventsRef más arriba).
+  useEffect(() => {
+    eventsRef.current = displayEvents;
+  }, [displayEvents]);
 
   // Recorta el contenido de un evento del calendario según el espacio real
   // disponible: nombre completo -> solo nombre, dejando que el texto se
@@ -388,12 +467,12 @@ export default function CalendarioPage() {
   }
 
   function openCreateModal(start: Date) {
-    if (!canEdit) return;
+    if (!canEditOffline) return;
     setModal({ mode: 'create', start });
   }
 
   function openEditModal(raw: any) {
-    if (!canEdit) return;
+    if (!canEditOffline) return;
     setModal({ mode: 'edit', booking: raw, start: new Date(raw.startTime) });
   }
 
@@ -410,18 +489,22 @@ export default function CalendarioPage() {
     const token = localStorage.getItem('token');
     if (!token) return;
     try {
-      await updateBooking(token, info.event.id, {
+      await updateBookingOrQueue(token, info.event.id, {
         startTime: info.event.start.toISOString(),
         endTime: info.event.end.toISOString(),
       });
       // Sin esto, el "raw" que lleva colgado el evento (con la hora vieja)
       // se queda tal cual, y si reabres el modal para editar te sale la
       // hora/día de antes de arrastrar, aunque el evento ya se vea movido.
+      // Si no hay conexión loadBookings no trae nada nuevo (falla en
+      // silencio), pero refreshPendingQueue hace que displayEvents
+      // recalcule con la hora nueva de todos modos.
       const api = calendarRef.current?.getApi();
       if (api) {
         loadBookings(api.view.activeStart.toISOString(), api.view.activeEnd.toISOString());
       }
       loadMonthDots(selectedDate);
+      refreshPendingQueue();
     } catch (err: any) {
       alert(err.message || 'No se pudo mover la sesión');
       info.revert();
@@ -450,6 +533,7 @@ export default function CalendarioPage() {
       loadBookings(api.view.activeStart.toISOString(), api.view.activeEnd.toISOString());
     }
     loadMonthDots(selectedDate);
+    refreshPendingQueue();
   }
 
   if (!roleReady || loadingLists) {
@@ -605,14 +689,14 @@ export default function CalendarioPage() {
             slotMaxTime="23:59:00"
             height="100%"
             expandRows
-            selectable={canEdit}
+            selectable={canEditOffline}
             selectLongPressDelay={200}
             eventLongPressDelay={200}
             // Sin esto, al soltar el dedo el bloque desliza 500ms de vuelta
             // a su sitio con top/left (no transform), lo que en Safari/iOS
             // puede provocar un filo gris de repintado durante el gesto.
             dragRevertDuration={0}
-            eventStartEditable={canEdit}
+            eventStartEditable={canEditOffline}
             eventDurationEditable={false}
             select={handleSelect}
             eventClick={handleEventClick}
@@ -622,7 +706,7 @@ export default function CalendarioPage() {
             eventDidMount={handleEventDidMount}
             eventWillUnmount={handleEventWillUnmount}
             datesSet={handleDatesSet}
-            events={events}
+            events={displayEvents}
             eventColor={FALLBACK_COLOR}
             slotEventOverlap={false}
             slotDuration="00:30:00"
@@ -632,6 +716,7 @@ export default function CalendarioPage() {
               const classes: string[] = [];
               if (arg.event.extendedProps.raw?.status === 'cancelled') classes.push('ziti-event-cancelled');
               if (arg.event.extendedProps.raw?.holidaySkip) classes.push('ziti-event-holiday-skip');
+              if (arg.event.extendedProps.pendingSync) classes.push('ziti-event-pending-sync');
               return classes;
             }}
             eventContent={(arg) => {
@@ -658,6 +743,9 @@ export default function CalendarioPage() {
                   )}
                   {raw?.holidaySkip && viewType !== 'timeGridWeek' && (
                     <span className="ziti-event-holiday-skip-label">No cuenta (festivo)</span>
+                  )}
+                  {arg.event.extendedProps.pendingSync && (
+                    <span className="ziti-event-pending-sync-label">Sin sincronizar</span>
                   )}
                   {raw?.notes && <div className="ziti-event-tooltip">{raw.notes}</div>}
                 </div>
