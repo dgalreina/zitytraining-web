@@ -121,6 +121,17 @@ export default function OfflineSyncBanner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOnline]);
 
+  // El calendario recalcula su alto escuchando el "resize" nativo de la
+  // ventana (ver app/dashboard/calendario/page.tsx), pero este banner vive
+  // en el layout, aparte: cuando cambia de tamaño por su cuenta (aparece,
+  // pasa a "Todo sincronizado", o se desvanece sola unos segundos después)
+  // esa página no se entera por ningún otro medio. Disparar un "resize" de
+  // mentira reutiliza ese mismo mecanismo sin tener que acoplar el banner
+  // al calendario.
+  useEffect(() => {
+    window.dispatchEvent(new Event('resize'));
+  }, [isOnline, isAdmin, pendingCount, syncing, justSynced, fadingOut, failures.length]);
+
   const showPendingOrOffline = !isOnline || (isAdmin && pendingCount > 0);
   const showSuccess = isOnline && isAdmin && justSynced && pendingCount === 0;
 

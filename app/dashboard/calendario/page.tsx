@@ -51,10 +51,26 @@ export default function CalendarioPage() {
   function refreshPendingQueue() {
     getQueue().then(setPendingQueue).catch(() => {});
   }
+  // Cuando la cola cambia porque OfflineSyncBanner acaba de sincronizar un
+  // cambio de verdad con el servidor (no solo porque se encoló uno nuevo
+  // sin conexión), "events" se queda con los datos de antes de
+  // desconectarse: sin este refresco, al vaciarse la cola el calendario
+  // volvía a enseñar la posición vieja de la sesión en vez de la ya
+  // guardada. Pedirlo también cuando no hay red no hace daño: loadBookings
+  // ya falla en silencio en ese caso.
+  function handleQueueChanged() {
+    refreshPendingQueue();
+    const api = calendarRef.current?.getApi();
+    if (api) {
+      loadBookings(api.view.activeStart.toISOString(), api.view.activeEnd.toISOString());
+    }
+    loadMonthDots(selectedDate);
+  }
   useEffect(() => {
     refreshPendingQueue();
-    window.addEventListener(QUEUE_CHANGED_EVENT, refreshPendingQueue);
-    return () => window.removeEventListener(QUEUE_CHANGED_EVENT, refreshPendingQueue);
+    window.addEventListener(QUEUE_CHANGED_EVENT, handleQueueChanged);
+    return () => window.removeEventListener(QUEUE_CHANGED_EVENT, handleQueueChanged);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   // El ResizeObserver de fitEventText necesita los datos MÁS RECIENTES del
   // evento, no los que había en el momento en que se montó el elemento: si
