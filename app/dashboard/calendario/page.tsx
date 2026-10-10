@@ -66,11 +66,24 @@ export default function CalendarioPage() {
     }
     loadMonthDots(selectedDate);
   }
+  // El oyente de abajo se registra una sola vez (al montar), pero
+  // handleQueueChanged usa loadBookings, que a su vez lee
+  // selectedTrainerIds/selectedClientId/selectedDate del cierre de ESTE
+  // render. Sin la referencia, el oyente se quedaría para siempre con la
+  // versión de la primerísima carga (con selectedTrainerIds todavía
+  // vacío, antes de que terminara de pedirse la lista de entrenadores):
+  // cada sincronización pediría sesiones de "ningún entrenador" y
+  // vaciaría el calendario entero. Guardando la última versión en una
+  // referencia, el oyente (que no cambia) siempre llama a la actual.
+  const handleQueueChangedRef = useRef(handleQueueChanged);
+  useEffect(() => {
+    handleQueueChangedRef.current = handleQueueChanged;
+  });
   useEffect(() => {
     refreshPendingQueue();
-    window.addEventListener(QUEUE_CHANGED_EVENT, handleQueueChanged);
-    return () => window.removeEventListener(QUEUE_CHANGED_EVENT, handleQueueChanged);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const listener = () => handleQueueChangedRef.current();
+    window.addEventListener(QUEUE_CHANGED_EVENT, listener);
+    return () => window.removeEventListener(QUEUE_CHANGED_EVENT, listener);
   }, []);
   // El ResizeObserver de fitEventText necesita los datos MÁS RECIENTES del
   // evento, no los que había en el momento en que se montó el elemento: si
