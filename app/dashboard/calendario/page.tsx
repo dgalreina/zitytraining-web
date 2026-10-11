@@ -531,10 +531,26 @@ export default function CalendarioPage() {
       // Si se quedó en cola (sin conexión), FullCalendar ya movió este
       // evento a mano por el propio arrastre, así que displayEvents no lo
       // "cambia" de verdad (mismo id, misma hora) y a veces no vuelve a
-      // pasar por eventClassNames hasta el siguiente remontado. Marcándolo
-      // aquí, directo por la API del evento, se ve el filo al momento.
+      // pasar por eventClassNames hasta el siguiente remontado.
+      // setExtendedProp por sí solo no bastaba (FullCalendar sigue
+      // "asentando" el arrastre justo después de soltarlo y a veces no
+      // repinta ese evento concreto), así que se quita y se vuelve a
+      // añadir con el dato actualizado: así FullCalendar lo trata como
+      // nuevo y lo pinta de cero, con el filo ya puesto.
       if (result?._pendingSync) {
-        info.event.setExtendedProp('pendingSync', true);
+        const calApi = calendarRef.current?.getApi();
+        if (calApi && info.event.start && info.event.end) {
+          const rebuilt = {
+            id: info.event.id,
+            title: info.event.title,
+            start: info.event.start,
+            end: info.event.end,
+            color: info.event.backgroundColor,
+            extendedProps: { ...info.event.extendedProps, pendingSync: true },
+          };
+          info.event.remove();
+          calApi.addEvent(rebuilt);
+        }
       }
       // Sin esto, el "raw" que lleva colgado el evento (con la hora vieja)
       // se queda tal cual, y si reabres el modal para editar te sale la

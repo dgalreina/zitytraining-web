@@ -13,16 +13,54 @@ import {
   deleteBooking,
   deleteBookingSeries,
 } from './bookingsApi';
-import { addToQueue, newLocalId, PendingAction, PendingBookingEntry } from './offlineQueue';
+import { addToQueue, getQueue, newLocalId, removeFromQueue, PendingAction, PendingBookingEntry } from './offlineQueue';
 
 function isOfflineError(err: unknown): boolean {
   return err instanceof Error && err.message === OFFLINE_MESSAGE;
 }
 
+// Mover/editar varias veces la misma sesión sin conexión no apila una
+// acción por cada toque: se funde con la que ya hubiera en cola para esa
+// misma sesión, quedándose con los datos más recientes. Así "4 cambios
+// pendientes" refleja sesiones distintas tocadas, no toques sueltos.
 async function enqueue(action: PendingAction, targetId: string | null, payload: any): Promise<string> {
+  const queue = await getQueue();
+
+  if (action === 'delete' || action === 'deleteSeries') {
+    // Si lo que se borra es una sesión creada sin conexión y aún sin
+    // sincronizar, no hay nada que borrar en el servidor: basta con
+    // quitarla de la cola entera, como si nunca se hubiera creado.
+    const createEntry = targetId ? queue.find((e) => e.action === 'create' && e.localId === targetId) : undefined;
+    if (createEntry) {
+      await removeFromQueue(createEntry.localId);
+      return createEntry.localId;
+    }
+    // Cualquier edición pendiente de esa sesión deja de tener sentido si
+    // se va a borrar.
+    for (const e of queue) {
+      if (e.targetId === targetId && e.action === 'update') {
+        await removeFromQueue(e.localId);
+      }
+    }
+  } else if (action === 'update' && targetId) {
+    const existing = queue.find(
+      (e) =>
+        (e.action === 'update' && e.targetId === targetId) ||
+        (e.action === 'create' && e.localId === targetId),
+    );
+    if (existing) {
+      const merged: PendingBookingEntry = {
+        ...existing,
+        payload: { ...existing.payload, ...payload },
+        createdAt: Date.now(),
+      };
+      await addToQueue(merged); // misma localId: reemplaza en vez de duplicar
+      return existing.localId;
+    }
+  }
+
   const localId = newLocalId();
-  const entry: PendingBookingEntry = { localId, action, targetId, payload, createdAt: Date.now() };
-  await addToQueue(entry);
+  await addToQueue({ localId, action, targetId, payload, createdAt: Date.now() });
   return localId;
 }
 
