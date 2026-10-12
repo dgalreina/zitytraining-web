@@ -96,7 +96,6 @@ export default function DateOfBirthPicker({
         locale="es"
         calendarStartDay={1}
         dateFormat="dd/MM/yyyy"
-        placeholderText="Selecciona una fecha"
         className={inputClass}
         wrapperClassName="w-full"
         disabled={disabled}
