@@ -32,10 +32,10 @@ export default function NuevoEntrenadorPage() {
     setError('');
 
     // La dirección no se pide: se puede rellenar luego desde su ficha.
+    // La fecha de nacimiento tampoco es obligatoria.
     if (
       !form.firstName ||
       !form.lastName ||
-      !form.dateOfBirth ||
       !form.email ||
       !form.phone
     ) {
@@ -59,6 +59,7 @@ export default function NuevoEntrenadorPage() {
     try {
       await createUserByAdmin(token, {
         ...form,
+        dateOfBirth: form.dateOfBirth || undefined,
         roles: ['trainer'],
       });
       router.push('/dashboard/entrenadores');
@@ -112,7 +113,6 @@ export default function NuevoEntrenadorPage() {
             <DateOfBirthPicker
               value={form.dateOfBirth}
               onChange={(value) => setForm({ ...form, dateOfBirth: value })}
-              required
             />
             <div>
               <label className={labelClass}>Teléfono<span className="text-red-500"> *</span></label>

@@ -39,6 +39,7 @@ export default function NuevoClientePage() {
     try {
       const created = await createUserByAdmin(token, {
         ...form,
+        dateOfBirth: form.dateOfBirth || undefined,
         email: form.email || undefined,
         roles: ['client'],
       });
@@ -95,7 +96,6 @@ export default function NuevoClientePage() {
             <DateOfBirthPicker
               value={form.dateOfBirth}
               onChange={(value) => setForm({ ...form, dateOfBirth: value })}
-              required
             />
             <div>
               <label className={labelClass}>Teléfono<span className="text-red-500"> *</span></label>

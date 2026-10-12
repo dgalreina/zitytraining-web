@@ -100,7 +100,7 @@ export default function DateOfBirthPicker({
         className={inputClass}
         wrapperClassName="w-full"
         disabled={disabled}
-        required
+        required={required}
         popperPlacement="bottom-start"
         popperModifiers={[shift({ padding: 8 }), flip({ padding: 8 })]}
         renderCustomHeader={({

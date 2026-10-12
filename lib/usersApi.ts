@@ -27,7 +27,7 @@ export interface UpdateMePayload {
 export interface CreateUserByAdminPayload {
   firstName: string;
   lastName: string;
-  dateOfBirth: string;
+  dateOfBirth?: string;
   email?: string;
   password?: string;
   phone: string;
