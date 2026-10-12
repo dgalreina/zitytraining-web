@@ -1,12 +1,11 @@
 import { API_URL, apiFetch, handleResponse } from './apiClient';
-
+//
 export interface WorkoutExerciseRef {
   _id: string;
   name: string;
   category?: string;
 }
 
-// Una serie: repeticiones y peso (kg), cada uno opcional por separado.
 export interface WorkoutSet {
   reps?: number;
   weight?: number;

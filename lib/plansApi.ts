@@ -1,6 +1,6 @@
 import { API_URL, apiFetch, handleResponse } from './apiClient';
 import { TrainingCategory } from './pricing';
-
+//
 export interface Plan {
   _id: string;
   category: TrainingCategory;

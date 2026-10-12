@@ -1,10 +1,11 @@
 export const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+//
 
-// TODO: quitar todo este bloque de depuración (debugLog, decodeJwtExpiry
-// y las llamadas a debugLog de más abajo) en cuanto se localice por qué a
-// veces se cierra la sesión sola. Se guarda en localStorage bajo una
-// clave aparte (no la toca el borrado de sesión) para poder verla luego
-// en /login aunque haya pasado en el móvil, donde no hay consola a mano.
+// Comentado, no borrado, por si hiciera falta reactivarlo: el bug que
+// investigaba esto ("se cierra la sesión sola") ya se localizó y se
+// arregló (ver commit 698bf67, que quitó los paneles de /login que lo
+// mostraban) y ya no hay ninguna pantalla que lea DEBUG_LOG_KEY.
+/*
 const DEBUG_LOG_KEY = 'debug_auth_log';
 
 export function debugLog(event: string, details?: Record<string, unknown>) {
@@ -33,6 +34,7 @@ function decodeJwtExpiry(token: string): { exp: number; expiredAt: string; expir
     return null;
   }
 }
+*/
 
 // Evita que dos peticiones que caducan a la vez disparen dos refrescos
 // en paralelo (el segundo llegaría con un refresh token ya rotado por
@@ -44,11 +46,11 @@ async function tryRefreshToken(): Promise<string | null> {
 
   const refreshToken = localStorage.getItem('refreshToken');
   if (!refreshToken) {
-    debugLog('refresh_sin_refresh_token_guardado');
+    // debugLog('refresh_sin_refresh_token_guardado');
     return null;
   }
 
-  debugLog('refresh_intentado');
+  // debugLog('refresh_intentado');
 
   refreshInFlight = (async () => {
     try {
@@ -58,16 +60,16 @@ async function tryRefreshToken(): Promise<string | null> {
         body: JSON.stringify({ refreshToken }),
       });
       if (!res.ok) {
-        debugLog('refresh_fallo', { status: res.status });
+        // debugLog('refresh_fallo', { status: res.status });
         return null;
       }
       const data = await res.json();
       localStorage.setItem('token', data.access_token);
       localStorage.setItem('refreshToken', data.refresh_token);
-      debugLog('refresh_exito');
+      // debugLog('refresh_exito');
       return data.access_token as string;
     } catch (err) {
-      debugLog('refresh_error_de_red', { message: String(err) });
+      // debugLog('refresh_error_de_red', { message: String(err) });
       return null;
     } finally {
       refreshInFlight = null;
@@ -98,8 +100,8 @@ export async function fetchOrOffline(url: string, options?: RequestInit): Promis
 export async function apiFetch(url: string, options: RequestInit = {}): Promise<Response> {
   const res = await fetchOrOffline(url, options);
   if (res.status !== 401) return res;
-
-  debugLog('401_recibido', { url });
+  //problema de autenticación
+  // debugLog('401_recibido', { url });
   const newToken = await tryRefreshToken();
   if (!newToken) return res;
 
@@ -109,8 +111,9 @@ export async function apiFetch(url: string, options: RequestInit = {}): Promise<
 
 export async function handleResponse(res: Response) {
   if (res.status === 401) {
-    const token = localStorage.getItem('token');
     const refreshToken = localStorage.getItem('refreshToken');
+    /*
+    const token = localStorage.getItem('token');
     const exp = token ? decodeJwtExpiry(token) : null;
     // Esta es la entrada clave para depurar: si hadToken es true y
     // tokenExpirado es false, el token seguia siendo valido y el 401 no
@@ -124,6 +127,7 @@ export async function handleResponse(res: Response) {
       tokenExpirado: exp ? exp.expired : null,
       tokenCaducaba: exp ? exp.expiredAt : null,
     });
+    */
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
@@ -148,9 +152,6 @@ export async function handleResponse(res: Response) {
   }
 
   // Algunos endpoints (ej. cambiar contraseña) responden 200 sin body;
-  // res.json() sobre una respuesta vacía explota ("Unexpected end of
-  // JSON input" en Chrome, "did not match the expected pattern" en
-  // Safari — mismo fallo, cada motor lo describe a su manera).
   const text = await res.text();
   return text ? JSON.parse(text) : null;
 }

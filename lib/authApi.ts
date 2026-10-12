@@ -1,5 +1,5 @@
 import { API_URL, fetchOrOffline } from './apiClient';
-
+//
 export async function login(email: string, password: string) {
   const res = await fetchOrOffline(`${API_URL}/auth/login`, {
     method: 'POST',
@@ -14,8 +14,7 @@ export async function login(email: string, password: string) {
   return res.json();
 }
 
-// Responde lo mismo exista o no la dirección, a propósito: así nadie
-// puede usar esto para descubrir qué correos están registrados.
+
 export async function forgotPassword(email: string) {
   const res = await fetchOrOffline(`${API_URL}/auth/forgot-password`, {
     method: 'POST',

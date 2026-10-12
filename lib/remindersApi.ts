@@ -1,9 +1,9 @@
 import { API_URL, apiFetch, handleResponse } from './apiClient';
-
+//
 export interface ReminderLog {
   clientId: string;
-  // Días y horas que se le anunciaron. Si no coincide con lo que hay
-  // ahora, es que su semana cambió desde que se le escribió.
+  // Días y horas que se le anunciaron por whatsapp. Si no coincide con lo que hay
+  // ahora, es que algo cambió desde que se le escribió.
   sessionsFingerprint: string;
   sentAt: string;
 }

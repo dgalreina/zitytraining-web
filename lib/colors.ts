@@ -1,7 +1,6 @@
 export const DEFAULT_TRAINER_COLOR = '#868585';
 
-// Sesiones sin clientes del propio entrenador: colores fijos (no el del
-// entrenador) para que se distingan a simple vista en el calendario.
+//
 export const PRIVATE_COLOR = '#fa8072';
 export const INTERVIEW_COLOR = '#c9ad84';
 

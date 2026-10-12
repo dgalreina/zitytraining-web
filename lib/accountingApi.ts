@@ -1,9 +1,10 @@
 import { API_URL, apiFetch, handleResponse } from './apiClient';
+//
 
-// De dónde sale el importe del tramo: el precio del plan entero, el
+// De dónde sale el importe del tramo: 1. el precio del plan entero, 2. el
 // precio del plan entero más las sesiones de más que no entraban en su
-// cupo semanal (cobradas como sueltas), las sesiones dadas dentro del
-// tramo, o nada (no se cobró ese último mes).
+// cupo semanal (cobradas como sueltas), 3. las sesiones dadas dentro del
+// tramo, o 4. nada (no se cobró ese último mes).
 export type AccountingSegmentBasis = 'full_month' | 'full_month_plus_extra' | 'sessions' | 'none';
 
 export interface AccountingSegment {

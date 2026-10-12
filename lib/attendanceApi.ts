@@ -1,5 +1,5 @@
 import { API_URL, apiFetch, handleResponse } from './apiClient';
-
+//
 export interface AttendanceEntry {
   _id: string;
   trainer?: { _id: string } | string;
