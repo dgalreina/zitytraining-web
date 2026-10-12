@@ -1,32 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import DatePicker, { registerLocale } from 'react-datepicker';
+import { registerLocale } from 'react-datepicker';
 import { es } from 'date-fns/locale';
 import 'react-datepicker/dist/react-datepicker.css';
 import '@/styles/datepicker-theme.css';
-import { X, Trash2, ChevronLeft, ChevronDown, Ban, RotateCcw, Star, Repeat, CalendarOff } from 'lucide-react';
-import FilterDropdown from '@/components/FilterDropdown';
-import Switch from '@/components/Switch';
-import {
-  createBookingOrQueue as createBooking,
-  updateBookingOrQueue as updateBooking,
-  deleteBookingOrQueue as deleteBooking,
-  deleteBookingSeriesOrQueue as deleteBookingSeries,
-} from '@/lib/offlineBookings';
-import { getWorkouts } from '@/lib/workoutsApi';
-import { dayKey } from '@/components/MiniCalendar';
-import { INTERVIEW_COLOR, PRIVATE_COLOR } from '@/lib/colors';
+import { X, Trash2, ChevronLeft, ChevronDown, Ban, RotateCcw } from 'lucide-react';
 import WorkoutFormModal from '../entrenamientos/WorkoutFormModal';
-import WorkoutSummary from '../entrenamientos/WorkoutSummary';
-
-type BookingKind = 'normal' | 'private' | 'interview';
-
-const KIND_OPTIONS: { value: BookingKind; label: string; color: string }[] = [
-  { value: 'normal', label: 'Normal', color: '#6aa842' },
-  { value: 'private', label: 'Privada', color: PRIVATE_COLOR },
-  { value: 'interview', label: 'Entrevista', color: INTERVIEW_COLOR },
-];
+import BookingFormFields from './BookingFormFields';
+import BookingNotesView from './BookingNotesView';
+import BookingTrainingView from './BookingTrainingView';
+import DeleteSeriesChoiceDialog from './DeleteSeriesChoiceDialog';
+import { useBookingForm, KIND_OPTIONS } from './useBookingForm';
 
 registerLocale('es', es);
 
@@ -35,17 +19,13 @@ export type ModalState =
   | { mode: 'edit'; booking: any; start: Date }
   | null;
 
-type DurationOption = '40' | '60' | 'custom' | 'endTime';
-type ModalView = 'form' | 'notes' | 'training';
-
-function minutesBetween(start: Date, end: Date) {
-  return Math.round((end.getTime() - start.getTime()) / 60000);
-}
-
-// Modal de crear/editar sesión. Todo el estado del formulario vive aquí
-// dentro; el padre solo decide QUÉ se está editando (o "nueva sesión" a
-// partir de qué hora) a través de la prop `modal`, y se entera de cuándo
-// hay que recargar y cerrar mediante `onSaved`.
+// Modal de crear/editar sesión. Todo el estado del formulario vive en
+// useBookingForm; este componente solo decide QUÉ vista mostrar (la
+// cabecera, el formulario principal, notas a pantalla completa, o
+// entrenamiento) y ensambla las piezas. El padre solo decide QUÉ se está
+// editando (o "nueva sesión" a partir de qué hora) a través de la prop
+// `modal`, y se entera de cuándo hay que recargar y cerrar mediante
+// `onSaved`.
 export default function BookingModal({
   modal,
   trainers,
@@ -63,809 +43,202 @@ export default function BookingModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
-  const [start, setStart] = useState<Date>(() => modal?.start ?? new Date());
-  const [modalTrainerId, setModalTrainerId] = useState('');
-  // Hasta 3 clientes, sin distinguir uno "principal" de los demás.
-  const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
-  const [clientSearch, setClientSearch] = useState('');
-  const [notes, setNotes] = useState('');
-  const [durationOption, setDurationOption] = useState<DurationOption>('60');
-  // Como texto, no numero: un input numerico controlado no deja vaciar
-  // del todo el campo (React lo fuerza de vuelta a "0" antes del
-  // siguiente tecleo), lo que impedia escribir p.ej. "70" sin que
-  // quedara "070". Se convierte a numero solo donde hace falta.
-  const [customMinutes, setCustomMinutes] = useState('60');
-  // Hora de finalización cuando se elige la opción "endTime"
-  const [endTime, setEndTime] = useState<Date>(() => {
-    const d = new Date(modal?.start ?? new Date());
-    d.setHours(d.getHours() + 1);
-    return d;
-  });
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [view, setView] = useState<ModalView>('form');
-  const [status, setStatus] = useState<'active' | 'cancelled'>('active');
-  // Normal (con clientes), privada (hueco personal del entrenador) o
-  // entrevista (con alguien que aún no es cliente). Las dos últimas no
-  // llevan clientes y solo las ve quien las crea.
-  const [kind, setKind] = useState<BookingKind>('normal');
-  const isPrivate = kind !== 'normal';
-  const kindColor = KIND_OPTIONS.find((o) => o.value === kind)!.color;
-  // Solo se elige al crear; una sesión ya creada no se puede convertir en
-  // serie ni al revés desde aquí.
-  const [recurrence, setRecurrence] = useState<'once' | 'weekly'>('once');
-  // Si esta sesión pertenece a una serie y cae en festivo.
-  const [seriesId, setSeriesId] = useState<string | null>(null);
-  const [holidaySkip, setHolidaySkip] = useState(false);
-  const [deleteChoiceOpen, setDeleteChoiceOpen] = useState(false);
-
-  // El entrenamiento es un campo mas del formulario: se queda en local
-  // hasta que se pulsa "Guardar", igual que las notas o los clientes.
-  // Al crear uno nuevo desde aqui si que se crea de verdad en el
-  // catalogo (es un recurso aparte), pero solo queda "enganchado" a
-  // esta sesion cuando se guarda la sesion.
-  const [bookingWorkout, setBookingWorkout] = useState<any | null>(null);
-  const [workoutFormOpen, setWorkoutFormOpen] = useState(false);
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [allWorkouts, setAllWorkouts] = useState<any[] | null>(null);
-  const [workoutSearch, setWorkoutSearch] = useState('');
-
-  // Cada vez que se abre (o cambia lo que se está editando), recarga el
-  // formulario desde cero a partir de esa sesión, o de los valores por
-  // defecto si es una nueva.
-  useEffect(() => {
-    if (!modal) return;
-    setStart(modal.start);
-    setClientSearch('');
-    setError('');
-    setView('form');
-    setBookingWorkout(null);
-    setPickerOpen(false);
-    setWorkoutSearch('');
-    setDeleteChoiceOpen(false);
-    setRecurrence('once');
-
-    if (modal.mode === 'edit') {
-      const raw = modal.booking;
-      const rawEnd = new Date(raw.endTime);
-      const diff = minutesBetween(modal.start, rawEnd);
-      setModalTrainerId(raw.trainer?._id || raw.trainer || '');
-      setSelectedClientIds(raw.clients.map((c: any) => c._id));
-      setNotes(raw.notes || '');
-      setStatus(raw.status === 'cancelled' ? 'cancelled' : 'active');
-      setKind(raw.isInterview ? 'interview' : raw.isPrivate ? 'private' : 'normal');
-      setBookingWorkout(raw.workout || null);
-      setSeriesId(raw.series ? String(raw.series) : null);
-      setHolidaySkip(!!raw.holidaySkip);
-      setEndTime(rawEnd);
-      if (diff === 40) {
-        setDurationOption('40');
-      } else if (diff === 60) {
-        setDurationOption('60');
-      } else {
-        setDurationOption('custom');
-        setCustomMinutes(String(diff));
-      }
-    } else {
-      // Preseleccionamos tu propio usuario si eres entrenador, o el primero
-      // marcado en el checklist si eres admin puro; el selector siempre se
-      // muestra, así que esto es solo un punto de partida cómodo.
-      setModalTrainerId(defaultTrainerId);
-      setSelectedClientIds([]);
-      setNotes('');
-      setDurationOption('60');
-      setCustomMinutes('60');
-      setStatus('active');
-      setKind('normal');
-      setSeriesId(null);
-      setHolidaySkip(false);
-      const defaultEnd = new Date(modal.start);
-      defaultEnd.setMinutes(defaultEnd.getMinutes() + 60);
-      setEndTime(defaultEnd);
-    }
-  }, [modal, defaultTrainerId]);
+  const form = useBookingForm(modal, defaultTrainerId, onSaved);
 
   if (!modal) return null;
 
-  function toggleClient(id: string) {
-    setSelectedClientIds((prev) => {
-      if (prev.includes(id)) return prev.filter((c) => c !== id);
-      if (prev.length >= 3) return prev; // máximo 3 clientes
-      return [...prev, id];
-    });
-  }
-
-  function openWorkoutPicker() {
-    setPickerOpen(true);
-    if (allWorkouts === null) {
-      const token = localStorage.getItem('token');
-      if (!token) return;
-      getWorkouts(token)
-        .then(setAllWorkouts)
-        .catch(() => setAllWorkouts([]));
-    }
-  }
-
-  function attachWorkout(workout: any) {
-    setBookingWorkout(workout);
-    setPickerOpen(false);
-  }
-
-  function handleWorkoutCreated(workout: any) {
-    attachWorkout(workout);
-    setWorkoutFormOpen(false);
-  }
-
-  function removeWorkout() {
-    setBookingWorkout(null);
-  }
-
-  const filteredWorkouts = (allWorkouts || []).filter((w) =>
-    w.name.toLowerCase().includes(workoutSearch.trim().toLowerCase()),
-  );
-
-  function getEffectiveDurationMinutes() {
-    if (durationOption === '40') return 40;
-    if (durationOption === '60') return 60;
-    if (durationOption === 'endTime') return minutesBetween(start, endTime);
-    return Number(customMinutes) || 0;
-  }
-
-  function handleStartTimeChange(date: Date | null) {
-    if (!date) return;
-    // Si la hora de fin quedara antes (o igual) que la nueva hora de
-    // inicio, se desplaza con ella manteniendo la misma duración: si no,
-    // el picker de "Hora fin" queda con un valor fuera de su propio
-    // rango permitido (minTime=start) y se rompe al abrirlo.
-    if (endTime.getTime() <= date.getTime()) {
-      const durationMs = endTime.getTime() - start.getTime();
-      setEndTime(new Date(date.getTime() + Math.max(durationMs, 5 * 60000)));
-    }
-    setStart(date);
-  }
-
-  async function handleSave() {
-    if (!modalTrainerId) {
-      setError('Selecciona un entrenador');
-      return;
-    }
-    // Una privada es solo tuya: no lleva clientes.
-    if (!isPrivate && selectedClientIds.length === 0) {
-      setError('Selecciona al menos un cliente');
-      return;
-    }
-    const duration = getEffectiveDurationMinutes();
-    if (!duration || duration < 5) {
-      setError('La duración debe ser de al menos 5 minutos');
-      return;
-    }
-
-    const end = durationOption === 'endTime' ? endTime : new Date(start.getTime() + duration * 60000);
-    setSaving(true);
-    setError('');
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
-    try {
-      if (modal!.mode === 'create') {
-        await createBooking(token, {
-          trainer: modalTrainerId,
-          clients: isPrivate ? [] : selectedClientIds,
-          startTime: start.toISOString(),
-          endTime: end.toISOString(),
-          notes: notes || undefined,
-          isPrivate,
-          isInterview: kind === 'interview',
-          workoutId: bookingWorkout?._id,
-          recurrence,
-        });
-      } else {
-        await updateBooking(token, (modal as { mode: 'edit'; booking: any }).booking._id, {
-          trainer: modalTrainerId,
-          clients: isPrivate ? [] : selectedClientIds,
-          holidaySkip,
-          startTime: start.toISOString(),
-          endTime: end.toISOString(),
-          notes: notes || undefined,
-          isPrivate,
-          isInterview: kind === 'interview',
-          workoutId: bookingWorkout?._id || null,
-        });
-      }
-      onSaved();
-    } catch (err: any) {
-      setError(err.message || 'No se pudo guardar la sesión');
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  function handleDeleteClick() {
-    if (modal!.mode !== 'edit') return;
-    // Si es de una serie, primero hay que preguntar si se borra solo esta
-    // sesión o esta y todas las futuras (ver deleteChoiceOpen más abajo).
-    if (seriesId) {
-      setDeleteChoiceOpen(true);
-      return;
-    }
-    handleDelete();
-  }
-
-  async function handleDelete() {
-    if (modal!.mode !== 'edit') return;
-    // A diferencia de cancelar (que se puede deshacer reactivando), borrar
-    // es definitivo — y el botón está justo al lado del de cancelar, así
-    // que un toque equivocado no debería destruir nada sin confirmar.
-    if (!window.confirm('¿Seguro que quieres eliminar esta sesión? No se puede deshacer.')) {
-      return;
-    }
-    setSaving(true);
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
-    try {
-      await deleteBooking(token, modal!.booking._id);
-      onSaved();
-    } catch (err: any) {
-      setError(err.message || 'No se pudo eliminar la sesión');
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  // Borra esta sesión y todas las futuras de la serie; el pasado ya
-  // generado no se toca, y la serie deja de generar sesiones a partir de
-  // aquí.
-  async function handleDeleteSeriesFrom() {
-    if (modal!.mode !== 'edit') return;
-    setDeleteChoiceOpen(false);
-    setSaving(true);
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
-    try {
-      await deleteBookingSeries(token, modal!.booking._id);
-      onSaved();
-    } catch (err: any) {
-      setError(err.message || 'No se pudo eliminar la serie');
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  // Cancelar es distinto de borrar: la sesión se queda (se ve en el
-  // calendario, en su color pero transparente, con "CANCELADA"), solo
-  // cambia de estado. Se puede revertir volviendo a marcarla como activa.
-  async function handleToggleCancelled() {
-    if (modal!.mode !== 'edit') return;
-    const nextStatus = status === 'cancelled' ? 'active' : 'cancelled';
-    setSaving(true);
-    setError('');
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
-    try {
-      await updateBooking(token, modal!.booking._id, { status: nextStatus });
-      onSaved();
-    } catch (err: any) {
-      setError(err.message || 'No se pudo actualizar la sesión');
-    } finally {
-      setSaving(false);
-    }
-  }
-
   const filteredClients = clients.filter((c) =>
-    `${c.firstName} ${c.lastName}`.toLowerCase().includes(clientSearch.trim().toLowerCase()),
+    `${c.firstName} ${c.lastName}`.toLowerCase().includes(form.clientSearch.trim().toLowerCase()),
+  );
+  const filteredWorkouts = (form.allWorkouts || []).filter((w) =>
+    w.name.toLowerCase().includes(form.workoutSearch.trim().toLowerCase()),
   );
 
   // El centro cierra a las 22:00, pero a veces la sesión se alarga más
   // allá del cierre, así que se deja empezar hasta las 23:00.
-  const minStartTime = new Date(start);
+  const minStartTime = new Date(form.start);
   minStartTime.setHours(7, 0, 0, 0);
-  const maxStartTime = new Date(start);
+  const maxStartTime = new Date(form.start);
   maxStartTime.setHours(23, 0, 0, 0);
   // react-datepicker exige minTime y maxTime juntos: el de "Hora fin" no
   // tiene un mínimo natural más que "después de empezar", así que se le
   // da el mismo margen que a la franja visible del calendario.
-  const maxEndTime = new Date(start);
+  const maxEndTime = new Date(form.start);
   maxEndTime.setHours(23, 59, 0, 0);
 
   return (
     <>
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-      <div className="max-h-[85vh] w-full max-w-sm overflow-y-auto rounded-xl bg-white p-6 shadow-xl">
-        <div className="mb-4 flex items-center justify-between">
-          {view === 'form' ? (
-            <div className="flex items-center gap-2">
-              <h3 className="font-[family-name:var(--font-work-sans)] text-base font-bold text-[#2b2b2a]">
-                {modal.mode === 'create' ? 'Nueva sesión' : 'Editar sesión'}
-              </h3>
-              {status === 'cancelled' && (
-                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700">
-                  Cancelada
-                </span>
-              )}
-              {/* Desplegable nativo del tamaño del antiguo switch, teñido
-                  del color del tipo: el tipo se ve de un vistazo sin robar
-                  una línea al formulario. Una cancelada es siempre normal
-                  (las privadas se borran, no se cancelan): ahí no se enseña. */}
-              {status !== 'cancelled' && (
-                <span className="relative ml-1 inline-flex items-center">
-                  <select
-                    value={kind}
-                    onChange={(e) => setKind(e.target.value as BookingKind)}
-                    aria-label="Tipo de sesión"
-                    className="h-5 cursor-pointer appearance-none rounded-full border py-0 pl-2 pr-5 text-[11px] font-semibold focus:outline-none"
-                    style={{ color: kindColor, borderColor: kindColor, backgroundColor: `${kindColor}1a` }}
-                  >
-                    {KIND_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown size={12} className="pointer-events-none absolute right-1.5" style={{ color: kindColor }} />
-                </span>
-              )}
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setView('form')}
-              className="flex items-center gap-1 font-[family-name:var(--font-work-sans)] text-base font-bold text-[#2b2b2a]"
-            >
-              <ChevronLeft size={18} />
-              {view === 'notes' ? 'Notas' : 'Entrenamiento'}
-            </button>
-          )}
-          {view === 'form' && (
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-              <X size={18} />
-            </button>
-          )}
-        </div>
-
-        {view === 'form' && (
-          <>
-            {!isPrivate && (
-              <div className="mb-3">
-                <label className="mb-1 block text-xs font-semibold text-[#868585]">
-                  Entrenador
-                </label>
-                <FilterDropdown
-                  label="Elige un entrenador"
-                  options={trainers.map((t) => ({
-                    id: t._id,
-                    name: `${t.firstName} ${t.lastName}`,
-                    color: t.color,
-                  }))}
-                  value={modalTrainerId}
-                  onChange={setModalTrainerId}
-                  showColorDot
-                />
-              </div>
-            )}
-
-            <label className="mb-1 block text-xs font-semibold text-[#868585]">
-              Hora de inicio
-            </label>
-            <DatePicker
-              selected={start}
-              onChange={handleStartTimeChange}
-              showTimeSelect
-              showTimeSelectOnly
-              timeIntervals={5}
-              timeCaption="Hora"
-              dateFormat="HH:mm"
-              locale="es"
-              minTime={minStartTime}
-              maxTime={maxStartTime}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#6aa842] focus:outline-none"
-              wrapperClassName="mb-3 w-full block"
-            />
-            <p className="mb-3 text-xs text-[#868585]">
-              {start.toLocaleDateString('es-ES', {
-                weekday: 'long',
-                day: 'numeric',
-                month: 'long',
-              })}
-            </p>
-
-            <label className="mb-1.5 block text-xs font-semibold text-[#868585]">Duración</label>
-            <div className="mb-3 flex gap-2">
-              <button
-                type="button"
-                onClick={() => setDurationOption('40')}
-                className={`flex-1 rounded-lg border py-1.5 text-sm font-semibold transition ${
-                  durationOption === '40'
-                    ? 'border-[#6aa842] bg-[#a2c037]/10 text-[#4b7a1f]'
-                    : 'border-gray-200 text-[#868585] hover:bg-gray-50'
-                }`}
-              >
-                40 min
-              </button>
-              <button
-                type="button"
-                onClick={() => setDurationOption('60')}
-                className={`flex-1 rounded-lg border py-1.5 text-sm font-semibold transition ${
-                  durationOption === '60'
-                    ? 'border-[#6aa842] bg-[#a2c037]/10 text-[#4b7a1f]'
-                    : 'border-gray-200 text-[#868585] hover:bg-gray-50'
-                }`}
-              >
-                1 hora
-              </button>
-              <button
-                type="button"
-                onClick={() => setDurationOption('endTime')}
-                className={`flex-1 rounded-lg border py-1.5 text-sm font-semibold transition ${
-                  durationOption === 'endTime'
-                    ? 'border-[#6aa842] bg-[#a2c037]/10 text-[#4b7a1f]'
-                    : 'border-gray-200 text-[#868585] hover:bg-gray-50'
-                }`}
-              >
-                Hora fin
-              </button>
-            </div>
-
-            {durationOption === 'endTime' && (
-              <div className="mb-3">
-                <label className="mb-1 block text-xs font-semibold text-[#868585]">
-                  Termina a las
-                </label>
-                <DatePicker
-                  selected={endTime}
-                  onChange={(date: Date | null) => {
-                    if (date) setEndTime(date);
-                  }}
-                  showTimeSelect
-                  showTimeSelectOnly
-                  timeIntervals={5}
-                  timeCaption="Hora"
-                  dateFormat="HH:mm"
-                  locale="es"
-                  minTime={start}
-                  maxTime={maxEndTime}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#6aa842] focus:outline-none"
-                  wrapperClassName="mb-0 w-full block"
-                />
-              </div>
-            )}
-
-            {modal.mode === 'create' && (
-              <>
-                <label className="mb-1.5 block text-xs font-semibold text-[#868585]">
-                  Repetición
-                </label>
-                <div className="mb-3 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setRecurrence('once')}
-                    className={`flex-1 rounded-lg border py-1.5 text-sm font-semibold transition ${
-                      recurrence === 'once'
-                        ? 'border-[#6aa842] bg-[#a2c037]/10 text-[#4b7a1f]'
-                        : 'border-gray-200 text-[#868585] hover:bg-gray-50'
-                    }`}
-                  >
-                    Puntual
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRecurrence('weekly')}
-                    className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg border py-1.5 text-sm font-semibold transition ${
-                      recurrence === 'weekly'
-                        ? 'border-[#6aa842] bg-[#a2c037]/10 text-[#4b7a1f]'
-                        : 'border-gray-200 text-[#868585] hover:bg-gray-50'
-                    }`}
-                  >
-                    <Repeat size={14} />
-                    Cada semana
-                  </button>
-                </div>
-                {recurrence === 'weekly' && (
-                  <p className="mb-3 text-xs text-[#868585]">
-                    Se repite todas las semanas a esta misma hora, sin fecha de fin. Se puede parar
-                    más adelante desde cualquiera de sus sesiones.
-                  </p>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+        <div className="max-h-[85vh] w-full max-w-sm overflow-y-auto rounded-xl bg-white p-6 shadow-xl">
+          <div className="mb-4 flex items-center justify-between">
+            {form.view === 'form' ? (
+              <div className="flex items-center gap-2">
+                <h3 className="font-[family-name:var(--font-work-sans)] text-base font-bold text-[#2b2b2a]">
+                  {modal.mode === 'create' ? 'Nueva sesión' : 'Editar sesión'}
+                </h3>
+                {form.status === 'cancelled' && (
+                  <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700">
+                    Cancelada
+                  </span>
                 )}
-              </>
-            )}
-
-            {modal.mode === 'edit' && holidaysByDate[dayKey(start)] && (
-              <label className="mb-3 flex cursor-pointer items-center justify-between gap-2 rounded-lg border border-gray-200 px-3 py-2">
-                <span className="flex items-center gap-1.5 text-xs font-semibold text-[#868585]">
-                  <CalendarOff size={14} />
-                  No cuenta como sesión dada (cae en {holidaysByDate[dayKey(start)]})
-                </span>
-                <Switch checked={holidaySkip} onChange={() => setHolidaySkip((v) => !v)} activeColor="#fa8072" size="sm" />
-              </label>
-            )}
-
-            {isPrivate ? (
-              <>
-                <label className="mb-1 block text-xs font-semibold text-[#868585]">Nota</label>
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows={5}
-                  placeholder="Escribe aquí lo que quieras recordar..."
-                  className="mb-3 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#6aa842] focus:outline-none"
-                />
-              </>
-            ) : (
-              <>
-                <label className="mb-1 block text-xs font-semibold text-[#868585]">
-                  Clientes (máximo 3)
-                </label>
-                {clients.length > 0 && (
-                  <input
-                    type="text"
-                    value={clientSearch}
-                    onChange={(e) => setClientSearch(e.target.value)}
-                    placeholder="Buscar cliente..."
-                    className="mb-1.5 w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-[#6aa842] focus:outline-none"
-                  />
+                {/* Desplegable nativo del tamaño del antiguo switch, teñido
+                    del color del tipo: el tipo se ve de un vistazo sin robar
+                    una línea al formulario. Una cancelada es siempre normal
+                    (las privadas se borran, no se cancelan): ahí no se enseña. */}
+                {form.status !== 'cancelled' && (
+                  <span className="relative ml-1 inline-flex items-center">
+                    <select
+                      value={form.kind}
+                      onChange={(e) => form.setKind(e.target.value as typeof form.kind)}
+                      aria-label="Tipo de sesión"
+                      className="h-5 cursor-pointer appearance-none rounded-full border py-0 pl-2 pr-5 text-[11px] font-semibold focus:outline-none"
+                      style={{
+                        color: form.kindColor,
+                        borderColor: form.kindColor,
+                        backgroundColor: `${form.kindColor}1a`,
+                      }}
+                    >
+                      {KIND_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown
+                      size={12}
+                      className="pointer-events-none absolute right-1.5"
+                      style={{ color: form.kindColor }}
+                    />
+                  </span>
                 )}
-                <div className="mb-3 max-h-40 overflow-y-auto rounded-lg border border-gray-200 p-1">
-                  {clients.length === 0 ? (
-                    <p className="p-2 text-xs text-gray-400">No hay clientes activos.</p>
-                  ) : filteredClients.length === 0 ? (
-                    <p className="p-2 text-xs text-gray-400">Sin resultados.</p>
-                  ) : (
-                    <div className="grid grid-cols-2 gap-x-1">
-                      {filteredClients.map((c) => {
-                        const checked = selectedClientIds.includes(c._id);
-                        const disabled = !checked && selectedClientIds.length >= 3;
-                        return (
-                          <label
-                            key={c._id}
-                            className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm ${
-                              disabled ? 'cursor-not-allowed opacity-40' : 'cursor-pointer hover:bg-gray-50'
-                            }`}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={checked}
-                              disabled={disabled}
-                              onChange={() => toggleClient(c._id)}
-                              className="shrink-0 accent-[#6aa842]"
-                            />
-                            {c.isFavorite && (
-                              <Star size={12} className="shrink-0 fill-amber-400 text-amber-400" />
-                            )}
-                            <span className="truncate">
-                              {c.firstName} {c.lastName}
-                            </span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                <label className="mb-1.5 block text-xs font-semibold text-[#868585]">Más</label>
-                <div className="mb-3 flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setView('notes')}
-                    className="relative flex-1 rounded-lg border border-gray-200 py-1.5 text-sm font-semibold text-[#868585] transition hover:bg-gray-50"
-                  >
-                    Notas
-                    {notes.trim() && (
-                      <span className="absolute right-2.5 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-[#6aa842]" />
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setView('training')}
-                    className="relative flex-1 rounded-lg border border-gray-200 py-1.5 text-sm font-semibold text-[#868585] transition hover:bg-gray-50"
-                  >
-                    Entrenamiento
-                    {bookingWorkout && (
-                      <span className="absolute right-2.5 top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-[#6aa842]" />
-                    )}
-                  </button>
-                </div>
-              </>
-            )}
-          </>
-        )}
-
-        {view === 'notes' && (
-          <>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={8}
-              autoFocus
-              placeholder="Escribe aquí cualquier detalle sobre la sesión..."
-              className="mb-3 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#6aa842] focus:outline-none"
-            />
-            {notes.trim() && (
-              // Solo borra el texto aquí en el formulario; como el resto de
-              // cambios de la nota, hace falta pulsar Guardar para que se
-              // quede así de verdad.
-              <div className="mb-3 flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setNotes('');
-                    setView('form');
-                  }}
-                  title="Borrar nota"
-                  className="rounded-lg bg-red-50 px-3 py-2 text-red-600 hover:bg-red-100"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            )}
-          </>
-        )}
-
-        {view === 'training' && (
-          <div className="mb-3">
-            {bookingWorkout ? (
-              <div>
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <h4 className="text-sm font-bold text-[#2b2b2a]">{bookingWorkout.name}</h4>
-                  <button
-                    type="button"
-                    onClick={removeWorkout}
-                    title="Quitar entrenamiento de esta sesión"
-                    className="shrink-0 rounded-lg bg-red-50 p-1.5 text-red-600 hover:bg-red-100"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-                <WorkoutSummary slots={bookingWorkout.slots} />
-              </div>
-            ) : pickerOpen ? (
-              <div>
-                <input
-                  value={workoutSearch}
-                  onChange={(e) => setWorkoutSearch(e.target.value)}
-                  placeholder="Buscar entrenamiento..."
-                  autoFocus
-                  className="mb-1.5 w-full rounded-lg border border-gray-200 px-3 py-1.5 text-sm focus:border-[#6aa842] focus:outline-none"
-                />
-                <div className="mb-2 max-h-48 overflow-y-auto rounded-lg border border-gray-200 p-1">
-                  {allWorkouts === null ? (
-                    <p className="p-2 text-xs text-gray-400">Cargando...</p>
-                  ) : filteredWorkouts.length === 0 ? (
-                    <p className="p-2 text-xs text-gray-400">Sin resultados.</p>
-                  ) : (
-                    filteredWorkouts.map((w) => (
-                      <button
-                        key={w._id}
-                        type="button"
-                        onClick={() => attachWorkout(w)}
-                        className="block w-full rounded-md px-3 py-2 text-left text-sm text-[#2b2b2a] hover:bg-gray-50"
-                      >
-                        {w.name}
-                      </button>
-                    ))
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setPickerOpen(false)}
-                  className="text-xs font-semibold text-[#868585] hover:underline"
-                >
-                  Cancelar
-                </button>
               </div>
             ) : (
-              <div className="flex flex-col gap-2">
-                <button
-                  type="button"
-                  onClick={() => setWorkoutFormOpen(true)}
-                  className="rounded-lg bg-gradient-to-r from-[#a2c037] to-[#6aa842] py-2 text-sm font-semibold text-white hover:opacity-90"
-                >
-                  Crear entrenamiento nuevo
-                </button>
-                <button
-                  type="button"
-                  onClick={openWorkoutPicker}
-                  className="rounded-lg border border-gray-200 py-2 text-sm font-semibold text-[#868585] hover:bg-gray-50"
-                >
-                  Elegir uno existente
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => form.setView('form')}
+                className="flex items-center gap-1 font-[family-name:var(--font-work-sans)] text-base font-bold text-[#2b2b2a]"
+              >
+                <ChevronLeft size={18} />
+                {form.view === 'notes' ? 'Notas' : 'Entrenamiento'}
+              </button>
+            )}
+            {form.view === 'form' && (
+              <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+                <X size={18} />
+              </button>
             )}
           </div>
-        )}
 
-        {view === 'form' && (
-          <>
-            {error && <p className="mb-3 text-sm font-medium text-red-600">{error}</p>}
+          {form.view === 'form' && (
+            <BookingFormFields
+              mode={modal.mode}
+              trainers={trainers}
+              clients={clients}
+              holidaysByDate={holidaysByDate}
+              isPrivate={form.isPrivate}
+              modalTrainerId={form.modalTrainerId}
+              setModalTrainerId={form.setModalTrainerId}
+              start={form.start}
+              handleStartTimeChange={form.handleStartTimeChange}
+              minStartTime={minStartTime}
+              maxStartTime={maxStartTime}
+              durationOption={form.durationOption}
+              setDurationOption={form.setDurationOption}
+              endTime={form.endTime}
+              setEndTime={form.setEndTime}
+              maxEndTime={maxEndTime}
+              recurrence={form.recurrence}
+              setRecurrence={form.setRecurrence}
+              holidaySkip={form.holidaySkip}
+              setHolidaySkip={form.setHolidaySkip}
+              notes={form.notes}
+              setNotes={form.setNotes}
+              clientSearch={form.clientSearch}
+              setClientSearch={form.setClientSearch}
+              filteredClients={filteredClients}
+              selectedClientIds={form.selectedClientIds}
+              toggleClient={form.toggleClient}
+              setView={form.setView}
+              bookingWorkout={form.bookingWorkout}
+            />
+          )}
 
-            <div className="flex gap-2">
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="flex-1 rounded-lg bg-gradient-to-r from-[#a2c037] to-[#6aa842] py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
-              >
-                {saving ? 'Guardando...' : 'Guardar'}
-              </button>
-              {modal.mode === 'edit' && !isPrivate && (
+          {form.view === 'notes' && (
+            <BookingNotesView notes={form.notes} setNotes={form.setNotes} setView={form.setView} />
+          )}
+
+          {form.view === 'training' && (
+            <BookingTrainingView
+              bookingWorkout={form.bookingWorkout}
+              removeWorkout={form.removeWorkout}
+              pickerOpen={form.pickerOpen}
+              setPickerOpen={form.setPickerOpen}
+              workoutSearch={form.workoutSearch}
+              setWorkoutSearch={form.setWorkoutSearch}
+              allWorkouts={form.allWorkouts}
+              filteredWorkouts={filteredWorkouts}
+              attachWorkout={form.attachWorkout}
+              setWorkoutFormOpen={form.setWorkoutFormOpen}
+              openWorkoutPicker={form.openWorkoutPicker}
+            />
+          )}
+
+          {form.view === 'form' && (
+            <>
+              {form.error && <p className="mb-3 text-sm font-medium text-red-600">{form.error}</p>}
+
+              <div className="flex gap-2">
                 <button
-                  onClick={handleToggleCancelled}
-                  disabled={saving}
-                  title={status === 'cancelled' ? 'Reactivar sesión' : 'Cancelar sesión'}
-                  className="rounded-lg bg-amber-50 px-3 py-2 text-amber-600 hover:bg-amber-100"
+                  onClick={form.handleSave}
+                  disabled={form.saving}
+                  className="flex-1 rounded-lg bg-gradient-to-r from-[#a2c037] to-[#6aa842] py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
                 >
-                  {status === 'cancelled' ? <RotateCcw size={16} /> : <Ban size={16} />}
+                  {form.saving ? 'Guardando...' : 'Guardar'}
                 </button>
-              )}
-              {modal.mode === 'edit' && (
-                <button
-                  onClick={handleDeleteClick}
-                  disabled={saving}
-                  title="Eliminar sesión"
-                  className="rounded-lg bg-red-50 px-3 py-2 text-red-600 hover:bg-red-100"
-                >
-                  <Trash2 size={16} />
-                </button>
-              )}
-            </div>
-          </>
-        )}
+                {modal.mode === 'edit' && !form.isPrivate && (
+                  <button
+                    onClick={form.handleToggleCancelled}
+                    disabled={form.saving}
+                    title={form.status === 'cancelled' ? 'Reactivar sesión' : 'Cancelar sesión'}
+                    className="rounded-lg bg-amber-50 px-3 py-2 text-amber-600 hover:bg-amber-100"
+                  >
+                    {form.status === 'cancelled' ? <RotateCcw size={16} /> : <Ban size={16} />}
+                  </button>
+                )}
+                {modal.mode === 'edit' && (
+                  <button
+                    onClick={form.handleDeleteClick}
+                    disabled={form.saving}
+                    title="Eliminar sesión"
+                    className="rounded-lg bg-red-50 px-3 py-2 text-red-600 hover:bg-red-100"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                )}
+              </div>
+            </>
+          )}
+        </div>
       </div>
-    </div>
 
-    {workoutFormOpen && (
-      <WorkoutFormModal
-        title="Entrenamiento para esta sesión"
-        onClose={() => setWorkoutFormOpen(false)}
-        onSaved={handleWorkoutCreated}
+      {form.workoutFormOpen && (
+        <WorkoutFormModal
+          title="Entrenamiento para esta sesión"
+          onClose={() => form.setWorkoutFormOpen(false)}
+          onSaved={form.handleWorkoutCreated}
+        />
+      )}
+
+      <DeleteSeriesChoiceDialog
+        open={form.deleteChoiceOpen}
+        onClose={() => form.setDeleteChoiceOpen(false)}
+        onDeleteOnly={() => {
+          form.setDeleteChoiceOpen(false);
+          form.handleDelete();
+        }}
+        onDeleteSeriesFrom={form.handleDeleteSeriesFrom}
+        saving={form.saving}
       />
-    )}
-
-    {deleteChoiceOpen && (
-      <div
-        className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 px-4"
-        onClick={() => setDeleteChoiceOpen(false)}
-      >
-        <div
-          className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <h3 className="mb-2 font-[family-name:var(--font-work-sans)] text-base font-bold text-[#2b2b2a]">
-            Esta sesión es de una serie
-          </h3>
-          <p className="mb-5 text-sm text-[#868585]">
-            ¿Quieres borrar solo esta sesión, o esta y todas las futuras de la serie? Las sesiones
-            pasadas nunca se borran.
-          </p>
-          <div className="flex flex-col gap-2">
-            <button
-              onClick={() => {
-                setDeleteChoiceOpen(false);
-                handleDelete();
-              }}
-              disabled={saving}
-              className="rounded-lg border border-gray-200 py-2.5 text-sm font-semibold text-[#2b2b2a] hover:bg-gray-50 disabled:opacity-60"
-            >
-              Solo esta sesión
-            </button>
-            <button
-              onClick={handleDeleteSeriesFrom}
-              disabled={saving}
-              className="rounded-lg bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60"
-            >
-              Esta y todas las futuras
-            </button>
-            <button
-              onClick={() => setDeleteChoiceOpen(false)}
-              disabled={saving}
-              className="py-1.5 text-sm font-semibold text-[#868585] hover:underline"
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
-      </div>
-    )}
     </>
   );
 }

@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import FullCalendar from '@fullcalendar/react';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
@@ -15,110 +14,37 @@ import TrainerMultiSelect from './TrainerMultiSelect';
 import { useCalendarDaySlide } from './useCalendarDaySlide';
 import { useEdgeDragNavigation } from './useEdgeDragNavigation';
 import { useSwipeNavigation } from './useSwipeNavigation';
-import { getUsers, getMe, getActiveClients } from '@/lib/usersApi';
-import { getBookings, getBookingsByTrainers } from '@/lib/bookingsApi';
+import { useCalendarData, ALL_VALUE } from './useCalendarData';
+import { useOfflineCalendarQueue } from './useOfflineCalendarQueue';
+import { useFitEventText } from './useFitEventText';
+import { applyPendingQueueToEvents, FALLBACK_COLOR } from './bookingEvents';
 import { updateBookingOrQueue } from '@/lib/offlineBookings';
-import { getQueue, PendingBookingEntry, QUEUE_CHANGED_EVENT } from '@/lib/offlineQueue';
 import { useOnlineStatus } from '@/lib/useOnlineStatus';
-import { getHolidays } from '@/lib/holidaysApi';
-import { INTERVIEW_COLOR, PRIVATE_COLOR } from '@/lib/colors';
-
-const FALLBACK_COLOR = '#868585';
-const ALL_VALUE = 'all';
 
 export default function CalendarioPage() {
-  const [userId, setUserId] = useState('');
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isTrainer, setIsTrainer] = useState(false);
-  const [ownColor, setOwnColor] = useState(FALLBACK_COLOR);
-  const [roleReady, setRoleReady] = useState(false);
+  const isOnline = useOnlineStatus();
 
-  const [trainers, setTrainers] = useState<any[]>([]);
-  const [clients, setClients] = useState<any[]>([]);
-
-  const [selectedTrainerIds, setSelectedTrainerIds] = useState<string[]>([]);
-  const [selectedClientId, setSelectedClientId] = useState(ALL_VALUE);
-  const [loadingLists, setLoadingLists] = useState(false);
+  const {
+    userId,
+    isAdmin,
+    isTrainer,
+    roleReady,
+    trainers,
+    clients,
+    selectedTrainerIds,
+    setSelectedTrainerIds,
+    selectedClientId,
+    setSelectedClientId,
+    loadingLists,
+    events,
+    loadBookings,
+    daysWithBookings,
+    loadMonthDots,
+    holidaysByDate,
+    loadHolidaysForYear,
+  } = useCalendarData();
 
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [events, setEvents] = useState<any[]>([]);
-  const isOnline = useOnlineStatus();
-  // Acciones hechas sin conexión (solo admin) que aún no se han mandado al
-  // servidor; se mezclan sobre "events" para que se vean al momento (ver
-  // applyPendingQueueToEvents) y las consume de verdad OfflineSyncBanner al
-  // recuperar conexión.
-  const [pendingQueue, setPendingQueue] = useState<PendingBookingEntry[]>([]);
-  function refreshPendingQueue() {
-    getQueue().then(setPendingQueue).catch(() => {});
-  }
-  // Cuando la cola cambia porque OfflineSyncBanner acaba de sincronizar un
-  // cambio de verdad con el servidor (no solo porque se encoló uno nuevo
-  // sin conexión), "events" se queda con los datos de antes de
-  // desconectarse: sin este refresco, al vaciarse la cola el calendario
-  // volvía a enseñar la posición vieja de la sesión en vez de la ya
-  // guardada. Pedirlo también cuando no hay red no hace daño: loadBookings
-  // ya falla en silencio en ese caso.
-  function handleQueueChanged() {
-    refreshPendingQueue();
-    const api = calendarRef.current?.getApi();
-    if (api) {
-      loadBookings(api.view.activeStart.toISOString(), api.view.activeEnd.toISOString());
-    }
-    loadMonthDots(selectedDate);
-  }
-  // El oyente de abajo se registra una sola vez (al montar), pero
-  // handleQueueChanged usa loadBookings, que a su vez lee
-  // selectedTrainerIds/selectedClientId/selectedDate del cierre de ESTE
-  // render. Sin la referencia, el oyente se quedaría para siempre con la
-  // versión de la primerísima carga (con selectedTrainerIds todavía
-  // vacío, antes de que terminara de pedirse la lista de entrenadores):
-  // cada sincronización pediría sesiones de "ningún entrenador" y
-  // vaciaría el calendario entero. Guardando la última versión en una
-  // referencia, el oyente (que no cambia) siempre llama a la actual.
-  const handleQueueChangedRef = useRef(handleQueueChanged);
-  useEffect(() => {
-    handleQueueChangedRef.current = handleQueueChanged;
-  });
-  useEffect(() => {
-    refreshPendingQueue();
-    const listener = () => handleQueueChangedRef.current();
-    window.addEventListener(QUEUE_CHANGED_EVENT, listener);
-    return () => window.removeEventListener(QUEUE_CHANGED_EVENT, listener);
-  }, []);
-  // El ResizeObserver de fitEventText necesita los datos MÁS RECIENTES del
-  // evento, no los que había en el momento en que se montó el elemento: si
-  // FullCalendar reutiliza el mismo nodo del DOM tras una edición (en vez
-  // de recrearlo), "info.event" capturado en el closure del observer se
-  // queda con los datos viejos, y un resize posterior (p.ej. al cambiar de
-  // vista) volvía a pintar el texto antiguo encima del ya corregido.
-  const eventsRef = useRef<any[]>([]);
-
-  // Festivos (nacionales + Castilla y León automáticos, más los locales
-  // que se añadan a mano en /dashboard/festivos): "YYYY-MM-DD" -> nombre.
-  const [holidaysByDate, setHolidaysByDate] = useState<Record<string, string>>({});
-  const loadedHolidayYearsRef = useRef<Set<number>>(new Set());
-
-  function loadHolidaysForYear(year: number) {
-    if (loadedHolidayYearsRef.current.has(year)) return;
-    loadedHolidayYearsRef.current.add(year);
-    const token = localStorage.getItem('token');
-    if (!token) return;
-    getHolidays(token, year)
-      .then((data: any[]) => {
-        setHolidaysByDate((prev) => {
-          const next = { ...prev };
-          data.forEach((h) => {
-            next[h.date.slice(0, 10)] = h.name;
-          });
-          return next;
-        });
-      })
-      .catch(() => {
-        // Silencioso: si falla, simplemente no se marcan festivos ese año.
-        loadedHolidayYearsRef.current.delete(year);
-      });
-  }
-  const [daysWithBookings, setDaysWithBookings] = useState<Set<string>>(new Set());
   const [modal, setModal] = useState<ModalState>(null);
   const [viewTitle, setViewTitle] = useState('');
   const [viewType, setViewType] = useState('timeGridWeek');
@@ -134,9 +60,40 @@ export default function CalendarioPage() {
   const calendarRef = useRef<FullCalendar>(null);
   const calendarWrapperRef = useRef<HTMLDivElement>(null);
   const gridRowRef = useRef<HTMLDivElement>(null);
-  const router = useRouter();
 
   const isTrainerPerspective = isAdmin || isTrainer;
+  // Un admin o entrenador puede crear/editar/borrar aunque el filtro esté
+  // acotado a un cliente o entrenador concreto. El modal siempre pregunta
+  // a qué entrenador pertenece cada sesión nueva, así que no hace falta
+  // tener exactamente uno marcado en el checklist para poder crear.
+  const canEdit = isTrainerPerspective;
+  // Sin conexión solo el admin puede seguir creando/moviendo/borrando
+  // sesiones (se guardan en cola); el resto de roles pasan a solo lectura.
+  const canEditOffline = isOnline ? canEdit : isAdmin;
+
+  const { pendingQueue, refreshPendingQueue } = useOfflineCalendarQueue({
+    calendarRef,
+    selectedDate,
+    loadBookings,
+    loadMonthDots,
+  });
+
+  const displayEvents = useMemo(
+    () => applyPendingQueueToEvents(events, pendingQueue, trainers, clients),
+    [events, pendingQueue, trainers, clients],
+  );
+  // El ResizeObserver de fitEventText necesita los datos MÁS RECIENTES del
+  // evento, no los que había en el momento en que se montó el elemento: si
+  // FullCalendar reutiliza el mismo nodo del DOM tras una edición (en vez
+  // de recrearlo), "info.event" capturado en el closure del observer se
+  // queda con los datos viejos, y un resize posterior (p.ej. al cambiar de
+  // vista) volvía a pintar el texto antiguo encima del ya corregido.
+  const eventsRef = useRef<any[]>([]);
+  useEffect(() => {
+    eventsRef.current = displayEvents;
+  }, [displayEvents]);
+
+  const { handleEventDidMount, handleEventWillUnmount } = useFitEventText(eventsRef);
 
   // Se cuentan aquí para saber si el botón de recordatorios tiene algo que
   // ofrecer: un admin puede estar viendo la semana entera de todos y no
@@ -148,276 +105,6 @@ export default function CalendarioPage() {
     () => construirRecordatorios(events, userId),
     [events, userId],
   );
-
-  // Un admin o entrenador puede crear/editar/borrar aunque el filtro esté
-  // acotado a un cliente o entrenador concreto. El modal siempre pregunta
-  // a qué entrenador pertenece cada sesión nueva, así que no hace falta
-  // tener exactamente uno marcado en el checklist para poder crear.
-  const canEdit = isTrainerPerspective;
-  // Sin conexión solo el admin puede seguir creando/moviendo/borrando
-  // sesiones (se guardan en cola); el resto de roles pasan a solo lectura.
-  const canEditOffline = isOnline ? canEdit : isAdmin;
-
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-    if (!token || !storedUser) {
-      router.push('/login');
-      return;
-    }
-    const { id, roles } = JSON.parse(storedUser);
-    setUserId(id);
-
-    const admin = roles?.includes('admin') ?? false;
-    const trainer = roles?.includes('trainer') ?? false;
-    setIsAdmin(admin);
-    setIsTrainer(trainer);
-
-    if (trainer) {
-      getMe(token)
-        .then((me) => setOwnColor(me.color || FALLBACK_COLOR))
-        .catch(() => {});
-    }
-
-    if (admin || trainer) {
-      setLoadingLists(true);
-      Promise.all([getUsers(token), getActiveClients(token)])
-        .then(([users, activeClients]) => {
-          const activeTrainers = users.filter(
-            (u: any) => u.roles?.includes('trainer') && u.status === 'active',
-          );
-          setTrainers(activeTrainers);
-          // Admin: todos los entrenadores marcados por defecto. Entrenador:
-          // solo él mismo.
-          setSelectedTrainerIds(admin ? activeTrainers.map((t: any) => t._id) : [id]);
-          // El backend ya manda los favoritos primero; aquí solo se
-          // desempata alfabéticamente dentro de cada grupo (favoritos /
-          // resto), sin deshacer ese orden.
-          const sortedClients = [...activeClients].sort((a: any, b: any) => {
-            if (!!a.isFavorite !== !!b.isFavorite) return a.isFavorite ? -1 : 1;
-            return `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, 'es');
-          });
-          setClients(sortedClients);
-        })
-        .finally(() => setLoadingLists(false));
-    }
-
-    setRoleReady(true);
-  }, [router]);
-
-  function bookingToEvent(b: any) {
-    // De más a menos detallado: se usa el primero que quepa entero (partido
-    // en líneas si hace falta); si ninguno cabe, se muestra el más corto
-    // aunque se corte, pero el nombre nunca desaparece.
-    let candidates: string[] = [];
-    let color = FALLBACK_COLOR;
-
-    if (b.isInterview) {
-      // Entrevista con alguien que aún no es cliente: como una privada,
-      // pero en beige para distinguirla.
-      candidates = ['Entrevista'];
-      color = INTERVIEW_COLOR;
-    } else if (b.isPrivate) {
-      // Sesión personal del entrenador: no lleva clientes, siempre en
-      // salmón (independiente del color que tenga asignado el entrenador),
-      // para que se distinga a simple vista de una sesión normal.
-      candidates = ['Privada'];
-      color = PRIVATE_COLOR;
-    } else {
-      // Nombres de clientes, color del entrenador de esa sesión concreta
-      // (funciona igual con 1, varios, o todos los entrenadores marcados)
-      const clients = b.clients || [];
-      const full = clients.map((c: any) => `${c.firstName} ${c.lastName}`).join(', ');
-      const initials = clients
-        .map((c: any) => `${c.firstName} ${c.lastName?.[0] ?? ''}.`)
-        .join(', ');
-      const short = clients.map((c: any) => c.firstName).join(', ');
-      candidates = [full, initials, short];
-      color = b.trainer?.color || FALLBACK_COLOR;
-    }
-
-    candidates = candidates.filter(Boolean);
-    if (candidates.length === 0) candidates = ['Sesión'];
-
-    return {
-      id: b._id,
-      title: candidates[0],
-      start: b.startTime,
-      end: b.endTime,
-      color,
-      extendedProps: { raw: b, candidates },
-    };
-  }
-
-  // Un payload de la cola offline lleva ids en crudo (trainer: string,
-  // clients: string[]); bookingToEvent espera los objetos ya poblados, así
-  // que se resuelven aquí contra las listas que ya tenemos en memoria para
-  // los desplegables de filtro.
-  function resolveTrainerRef(id: string | undefined) {
-    return trainers.find((t) => t._id === id) || { _id: id, firstName: '', lastName: '', color: FALLBACK_COLOR };
-  }
-  function resolveClientRefs(ids: string[] | undefined) {
-    return (ids || []).map((cid) => clients.find((c) => c._id === cid) || { _id: cid, firstName: '', lastName: '' });
-  }
-
-  // Aplica, por orden, la cola de acciones sin sincronizar sobre la lista
-  // de eventos ya cargada: añade las creadas offline, parchea las editadas
-  // y quita las borradas. Así el admin ve al momento lo que ha hecho sin
-  // conexión, sin esperar a que sincronice de verdad.
-  function applyPendingQueueToEvents(baseEvents: any[], queue: PendingBookingEntry[]) {
-    let result = baseEvents;
-    for (const entry of queue) {
-      if (entry.action === 'create') {
-        const raw = {
-          _id: entry.localId,
-          trainer: resolveTrainerRef(entry.payload.trainer),
-          clients: resolveClientRefs(entry.payload.clients),
-          startTime: entry.payload.startTime,
-          endTime: entry.payload.endTime,
-          notes: entry.payload.notes,
-          isPrivate: entry.payload.isPrivate,
-          isInterview: entry.payload.isInterview,
-          status: 'active',
-        };
-        const ev: any = bookingToEvent(raw);
-        ev.extendedProps = { ...ev.extendedProps, pendingSync: true };
-        result = [...result, ev];
-      } else if (entry.action === 'update') {
-        result = result.map((ev) => {
-          if (ev.id !== entry.targetId) return ev;
-          const mergedRaw = { ...ev.extendedProps.raw, ...entry.payload };
-          if (entry.payload.trainer) mergedRaw.trainer = resolveTrainerRef(entry.payload.trainer);
-          if (entry.payload.clients) mergedRaw.clients = resolveClientRefs(entry.payload.clients);
-          const merged: any = bookingToEvent(mergedRaw);
-          merged.extendedProps = { ...merged.extendedProps, pendingSync: true };
-          return merged;
-        });
-      } else if (entry.action === 'delete' || entry.action === 'deleteSeries') {
-        result = result.filter((ev) => ev.id !== entry.targetId);
-      }
-    }
-    return result;
-  }
-
-  const displayEvents = useMemo(
-    () => applyPendingQueueToEvents(events, pendingQueue),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [events, pendingQueue, trainers, clients],
-  );
-  // El ResizeObserver de fitEventText necesita los datos MÁS RECIENTES
-  // (incluidos los pendientes de sincronizar), no los que había cuando se
-  // montó el elemento (ver el comentario junto a eventsRef más arriba).
-  useEffect(() => {
-    eventsRef.current = displayEvents;
-  }, [displayEvents]);
-
-  // Recorta el contenido de un evento del calendario según el espacio real
-  // disponible: nombre completo -> solo nombre, dejando que el texto se
-  // parta en varias líneas si hace falta (nunca desaparece del todo, como
-  // mucho se corta a medias si de verdad no cabe ni en alto); hora -> se
-  // oculta si no cabe.
-  function fitEventText(el: HTMLElement, event: any) {
-    const boxEl = el.querySelector('.ziti-event-box') as HTMLElement | null;
-    const nameEl = el.querySelector('.ziti-event-name') as HTMLElement | null;
-    const timeEl = el.querySelector('.ziti-event-time') as HTMLElement | null;
-    if (!boxEl || !nameEl) return;
-
-    const candidates: string[] = event.extendedProps?.candidates?.length
-      ? event.extendedProps.candidates
-      : [event.title];
-
-    // El propio texto nunca desborda de sí mismo (crece a su contenido), así
-    // que hay que medir el desbordamiento contra la caja real (que sí tiene
-    // alto fijo y overflow:hidden), no contra el texto.
-    function tryFitName(): boolean {
-      for (const candidate of candidates) {
-        nameEl!.textContent = candidate;
-        if (boxEl!.scrollHeight <= boxEl!.clientHeight) return true;
-      }
-      return false;
-    }
-
-    // Hora: si no cabe de ancho, se quita directamente.
-    if (timeEl) {
-      timeEl.style.display = '';
-      if (timeEl.scrollWidth > timeEl.clientWidth) {
-        timeEl.style.display = 'none';
-      }
-    }
-
-    let fits = tryFitName();
-
-    // Si ni el nombre más corto cabe con la hora todavía visible, la
-    // quitamos: el nombre importa más y necesita todo el alto disponible.
-    if (!fits && timeEl && timeEl.style.display !== 'none') {
-      timeEl.style.display = 'none';
-      fits = tryFitName();
-    }
-
-    // Aun así no cabe entero (caja diminuta): nos quedamos con el más corto,
-    // aunque se corte, para que el nombre nunca desaparezca del todo.
-    if (!fits) {
-      nameEl.textContent = candidates[candidates.length - 1];
-    }
-  }
-
-  function handleEventDidMount(info: any) {
-    const eventId = info.event.id;
-    function refit() {
-      const current = eventsRef.current.find((e) => e.id === eventId);
-      fitEventText(info.el, current ?? info.event);
-    }
-    refit();
-    const ro = new ResizeObserver(refit);
-    ro.observe(info.el);
-    (info.el as any).__zitiResizeObserver = ro;
-  }
-
-  function handleEventWillUnmount(info: any) {
-    (info.el as any).__zitiResizeObserver?.disconnect();
-  }
-
-  async function loadBookings(fromStr: string, toStr: string) {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-    try {
-      const data = await fetchFilteredBookings(token, fromStr, toStr);
-      setEvents(data.map(bookingToEvent));
-    } catch {
-      // silencioso
-    }
-  }
-
-  // El backend, cuando se le pide un cliente concreto, devuelve TODAS sus
-  // sesiones sin mirar el filtro de entrenadores (son dos filtros que no
-  // sabe combinar). Si además hay entrenadores marcados, se cruza aquí.
-  async function fetchFilteredBookings(token: string, from: string, to: string): Promise<any[]> {
-    if (selectedClientId !== ALL_VALUE) {
-      if (selectedTrainerIds.length === 0) return [];
-      const data = await getBookings(token, { client: selectedClientId, from, to });
-      return data.filter((b: any) => selectedTrainerIds.includes(b.trainer?._id));
-    }
-    if (selectedTrainerIds.length > 0) {
-      return getBookingsByTrainers(token, selectedTrainerIds, from, to);
-    }
-    return [];
-  }
-
-  async function loadMonthDots(monthDate: Date) {
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
-    const start = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
-    const end = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0, 23, 59, 59);
-
-    try {
-      const data = await fetchFilteredBookings(token, start.toISOString(), end.toISOString());
-      const keys = new Set<string>(data.map((b: any) => dayKey(new Date(b.startTime))));
-      setDaysWithBookings(keys);
-    } catch {
-      // silencioso
-    }
-  }
 
   function handleDatesSet(info: any) {
     loadBookings(info.startStr, info.endStr);
