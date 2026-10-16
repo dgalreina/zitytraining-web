@@ -172,9 +172,10 @@ export default function BookingModal({
               <button
                 type="button"
                 onClick={form.saveNotesView}
-                className="w-full rounded-lg bg-gradient-to-r from-[#a2c037] to-[#6aa842] py-2 text-sm font-semibold text-white hover:opacity-90"
+                disabled={form.saving}
+                className="w-full rounded-lg bg-gradient-to-r from-[#a2c037] to-[#6aa842] py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
               >
-                Guardar
+                {form.saving ? 'Guardando...' : 'Guardar'}
               </button>
             </>
           )}
@@ -197,9 +198,10 @@ export default function BookingModal({
               <button
                 type="button"
                 onClick={form.saveTrainingView}
-                className="w-full rounded-lg bg-gradient-to-r from-[#a2c037] to-[#6aa842] py-2 text-sm font-semibold text-white hover:opacity-90"
+                disabled={form.saving}
+                className="w-full rounded-lg bg-gradient-to-r from-[#a2c037] to-[#6aa842] py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
               >
-                Guardar
+                {form.saving ? 'Guardando...' : 'Guardar'}
               </button>
             </>
           )}
@@ -210,7 +212,7 @@ export default function BookingModal({
 
               <div className="flex gap-2">
                 <button
-                  onClick={form.handleSave}
+                  onClick={() => form.handleSave()}
                   disabled={form.saving}
                   className="flex-1 rounded-lg bg-gradient-to-r from-[#a2c037] to-[#6aa842] py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
                 >
@@ -244,7 +246,8 @@ export default function BookingModal({
 
       {form.workoutFormOpen && (
         <WorkoutFormModal
-          title="Entrenamiento para esta sesión"
+          editingWorkout={form.bookingWorkout}
+          title={form.bookingWorkout ? undefined : 'Entrenamiento para esta sesión'}
           onClose={() => form.setWorkoutFormOpen(false)}
           onSaved={form.handleWorkoutCreated}
         />
@@ -266,6 +269,7 @@ export default function BookingModal({
         onCancel={form.cancelWorkoutScopeChoice}
         onApplyToThisOnly={() => form.confirmWorkoutScope('single')}
         onApplyToSeries={() => form.confirmWorkoutScope('series')}
+        saving={form.saving}
       />
     </>
   );

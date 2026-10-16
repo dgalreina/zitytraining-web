@@ -49,7 +49,7 @@ test('crear, revisar vistas y borrar una sesión, sin errores de consola', async
   const notasButton = page.getByRole('button', { name: 'Notas' });
   const notaGuardada = 'nota de prueba E2E';
 
-  await test.step('escribir una nota y salir con "Atrás": se descarta', async () => {
+  await test.step('escribir una nota y salir con "Atrás": se descarta, el modal sigue abierto', async () => {
     await notasButton.click();
     await page.getByPlaceholder('Escribe aquí cualquier detalle sobre la sesión...').fill('esto no debería guardarse');
     await notasButton.click(); // el botón "atrás" lleva el mismo texto "Notas"
@@ -58,15 +58,7 @@ test('crear, revisar vistas y borrar una sesión, sin errores de consola', async
     await expect(notasButton.locator('span')).toHaveCount(0);
   });
 
-  await test.step('escribir una nota y pulsar "Guardar": se mantiene', async () => {
-    await notasButton.click();
-    await page.getByPlaceholder('Escribe aquí cualquier detalle sobre la sesión...').fill(notaGuardada);
-    await page.getByRole('button', { name: 'Guardar' }).click();
-    await expect(page.getByText('Nueva sesión')).toBeVisible();
-    await expect(notasButton.locator('span')).toHaveCount(1);
-  });
-
-  await test.step('cambiar a Entrenamiento y volver', async () => {
+  await test.step('entrar en Entrenamiento y volver con "Atrás": no rompe nada', async () => {
     await page.getByRole('button', { name: 'Entrenamiento' }).click();
     await expect(page.getByText('Crear entrenamiento nuevo')).toBeVisible();
     // exact: true, porque "Crear entrenamiento nuevo" también contiene
@@ -75,15 +67,21 @@ test('crear, revisar vistas y borrar una sesión, sin errores de consola', async
     await expect(page.getByText('Nueva sesión')).toBeVisible();
   });
 
-  await test.step('guardar de verdad', async () => {
+  await test.step('escribir una nota y pulsar "Guardar" en Notas: guarda la sesión entera y cierra el modal', async () => {
+    await notasButton.click();
+    await page.getByPlaceholder('Escribe aquí cualquier detalle sobre la sesión...').fill(notaGuardada);
     await page.getByRole('button', { name: 'Guardar' }).click();
     await expect(page.getByText('Nueva sesión')).not.toBeVisible({ timeout: 5000 });
+    await expect(page.locator('.fc-event')).toHaveCount(1, { timeout: 5000 });
   });
 
-  await test.step('limpiar: borrar la sesión recién creada', async () => {
-    await expect(page.locator('.fc-event')).toHaveCount(1, { timeout: 5000 });
+  await test.step('reabrir la sesión: la nota se guardó de verdad', async () => {
     await page.locator('.fc-event').last().click({ force: true });
     await expect(page.getByText('Editar sesión')).toBeVisible();
+    await expect(notasButton.locator('span')).toHaveCount(1);
+  });
+
+  await test.step('limpiar: borrar la sesión', async () => {
     await page.getByTitle('Eliminar sesión').click();
     await expect(page.getByText('Editar sesión')).not.toBeVisible({ timeout: 5000 });
     await expect(page.locator('.fc-event')).toHaveCount(0);

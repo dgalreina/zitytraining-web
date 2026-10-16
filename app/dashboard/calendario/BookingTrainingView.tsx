@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { Pencil, Trash2 } from 'lucide-react';
 import WorkoutSummary from '../entrenamientos/WorkoutSummary';
 
@@ -47,25 +46,14 @@ export default function BookingTrainingView({
           <div className="mb-2 flex items-center justify-between gap-2">
             <h4 className="text-sm font-bold text-[#2b2b2a]">{bookingWorkout.name}</h4>
             <div className="flex shrink-0 gap-1.5">
-              <Link
-                href={`/dashboard/entrenamientos?editWorkout=${bookingWorkout._id}`}
-                onClick={(e) => {
-                  // Esto sale de toda la página del calendario, no solo de
-                  // esta pestaña: cualquier cambio sin guardar en la sesión
-                  // (hora, cliente...) se perdería, no solo lo del entrenamiento.
-                  if (
-                    !window.confirm(
-                      'Vas a salir de esta sesión para editar el entrenamiento. Se perderá cualquier cambio sin guardar. ¿Seguro?',
-                    )
-                  ) {
-                    e.preventDefault();
-                  }
-                }}
-                title="Editar este entrenamiento en Entrenamientos (afecta a todas las sesiones que lo usen)"
+              <button
+                type="button"
+                onClick={() => setWorkoutFormOpen(true)}
+                title="Editar este entrenamiento (afecta a todas las sesiones que lo usen)"
                 className="rounded-lg bg-gray-100 p-1.5 text-[#2b2b2a] hover:bg-gray-200"
               >
                 <Pencil size={14} />
-              </Link>
+              </button>
               <button
                 type="button"
                 onClick={removeWorkout}
@@ -131,7 +119,7 @@ export default function BookingTrainingView({
         <button
           type="button"
           onClick={() => setWorkoutFormOpen(true)}
-          className="rounded-lg bg-gradient-to-r from-[#a2c037] to-[#6aa842] py-2 text-sm font-semibold text-white hover:opacity-90"
+          className="rounded-lg border border-gray-200 py-2 text-sm font-semibold text-[#868585] hover:bg-gray-50"
         >
           Crear entrenamiento nuevo
         </button>

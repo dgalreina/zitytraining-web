@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { getWorkouts, deleteWorkout } from '@/lib/workoutsApi';
 import WorkoutFormModal from './WorkoutFormModal';
@@ -14,33 +13,12 @@ export default function WorkoutsTab() {
   const [editingWorkout, setEditingWorkout] = useState<any | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const router = useRouter();
-  const searchParams = useSearchParams();
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) return;
     load(token);
   }, []);
-
-  // Enlace directo desde el modal de sesión del calendario ("Editar en
-  // Entrenamientos"): si llega ?editWorkout=<id>, se abre ese entrenamiento
-  // en edición en cuanto termina de cargar la lista. Una sola vez (si no,
-  // cerrar el modal y recargar la página lo volvería a abrir solo) y se
-  // quita el parámetro de la URL para que no quede ahí pegado.
-  const autoOpenedRef = useRef(false);
-  useEffect(() => {
-    if (autoOpenedRef.current || !workouts) return;
-    const editId = searchParams.get('editWorkout');
-    if (!editId) return;
-    const found = workouts.find((w) => w._id === editId);
-    if (found) {
-      autoOpenedRef.current = true;
-      openEdit(found);
-      router.replace('/dashboard/entrenamientos');
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workouts, searchParams]);
 
   function load(token: string) {
     getWorkouts(token)

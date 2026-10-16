@@ -449,7 +449,7 @@ export default function CalendarioPage() {
             // desplaza de verdad una sesión real). 200ms quedaba demasiado
             // cerca de lo que tarda un toque normal en un móvil, y algún
             // toque se colaba como un arrastre mínimo.
-            eventLongPressDelay={350}
+            eventLongPressDelay={500}
             // Sin esto, al soltar el dedo el bloque desliza 500ms de vuelta
             // a su sitio con top/left (no transform), lo que en Safari/iOS
             // puede provocar un filo gris de repintado durante el gesto.

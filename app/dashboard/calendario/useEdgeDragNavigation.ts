@@ -124,12 +124,19 @@ export function useEdgeDragNavigation({
     };
     edgeTriggeredRef.current = false;
     window.addEventListener('pointermove', stablePointerMoveHandler);
+    // La vista Semana tiene su propio scroll horizontal nativo (red de
+    // seguridad para pantallas muy estrechas, ver fullcalendar-theme.css).
+    // Si la sesión arrastrada está en la última columna, ese scroll
+    // competía con el propio arrastre. Se desactiva mientras se arrastra
+    // y se repone al soltar.
+    calendarWrapperRef.current?.classList.add('ziti-dragging-event');
   }
 
   function handleEventDragStop() {
     window.removeEventListener('pointermove', stablePointerMoveHandler);
     clearEdgeTimer();
     dragStateRef.current = null;
+    calendarWrapperRef.current?.classList.remove('ziti-dragging-event');
   }
 
   return { handleEventDragStart, handleEventDragStop };

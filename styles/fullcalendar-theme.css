@@ -136,6 +136,13 @@
   overflow-x: auto !important;
 }
 
+/* Mientras se arrastra una sesión (ver useEdgeDragNavigation), se
+   desactiva el scroll horizontal nativo de la semana: si la sesión
+   está en la última columna, competía con el propio arrastre. */
+.ziti-week-view.ziti-dragging-event .fc-view-harness {
+  overflow-x: hidden !important;
+}
+
 /* Sabado y domingo, cuando se muestran (vista Dia siempre, vista Semana
    solo si se despliega con el icono): fondo gris para que se note que
    es fin de semana. */
@@ -404,4 +411,13 @@
    arreglo que ya lleva el resto de la aplicación. */
 .fc .fc-scroller {
   overscroll-behavior: none;
+}
+
+/* Al arrastrar una sesión (ver useEdgeDragNavigation), se desactiva el
+   scroll vertical nativo de esta misma rejilla mientras dura el
+   arrastre: competía con el propio movimiento de la sesión y se
+   sentía como si "tironearan" los dos a la vez. Se repone al soltar. */
+.ziti-dragging-event .fc-scroller {
+  overflow-y: hidden !important;
+  touch-action: none;
 }

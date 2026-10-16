@@ -177,12 +177,11 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
   }
 
   // Notas y entrenamiento se editan en su propia pantalla, aparte del
-  // formulario principal: "Guardar" ahí confirma el cambio y vuelve;
-  // "Atrás" lo descarta y vuelve al valor que había al entrar — pero si
-  // de verdad hay algo sin guardar, antes se pregunta, para no perder un
-  // cambio sin querer con un solo toque. Como el resto de campos del
-  // formulario, esto solo queda guardado de verdad en el servidor cuando
-  // se pulsa el "Guardar" general.
+  // formulario principal: "Guardar" ahí guarda la sesión entera de
+  // verdad (igual que el Guardar general) y cierra el modal, para no
+  // obligar a confirmar dos veces. "Atrás" descarta el cambio y vuelve
+  // al valor que había al entrar — pero si de verdad hay algo sin
+  // guardar, antes se pregunta, para no perderlo con un solo toque.
   const notesBackupRef = useRef('');
   const workoutBackupRef = useRef<any | null>(null);
 
@@ -190,8 +189,8 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
     notesBackupRef.current = notes;
     setView('notes');
   }
-  function saveNotesView() {
-    setView('form');
+  async function saveNotesView() {
+    await handleSave();
   }
   function discardNotesView() {
     if (notes !== notesBackupRef.current) {
@@ -207,22 +206,22 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
     workoutBackupRef.current = bookingWorkout;
     setView('training');
   }
-  function saveTrainingView() {
+  async function saveTrainingView() {
     setPickerOpen(false);
     // Si la sesión es de una serie y el entrenamiento de verdad ha
     // cambiado respecto al que tenía al abrir el modal, se pregunta a
-    // qué alcance aplicarlo antes de volver al formulario.
+    // qué alcance aplicarlo antes de guardar de verdad.
     const changedFromOriginal = (bookingWorkout?._id ?? null) !== originalWorkoutIdRef.current;
     if (seriesId && changedFromOriginal) {
       setWorkoutSeriesChoiceOpen(true);
       return;
     }
-    setView('form');
+    await handleSave();
   }
-  function confirmWorkoutScope(scope: 'single' | 'series') {
+  async function confirmWorkoutScope(scope: 'single' | 'series') {
     setApplyWorkoutToSeries(scope === 'series');
     setWorkoutSeriesChoiceOpen(false);
-    setView('form');
+    await handleSave(scope === 'series');
   }
   function cancelWorkoutScopeChoice() {
     // Se queda en la vista de Entrenamiento (no se decide nada todavía).
@@ -262,18 +261,25 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
     setStart(date);
   }
 
-  async function handleSave() {
+  // applyWorkoutToSeriesOverride: para llamar justo después de elegir el
+  // alcance en WorkoutSeriesChoiceDialog, sin esperar al siguiente render
+  // (setState es async, así que leer el estado aquí mismo podría ver
+  // todavía el valor viejo).
+  async function handleSave(applyWorkoutToSeriesOverride?: boolean) {
     if (!modalTrainerId) {
+      setView('form');
       setError('Selecciona un entrenador');
       return;
     }
     // Una privada es solo tuya: no lleva clientes.
     if (!isPrivate && selectedClientIds.length === 0) {
+      setView('form');
       setError('Selecciona al menos un cliente');
       return;
     }
     const duration = getEffectiveDurationMinutes();
     if (!duration || duration < 5) {
+      setView('form');
       setError('La duración debe ser de al menos 5 minutos');
       return;
     }
@@ -310,7 +316,7 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
           workoutId: bookingWorkout?._id || null,
           // Solo tiene efecto si de verdad cambió el entrenamiento y la
           // sesión es de una serie (ver saveTrainingView).
-          applyWorkoutToSeries,
+          applyWorkoutToSeries: applyWorkoutToSeriesOverride ?? applyWorkoutToSeries,
           // Solo tiene efecto de verdad si la sesión no era ya parte de
           // una serie (ver BookingFormFields: el selector ni se muestra
           // en ese caso, así que aquí sigue siendo 'once').
@@ -319,6 +325,7 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
       }
       onSaved();
     } catch (err: any) {
+      setView('form');
       setError(err.message || 'No se pudo guardar la sesión');
     } finally {
       setSaving(false);

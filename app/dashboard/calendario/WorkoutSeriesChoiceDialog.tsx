@@ -4,17 +4,20 @@
 // pertenece a una serie: solo esta sesión, o esta y todas las futuras ya
 // generadas (más la plantilla de la serie, para las que se generen más
 // adelante). Las sesiones pasadas nunca se tocan, se decida lo que se
-// decida aquí.
+// decida aquí. Elegir una opción guarda ya de verdad (como el Guardar
+// general), no hace falta confirmar otra vez.
 export default function WorkoutSeriesChoiceDialog({
   open,
   onCancel,
   onApplyToThisOnly,
   onApplyToSeries,
+  saving,
 }: {
   open: boolean;
   onCancel: () => void;
   onApplyToThisOnly: () => void;
   onApplyToSeries: () => void;
+  saving: boolean;
 }) {
   if (!open) return null;
 
@@ -37,19 +40,22 @@ export default function WorkoutSeriesChoiceDialog({
         <div className="flex flex-col gap-2">
           <button
             onClick={onApplyToThisOnly}
-            className="rounded-lg border border-gray-200 py-2.5 text-sm font-semibold text-[#2b2b2a] hover:bg-gray-50"
+            disabled={saving}
+            className="rounded-lg border border-gray-200 py-2.5 text-sm font-semibold text-[#2b2b2a] hover:bg-gray-50 disabled:opacity-60"
           >
             Solo esta sesión
           </button>
           <button
             onClick={onApplyToSeries}
-            className="rounded-lg bg-gradient-to-r from-[#a2c037] to-[#6aa842] py-2.5 text-sm font-semibold text-white hover:opacity-90"
+            disabled={saving}
+            className="rounded-lg bg-gradient-to-r from-[#a2c037] to-[#6aa842] py-2.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
           >
-            Esta y todas las futuras
+            {saving ? 'Guardando...' : 'Esta y todas las futuras'}
           </button>
           <button
             onClick={onCancel}
-            className="py-1.5 text-sm font-semibold text-[#868585] hover:underline"
+            disabled={saving}
+            className="py-1.5 text-sm font-semibold text-[#868585] hover:underline disabled:opacity-60"
           >
             Cancelar
           </button>
