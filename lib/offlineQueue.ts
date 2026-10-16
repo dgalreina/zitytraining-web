@@ -2,6 +2,7 @@
 // guarda en IndexedDB a mano (sin librería: el modelo es muy simple, una
 // sola tabla) para que sobreviva a recargar la página mientras se sigue
 // sin red.
+//
 
 const DB_NAME = 'zitytraining-offline';
 const DB_VERSION = 1;

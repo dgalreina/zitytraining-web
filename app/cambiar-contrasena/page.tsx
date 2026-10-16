@@ -1,4 +1,5 @@
 'use client';
+//
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -9,9 +10,6 @@ import PasswordInput from '@/components/PasswordInput';
 import { inputClass, labelClass } from '@/lib/formStyles';
 import { STRONG_PASSWORD_REGEX, STRONG_PASSWORD_HINT } from '@/lib/validation';
 
-// Primer acceso de quien entra con la contraseña que le dio el admin. No
-// es la misma pantalla que la del perfil: aquí no hay a dónde volver, y
-// el API le rechaza cualquier otra cosa hasta que elija una suya.
 export default function CambiarContrasenaObligatorioPage() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
