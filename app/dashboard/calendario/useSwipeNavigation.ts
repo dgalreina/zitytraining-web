@@ -12,15 +12,26 @@ export function useSwipeNavigation({
   calendarRef,
   viewType,
   prepareDaySlide,
+  ready,
 }: {
   calendarWrapperRef: RefObject<HTMLDivElement | null>;
   calendarRef: RefObject<FullCalendar | null>;
   viewType: string;
   prepareDaySlide: (direction: 1 | -1) => boolean;
+  // Cuándo existe ya de verdad el div de calendarWrapperRef (no durante el
+  // "Cargando..." inicial). Hace falta como dependencia explícita: un ref
+  // no dispara un re-render al rellenarse solo, así que sin esto el efecto
+  // se ejecuta primero con el div todavía sin montar, ve calendarWrapperRef
+  // .current a null, y no hay nada que le avise para reintentarlo después
+  // — se queda sin enganchar el swipe hasta que algo MÁS cambie viewType
+  // de verdad (p.ej. tocar "Día"), que es justo el síntoma reportado: el
+  // deslizamiento no funciona nada más abrir, pero en cuanto se cambia de
+  // vista una vez, ya funciona siempre.
+  ready: boolean;
 }) {
   useEffect(() => {
     const el = calendarWrapperRef.current;
-    if (!el || (viewType !== 'timeGridDay' && viewType !== 'timeGridWeek')) return;
+    if (!ready || !el || (viewType !== 'timeGridDay' && viewType !== 'timeGridWeek')) return;
 
     const DIRECTION_THRESHOLD = 10; // px para empezar a decidir la dirección
     const DECIDE_TIME_LIMIT = 180; // ms; pasado esto, se lo dejamos a FullCalendar
@@ -87,5 +98,5 @@ export function useSwipeNavigation({
       el.removeEventListener('touchmove', handleTouchMove);
       el.removeEventListener('touchend', handleTouchEnd);
     };
-  }, [viewType, calendarWrapperRef, calendarRef, prepareDaySlide]);
+  }, [viewType, ready, calendarWrapperRef, calendarRef, prepareDaySlide]);
 }

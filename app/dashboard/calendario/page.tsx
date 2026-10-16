@@ -268,7 +268,13 @@ export default function CalendarioPage() {
     loadMonthDots,
   });
 
-  useSwipeNavigation({ calendarWrapperRef, calendarRef, viewType, prepareDaySlide });
+  useSwipeNavigation({
+    calendarWrapperRef,
+    calendarRef,
+    viewType,
+    prepareDaySlide,
+    ready: roleReady && !loadingLists,
+  });
 
   // El modal se encarga de crear/editar/borrar por su cuenta; solo nos
   // avisa cuando ha terminado con éxito, para cerrarlo y recargar.
