@@ -15,9 +15,6 @@ export default function BookingNotesView({
 }) {
   return (
     <>
-      <p className="mb-2 text-xs text-[#868585]">
-        Pulsa Guardar para confirmar la nota, o Atrás para salir sin guardar los cambios.
-      </p>
       <textarea
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
