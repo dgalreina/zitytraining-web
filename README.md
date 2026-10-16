@@ -5,8 +5,6 @@ management, workouts, attendance, plans and payments. This is the
 frontend; the API lives in the companion [`zitytraining-api`](../zitytraining-api)
 repository.
 
-Built from scratch and in active use by a real gym, handling real
-clients, trainers and payments day to day.
 
 ## What it does
 
