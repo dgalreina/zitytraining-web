@@ -8,6 +8,7 @@ import { shift, flip } from '@floating-ui/dom';
 import 'react-datepicker/dist/react-datepicker.css';
 import '@/styles/datepicker-theme.css';
 import { inputClassDisableable as inputClass, labelClass } from '@/lib/formStyles';
+import { calculateAge } from '@/lib/dates';
 
 registerLocale('es', es);
 
@@ -89,6 +90,7 @@ export default function DateOfBirthPicker({
       <label className={labelClass}>
         Fecha de nacimiento
         {required && <span className="text-red-500"> *</span>}
+        {value && <span className="font-normal text-[#868585]"> ({calculateAge(value)} años)</span>}
       </label>
       <DatePicker
         selected={selected}

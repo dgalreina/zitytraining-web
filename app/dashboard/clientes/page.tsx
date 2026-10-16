@@ -8,6 +8,7 @@ import StatusFilterDropdown from '@/components/StatusFilterDropdown';
 import { statusBadge } from '@/components/StatusBadge';
 import { getUsers, getActiveClients, updateUser, addFavoriteClient, removeFavoriteClient } from '@/lib/usersApi';
 import { useContentHeight } from '@/lib/useContentHeight';
+import { calculateAge } from '@/lib/dates';
 
 type StatusFilter = 'all' | 'active' | 'inactive' | 'deleted';
 
@@ -19,12 +20,6 @@ const statusOptions: { value: StatusFilter; label: string }[] = [
   { value: 'inactive', label: 'Inactivos' },
   { value: 'deleted', label: 'Eliminados' },
 ];
-
-function calculateAge(dateOfBirth: string) {
-  const dob = new Date(dateOfBirth);
-  const diff = Date.now() - dob.getTime();
-  return Math.floor(diff / (1000 * 60 * 60 * 24 * 365.25));
-}
 
 export default function ClientesPage() {
   const [clients, setClients] = useState<any[]>([]);

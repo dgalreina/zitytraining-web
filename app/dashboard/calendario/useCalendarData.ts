@@ -67,9 +67,10 @@ export function useCalendarData() {
             (u: any) => u.roles?.includes('trainer') && u.status === 'active',
           );
           setTrainers(activeTrainers);
-          // Admin: todos los entrenadores marcados por defecto. Entrenador:
-          // solo él mismo.
-          setSelectedTrainerIds(admin ? activeTrainers.map((t: any) => t._id) : [id]);
+          // Todos los entrenadores marcados por defecto, sea admin o
+          // entrenador: al entrar se ve el calendario completo, no solo
+          // las propias sesiones.
+          setSelectedTrainerIds(activeTrainers.map((t: any) => t._id));
           // El backend ya manda los favoritos primero; aquí solo se
           // desempata alfabéticamente dentro de cada grupo (favoritos /
           // resto), sin deshacer ese orden.
