@@ -10,6 +10,7 @@ import BookingFormFields from './BookingFormFields';
 import BookingNotesView from './BookingNotesView';
 import BookingTrainingView from './BookingTrainingView';
 import DeleteSeriesChoiceDialog from './DeleteSeriesChoiceDialog';
+import WorkoutSeriesChoiceDialog from './WorkoutSeriesChoiceDialog';
 import { useBookingForm, KIND_OPTIONS } from './useBookingForm';
 
 registerLocale('es', es);
@@ -115,7 +116,7 @@ export default function BookingModal({
             ) : (
               <button
                 type="button"
-                onClick={() => form.setView('form')}
+                onClick={form.view === 'notes' ? form.discardNotesView : form.discardTrainingView}
                 className="flex items-center gap-1 font-[family-name:var(--font-work-sans)] text-base font-bold text-[#2b2b2a]"
               >
                 <ChevronLeft size={18} />
@@ -159,29 +160,48 @@ export default function BookingModal({
               filteredClients={filteredClients}
               selectedClientIds={form.selectedClientIds}
               toggleClient={form.toggleClient}
-              setView={form.setView}
+              onOpenNotes={form.enterNotesView}
+              onOpenTraining={form.enterTrainingView}
               bookingWorkout={form.bookingWorkout}
             />
           )}
 
           {form.view === 'notes' && (
-            <BookingNotesView notes={form.notes} setNotes={form.setNotes} setView={form.setView} />
+            <>
+              <BookingNotesView notes={form.notes} setNotes={form.setNotes} />
+              <button
+                type="button"
+                onClick={form.saveNotesView}
+                className="w-full rounded-lg bg-gradient-to-r from-[#a2c037] to-[#6aa842] py-2 text-sm font-semibold text-white hover:opacity-90"
+              >
+                Guardar
+              </button>
+            </>
           )}
 
           {form.view === 'training' && (
-            <BookingTrainingView
-              bookingWorkout={form.bookingWorkout}
-              removeWorkout={form.removeWorkout}
-              pickerOpen={form.pickerOpen}
-              setPickerOpen={form.setPickerOpen}
-              workoutSearch={form.workoutSearch}
-              setWorkoutSearch={form.setWorkoutSearch}
-              allWorkouts={form.allWorkouts}
-              filteredWorkouts={filteredWorkouts}
-              attachWorkout={form.attachWorkout}
-              setWorkoutFormOpen={form.setWorkoutFormOpen}
-              openWorkoutPicker={form.openWorkoutPicker}
-            />
+            <>
+              <BookingTrainingView
+                bookingWorkout={form.bookingWorkout}
+                removeWorkout={form.removeWorkout}
+                pickerOpen={form.pickerOpen}
+                setPickerOpen={form.setPickerOpen}
+                workoutSearch={form.workoutSearch}
+                setWorkoutSearch={form.setWorkoutSearch}
+                allWorkouts={form.allWorkouts}
+                filteredWorkouts={filteredWorkouts}
+                attachWorkout={form.attachWorkout}
+                setWorkoutFormOpen={form.setWorkoutFormOpen}
+                openWorkoutPicker={form.openWorkoutPicker}
+              />
+              <button
+                type="button"
+                onClick={form.saveTrainingView}
+                className="w-full rounded-lg bg-gradient-to-r from-[#a2c037] to-[#6aa842] py-2 text-sm font-semibold text-white hover:opacity-90"
+              >
+                Guardar
+              </button>
+            </>
           )}
 
           {form.view === 'form' && (
@@ -239,6 +259,13 @@ export default function BookingModal({
         }}
         onDeleteSeriesFrom={form.handleDeleteSeriesFrom}
         saving={form.saving}
+      />
+
+      <WorkoutSeriesChoiceDialog
+        open={form.workoutSeriesChoiceOpen}
+        onCancel={form.cancelWorkoutScopeChoice}
+        onApplyToThisOnly={() => form.confirmWorkoutScope('single')}
+        onApplyToSeries={() => form.confirmWorkoutScope('series')}
       />
     </>
   );

@@ -46,6 +46,10 @@ export interface UpdateBookingPayload {
   isPrivate?: boolean;
   isInterview?: boolean;
   workoutId?: string | null;
+  // Solo tiene efecto si la sesión pertenece a una serie: aplica el
+  // entrenamiento (o su borrado) también a las futuras ya generadas, y
+  // a la plantilla de la serie.
+  applyWorkoutToSeries?: boolean;
   holidaySkip?: boolean;
   status?: string;
   // Solo tiene efecto si la sesión aún no pertenece a una serie: la

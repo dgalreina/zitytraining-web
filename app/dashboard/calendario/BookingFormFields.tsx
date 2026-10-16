@@ -6,7 +6,7 @@ import { Star, Repeat, CalendarOff } from 'lucide-react';
 import FilterDropdown from '@/components/FilterDropdown';
 import Switch from '@/components/Switch';
 import { dayKey } from '@/components/MiniCalendar';
-import { DurationOption, ModalView } from './useBookingForm';
+import { DurationOption } from './useBookingForm';
 
 // La vista principal del formulario de crear/editar sesión: entrenador,
 // hora, duración, repetición (solo al crear), festivo, y clientes o nota
@@ -43,7 +43,8 @@ export default function BookingFormFields({
   filteredClients,
   selectedClientIds,
   toggleClient,
-  setView,
+  onOpenNotes,
+  onOpenTraining,
   bookingWorkout,
 }: {
   mode: 'create' | 'edit';
@@ -76,7 +77,8 @@ export default function BookingFormFields({
   filteredClients: any[];
   selectedClientIds: string[];
   toggleClient: (id: string) => void;
-  setView: (v: ModalView) => void;
+  onOpenNotes: () => void;
+  onOpenTraining: () => void;
   bookingWorkout: any | null;
 }) {
   return (
@@ -292,7 +294,7 @@ export default function BookingFormFields({
           <div className="mb-3 flex gap-2">
             <button
               type="button"
-              onClick={() => setView('notes')}
+              onClick={onOpenNotes}
               className="relative flex-1 rounded-lg border border-gray-200 py-1.5 text-sm font-semibold text-[#868585] transition hover:bg-gray-50"
             >
               Notas
@@ -302,7 +304,7 @@ export default function BookingFormFields({
             </button>
             <button
               type="button"
-              onClick={() => setView('training')}
+              onClick={onOpenTraining}
               className="relative flex-1 rounded-lg border border-gray-200 py-1.5 text-sm font-semibold text-[#868585] transition hover:bg-gray-50"
             >
               Entrenamiento

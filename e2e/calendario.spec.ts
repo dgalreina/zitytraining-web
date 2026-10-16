@@ -46,11 +46,24 @@ test('crear, revisar vistas y borrar una sesión, sin errores de consola', async
     await page.locator('label:has(input[type="checkbox"])').first().click();
   });
 
-  await test.step('cambiar a Notas y volver', async () => {
-    await page.getByRole('button', { name: 'Notas' }).click();
-    await expect(page.getByPlaceholder('Escribe aquí cualquier detalle sobre la sesión...')).toBeVisible();
-    await page.getByRole('button', { name: 'Notas' }).click(); // el botón "atrás" lleva el mismo texto
+  const notasButton = page.getByRole('button', { name: 'Notas' });
+  const notaGuardada = 'nota de prueba E2E';
+
+  await test.step('escribir una nota y salir con "Atrás": se descarta', async () => {
+    await notasButton.click();
+    await page.getByPlaceholder('Escribe aquí cualquier detalle sobre la sesión...').fill('esto no debería guardarse');
+    await notasButton.click(); // el botón "atrás" lleva el mismo texto "Notas"
     await expect(page.getByText('Nueva sesión')).toBeVisible();
+    // Sin el puntito verde: confirma que no se guardó nada.
+    await expect(notasButton.locator('span')).toHaveCount(0);
+  });
+
+  await test.step('escribir una nota y pulsar "Guardar": se mantiene', async () => {
+    await notasButton.click();
+    await page.getByPlaceholder('Escribe aquí cualquier detalle sobre la sesión...').fill(notaGuardada);
+    await page.getByRole('button', { name: 'Guardar' }).click();
+    await expect(page.getByText('Nueva sesión')).toBeVisible();
+    await expect(notasButton.locator('span')).toHaveCount(1);
   });
 
   await test.step('cambiar a Entrenamiento y volver', async () => {
