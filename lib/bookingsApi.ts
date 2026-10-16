@@ -48,6 +48,9 @@ export interface UpdateBookingPayload {
   workoutId?: string | null;
   holidaySkip?: boolean;
   status?: string;
+  // Solo tiene efecto si la sesión aún no pertenece a una serie: la
+  // convierte en la primera ocurrencia de una semanal nueva.
+  recurrence?: string;
 }
 
 export async function getBookings(

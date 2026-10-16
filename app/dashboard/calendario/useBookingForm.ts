@@ -231,6 +231,10 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
           isPrivate,
           isInterview: kind === 'interview',
           workoutId: bookingWorkout?._id || null,
+          // Solo tiene efecto de verdad si la sesión no era ya parte de
+          // una serie (ver BookingFormFields: el selector ni se muestra
+          // en ese caso, así que aquí sigue siendo 'once').
+          recurrence,
         });
       }
       onSaved();

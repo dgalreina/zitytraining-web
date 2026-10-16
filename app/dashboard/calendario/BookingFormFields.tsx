@@ -16,6 +16,7 @@ import { DurationOption, ModalView } from './useBookingForm';
 // cuándo se pueden pulsar.
 export default function BookingFormFields({
   mode,
+  canSetRecurrence,
   trainers,
   clients,
   holidaysByDate,
@@ -46,6 +47,9 @@ export default function BookingFormFields({
   bookingWorkout,
 }: {
   mode: 'create' | 'edit';
+  // Al crear, siempre se puede elegir. Al editar, solo si esta sesión
+  // todavía no pertenece a una serie (si ya es de una, ya es semanal).
+  canSetRecurrence: boolean;
   trainers: any[];
   clients: any[];
   holidaysByDate: Record<string, string>;
@@ -176,7 +180,7 @@ export default function BookingFormFields({
         </div>
       )}
 
-      {mode === 'create' && (
+      {canSetRecurrence && (
         <>
           <label className="mb-1.5 block text-xs font-semibold text-[#868585]">Repetición</label>
           <div className="mb-3 flex gap-2">
@@ -206,8 +210,9 @@ export default function BookingFormFields({
           </div>
           {recurrence === 'weekly' && (
             <p className="mb-3 text-xs text-[#868585]">
-              Se repite todas las semanas a esta misma hora, sin fecha de fin. Se puede parar más
-              adelante desde cualquiera de sus sesiones.
+              {mode === 'edit'
+                ? 'Esta sesión pasa a ser la primera de una serie semanal a esta misma hora, sin fecha de fin. Se puede parar más adelante desde cualquiera de sus sesiones.'
+                : 'Se repite todas las semanas a esta misma hora, sin fecha de fin. Se puede parar más adelante desde cualquiera de sus sesiones.'}
             </p>
           )}
         </>

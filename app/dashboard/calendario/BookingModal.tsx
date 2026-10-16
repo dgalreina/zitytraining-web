@@ -132,6 +132,7 @@ export default function BookingModal({
           {form.view === 'form' && (
             <BookingFormFields
               mode={modal.mode}
+              canSetRecurrence={modal.mode === 'create' || !form.seriesId}
               trainers={trainers}
               clients={clients}
               holidaysByDate={holidaysByDate}
