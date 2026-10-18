@@ -9,6 +9,7 @@ import { X, ChevronLeft, ChevronRight, Send, CalendarDays } from 'lucide-react';
 import MiniCalendar, { dayKey } from '@/components/MiniCalendar';
 import FilterDropdown from '@/components/FilterDropdown';
 import BookingModal, { ModalState } from './BookingModal';
+import MoveSeriesChoiceDialog from './MoveSeriesChoiceDialog';
 import WhatsAppRemindersModal, { construirRecordatorios } from './WhatsAppRemindersModal';
 import TrainerMultiSelect from './TrainerMultiSelect';
 import { useCalendarDaySlide } from './useCalendarDaySlide';
@@ -46,6 +47,12 @@ export default function CalendarioPage() {
 
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [modal, setModal] = useState<ModalState>(null);
+  // Arrastrar una sesión de una serie no se guarda al momento: se espera a
+  // que el usuario elija "solo esta" o "esta y todas las futuras" (ver
+  // MoveSeriesChoiceDialog). FullCalendar ya la ha movido en pantalla para
+  // entonces; si se cancela, se deshace con el propio info.revert().
+  const [pendingDrop, setPendingDrop] = useState<any | null>(null);
+  const [movingSeries, setMovingSeries] = useState(false);
   const [viewTitle, setViewTitle] = useState('');
   const [viewType, setViewType] = useState('timeGridWeek');
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -207,13 +214,41 @@ export default function CalendarioPage() {
     openEditModal(clickInfo.event.extendedProps.raw);
   }
 
-  async function handleEventDrop(info: any) {
+  function handleEventDrop(info: any) {
+    // Solo tiene sentido preguntar "esta o las futuras" si de verdad hay
+    // una serie detrás; una sesión suelta se mueve y se guarda sin más.
+    if (info.event.extendedProps?.raw?.series) {
+      setPendingDrop(info);
+      return;
+    }
+    commitEventDrop(info, false);
+  }
+
+  function cancelPendingDrop() {
+    pendingDrop?.revert();
+    setPendingDrop(null);
+  }
+
+  async function confirmPendingDrop(applyTimeToSeries: boolean) {
+    const info = pendingDrop;
+    if (!info) return;
+    setMovingSeries(true);
+    try {
+      await commitEventDrop(info, applyTimeToSeries);
+    } finally {
+      setMovingSeries(false);
+      setPendingDrop(null);
+    }
+  }
+
+  async function commitEventDrop(info: any, applyTimeToSeries: boolean) {
     const token = localStorage.getItem('token');
     if (!token) return;
     try {
       const result: any = await updateBookingOrQueue(token, info.event.id, {
         startTime: info.event.start.toISOString(),
         endTime: info.event.end.toISOString(),
+        applyTimeToSeries,
       });
       // Si se quedó en cola (sin conexión), FullCalendar ya movió este
       // evento a mano por el propio arrastre, así que displayEvents no lo
@@ -569,6 +604,14 @@ export default function CalendarioPage() {
           onClose={() => setRemindersOpen(false)}
         />
       )}
+
+      <MoveSeriesChoiceDialog
+        open={!!pendingDrop}
+        onCancel={cancelPendingDrop}
+        onMoveOnly={() => confirmPendingDrop(false)}
+        onMoveSeries={() => confirmPendingDrop(true)}
+        saving={movingSeries}
+      />
 
       <BookingModal
         modal={modal}

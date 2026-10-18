@@ -50,6 +50,10 @@ export interface UpdateBookingPayload {
   // entrenamiento (o su borrado) también a las futuras ya generadas, y
   // a la plantilla de la serie.
   applyWorkoutToSeries?: boolean;
+  // Solo tiene efecto si la sesión pertenece a una serie y se manda un
+  // startTime nuevo: aplica el mismo cambio de día/hora a las futuras ya
+  // generadas, y reancla la serie a ese patrón.
+  applyTimeToSeries?: boolean;
   holidaySkip?: boolean;
   status?: string;
   // Solo tiene efecto si la sesión aún no pertenece a una serie: la
