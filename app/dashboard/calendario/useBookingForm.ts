@@ -65,6 +65,23 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
   const [seriesId, setSeriesId] = useState<string | null>(null);
   const [holidaySkip, setHolidaySkip] = useState(false);
   const [deleteChoiceOpen, setDeleteChoiceOpen] = useState(false);
+  // Confirmación genérica con nuestro propio estilo (ver ConfirmDialog),
+  // en vez de window.confirm: se usa para "salir sin guardar" y para
+  // borrar una sesión suelta. Cuando ya hay otro diálogo propio que hace
+  // de confirmación (elegir "esta sesión o toda la serie"), no se pasa
+  // por aquí: preguntarlo dos veces sería redundante.
+  const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(
+    null,
+  );
+
+  function askConfirm(message: string, onConfirm: () => void) {
+    setConfirmDialog({ message, onConfirm });
+  }
+  function resolveConfirm(confirmed: boolean) {
+    const pending = confirmDialog;
+    setConfirmDialog(null);
+    if (confirmed) pending?.onConfirm();
+  }
 
   // El entrenamiento es un campo mas del formulario: se queda en local
   // hasta que se pulsa "Guardar", igual que las notas o los clientes.
@@ -97,6 +114,7 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
     setPickerOpen(false);
     setWorkoutSearch('');
     setDeleteChoiceOpen(false);
+    setConfirmDialog(null);
     setRecurrence('once');
     setWorkoutSeriesChoiceOpen(false);
     setApplyWorkoutToSeries(false);
@@ -194,9 +212,11 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
   }
   function discardNotesView() {
     if (notes !== notesBackupRef.current) {
-      if (!window.confirm('¿Seguro que quieres salir sin guardar? Se perderán los cambios en la nota.')) {
-        return;
-      }
+      askConfirm('¿Seguro que quieres salir sin guardar? Se perderán los cambios en la nota.', () => {
+        setNotes(notesBackupRef.current);
+        setView('form');
+      });
+      return;
     }
     setNotes(notesBackupRef.current);
     setView('form');
@@ -230,11 +250,15 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
   function discardTrainingView() {
     const changed = (bookingWorkout?._id ?? null) !== (workoutBackupRef.current?._id ?? null);
     if (changed) {
-      if (
-        !window.confirm('¿Seguro que quieres salir sin guardar? Se perderán los cambios en el entrenamiento.')
-      ) {
-        return;
-      }
+      askConfirm(
+        '¿Seguro que quieres salir sin guardar? Se perderán los cambios en el entrenamiento.',
+        () => {
+          setBookingWorkout(workoutBackupRef.current);
+          setPickerOpen(false);
+          setView('form');
+        },
+      );
+      return;
     }
     setBookingWorkout(workoutBackupRef.current);
     setPickerOpen(false);
@@ -334,23 +358,19 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
 
   function handleDeleteClick() {
     if (modal!.mode !== 'edit') return;
-    // Si es de una serie, primero hay que preguntar si se borra solo esta
-    // sesión o esta y todas las futuras (ver deleteChoiceOpen más abajo).
+    // Si es de una serie, elegir "esta sesión" o "esta y todas las
+    // futuras" ya hace de confirmación (ver deleteChoiceOpen más abajo):
+    // preguntar "¿seguro?" otra vez encima sería redundante. Si es una
+    // sesión suelta, no hay ese otro diálogo, así que aquí sí hace falta.
     if (seriesId) {
       setDeleteChoiceOpen(true);
       return;
     }
-    handleDelete();
+    askConfirm('¿Seguro que quieres eliminar esta sesión? No se puede deshacer.', handleDelete);
   }
 
   async function handleDelete() {
     if (modal!.mode !== 'edit') return;
-    // A diferencia de cancelar (que se puede deshacer reactivando), borrar
-    // es definitivo — y el botón está justo al lado del de cancelar, así
-    // que un toque equivocado no debería destruir nada sin confirmar.
-    if (!window.confirm('¿Seguro que quieres eliminar esta sesión? No se puede deshacer.')) {
-      return;
-    }
     setSaving(true);
     const token = localStorage.getItem('token');
     if (!token) return;
@@ -444,6 +464,8 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
     setHolidaySkip,
     deleteChoiceOpen,
     setDeleteChoiceOpen,
+    confirmDialog,
+    resolveConfirm,
     bookingWorkout,
     removeWorkout,
     workoutFormOpen,

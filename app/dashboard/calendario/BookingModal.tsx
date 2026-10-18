@@ -10,6 +10,7 @@ import BookingFormFields from './BookingFormFields';
 import BookingNotesView from './BookingNotesView';
 import BookingTrainingView from './BookingTrainingView';
 import DeleteSeriesChoiceDialog from './DeleteSeriesChoiceDialog';
+import ConfirmDialog from './ConfirmDialog';
 import WorkoutSeriesChoiceDialog from './WorkoutSeriesChoiceDialog';
 import { useBookingForm, KIND_OPTIONS } from './useBookingForm';
 
@@ -252,6 +253,15 @@ export default function BookingModal({
           onSaved={form.handleWorkoutCreated}
         />
       )}
+
+      <ConfirmDialog
+        open={!!form.confirmDialog}
+        message={form.confirmDialog?.message ?? ''}
+        danger
+        confirmLabel="Sí, continuar"
+        onConfirm={() => form.resolveConfirm(true)}
+        onCancel={() => form.resolveConfirm(false)}
+      />
 
       <DeleteSeriesChoiceDialog
         open={form.deleteChoiceOpen}
