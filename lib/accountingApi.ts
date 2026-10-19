@@ -28,6 +28,8 @@ export interface AccountingDay {
   day: number;
   hasClass: boolean;
   holiday: boolean;
+  // Cancelada, pero se cobra igual (se pinta aparte para que se note).
+  cancelled: boolean;
 }
 
 export interface AccountingPayment {

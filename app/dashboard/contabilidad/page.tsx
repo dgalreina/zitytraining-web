@@ -362,6 +362,11 @@ export default function ContabilidadPage() {
                             </span>
                           ) : d.hasClass ? (
                             <span className="h-2.5 w-2.5 rounded-full bg-[#6aa842]" />
+                          ) : d.cancelled ? (
+                            <span
+                              className="h-2.5 w-2.5 rounded-full bg-red-500"
+                              title="Cancelada, pero se cobra"
+                            />
                           ) : null}
                         </div>
                       </td>
