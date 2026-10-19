@@ -10,6 +10,7 @@ import MiniCalendar, { dayKey } from '@/components/MiniCalendar';
 import FilterDropdown from '@/components/FilterDropdown';
 import BookingModal, { ModalState } from './BookingModal';
 import MoveSeriesChoiceDialog from './MoveSeriesChoiceDialog';
+import UndoMoveToast from './UndoMoveToast';
 import WhatsAppRemindersModal, { construirRecordatorios } from './WhatsAppRemindersModal';
 import TrainerMultiSelect from './TrainerMultiSelect';
 import { useCalendarDaySlide } from './useCalendarDaySlide';
@@ -53,6 +54,20 @@ export default function CalendarioPage() {
   // entonces; si se cancela, se deshace con el propio info.revert().
   const [pendingDrop, setPendingDrop] = useState<any | null>(null);
   const [movingSeries, setMovingSeries] = useState(false);
+  // Tras mover una sesión arrastrando, un aviso con "Deshacer" (como
+  // Google Calendar) en vez de preguntar antes de mover. Guarda lo
+  // necesario para repetir el mismo update() con los valores de antes del
+  // arrastre: para una serie, el propio shiftKeepingWeekPattern del
+  // backend deshace el desplazamiento igual de bien en sentido contrario.
+  const [undoToast, setUndoToast] = useState<{
+    id: number;
+    message: string;
+    bookingId: string;
+    originalStart: string;
+    originalEnd: string;
+    appliedToSeries: boolean;
+  } | null>(null);
+  const undoToastIdRef = useRef(0);
   const [viewTitle, setViewTitle] = useState('');
   const [viewType, setViewType] = useState('timeGridWeek');
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -274,6 +289,21 @@ export default function CalendarioPage() {
           calApi.addEvent(rebuilt);
         }
       }
+      if (info.oldEvent?.start && info.oldEvent?.end) {
+        // Deshacer funciona igual sin conexión: vuelve a pasar por
+        // updateBookingOrQueue con la hora de antes, así que se encola
+        // (o se funde con el cambio ya en cola) y se aplica del todo en
+        // cuanto sincronice, igual que cualquier otra edición offline.
+        undoToastIdRef.current += 1;
+        setUndoToast({
+          id: undoToastIdRef.current,
+          message: applyTimeToSeries ? 'Sesión y futuras movidas' : 'Sesión movida',
+          bookingId: info.event.id,
+          originalStart: info.oldEvent.start.toISOString(),
+          originalEnd: info.oldEvent.end.toISOString(),
+          appliedToSeries: applyTimeToSeries,
+        });
+      }
       // Sin esto, el "raw" que lleva colgado el evento (con la hora vieja)
       // se queda tal cual, y si reabres el modal para editar te sale la
       // hora/día de antes de arrastrar, aunque el evento ya se vea movido.
@@ -289,6 +319,29 @@ export default function CalendarioPage() {
     } catch (err: any) {
       alert(err.message || 'No se pudo mover la sesión');
       info.revert();
+    }
+  }
+
+  async function handleUndoMove() {
+    const toast = undoToast;
+    setUndoToast(null);
+    if (!toast) return;
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    try {
+      await updateBookingOrQueue(token, toast.bookingId, {
+        startTime: toast.originalStart,
+        endTime: toast.originalEnd,
+        applyTimeToSeries: toast.appliedToSeries,
+      });
+      const api = calendarRef.current?.getApi();
+      if (api) {
+        loadBookings(api.view.activeStart.toISOString(), api.view.activeEnd.toISOString());
+      }
+      loadMonthDots(selectedDate);
+      refreshPendingQueue();
+    } catch (err: any) {
+      alert(err.message || 'No se pudo deshacer el movimiento');
     }
   }
 
@@ -602,6 +655,15 @@ export default function CalendarioPage() {
           trainerId={userId}
           weekStart={weekStart}
           onClose={() => setRemindersOpen(false)}
+        />
+      )}
+
+      {undoToast && (
+        <UndoMoveToast
+          key={undoToast.id}
+          message={undoToast.message}
+          onUndo={handleUndoMove}
+          onDismiss={() => setUndoToast(null)}
         />
       )}
 
