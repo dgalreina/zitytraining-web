@@ -290,7 +290,10 @@ export default function ContabilidadPage() {
                             Baja
                           </span>
                         )}
-                        <span className="truncate">{client.sessionCount} sesiones este mes</span>
+                        <span className="truncate">
+                          {client.sessionCount} sesiones este mes
+                          {client.cancelledCount > 0 && ` · ${client.cancelledCount} cancelada${client.cancelledCount === 1 ? '' : 's'}`}
+                        </span>
                       </p>
                     </td>
 
@@ -410,18 +413,18 @@ export default function ContabilidadPage() {
           month={data.month}
           segmentColor={colorForLabel}
           onClose={() => setSelectedClient(null)}
-          onSaved={(payment) => {
+          onSaved={(updated) => {
             setData((prev) =>
               prev
                 ? {
                     ...prev,
                     clients: prev.clients.map((c) =>
-                      c.clientId === selectedClient.clientId ? { ...c, payment } : c,
+                      c.clientId === updated.clientId ? updated : c,
                     ),
                   }
                 : prev,
             );
-            setSelectedClient((prev) => (prev ? { ...prev, payment } : prev));
+            setSelectedClient(updated);
           }}
         />
       )}

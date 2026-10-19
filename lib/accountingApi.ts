@@ -19,9 +19,16 @@ export interface AccountingSegment {
   sessions: number | null;
   // Con basis 'sessions' o 'full_month_plus_extra'; en los demás, null.
   pricePerSession: number | null;
-  // Solo con basis 'full_month_plus_extra'.
+  // Sesiones de más sobre el cupo del plan, dadas de verdad. Por defecto
+  // NO se cobran (extraAmount/chargedExtraSessions se quedan a 0): el
+  // admin elige cuántas cobrar como sueltas.
   extraSessions: number | null;
   extraAmount: number | null;
+  chargedExtraSessions: number | null;
+  // Solo con basis 'full_month': cuántas sesiones faltaron para completar
+  // el cupo del plan. No cambia lo que se cobra (el mes se cobra entero
+  // igual), es solo para que se note en el desglose.
+  missingSessions: number | null;
 }
 
 export interface AccountingDay {
@@ -47,6 +54,9 @@ export interface AccountingClientMonth {
   segments: AccountingSegment[];
   days: AccountingDay[];
   sessionCount: number;
+  // Canceladas que se cobraron igual (ver AccountingDay.cancelled); no
+  // van incluidas en sessionCount.
+  cancelledCount: number;
   due: number;
   payment: AccountingPayment;
 }
@@ -69,13 +79,15 @@ export async function getAccountingMonth(
   return handleResponse(res);
 }
 
+// Devuelve el cliente/mes entero recalculado (no solo el pago):
+// chargedExtraSessions cambia lo que se cobra (amount, due, basis...).
 export async function setAccountingPayment(
   token: string,
   clientId: string,
   year: number,
   month: number,
-  data: { received: boolean; amountReceived?: number },
-): Promise<AccountingPayment> {
+  data: { received: boolean; amountReceived?: number; chargedExtraSessions?: number },
+): Promise<AccountingClientMonth> {
   const res = await apiFetch(`${API_URL}/accounting/${clientId}?year=${year}&month=${month}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
