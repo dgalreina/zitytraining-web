@@ -2,7 +2,7 @@
 
 import type { Dispatch, SetStateAction } from 'react';
 import DatePicker from 'react-datepicker';
-import { Star, Repeat, CalendarOff } from 'lucide-react';
+import { Star, Repeat, CalendarOff, RotateCcw } from 'lucide-react';
 import FilterDropdown from '@/components/FilterDropdown';
 import Switch from '@/components/Switch';
 import { dayKey } from '@/components/MiniCalendar';
@@ -46,6 +46,8 @@ export default function BookingFormFields({
   onOpenNotes,
   onOpenTraining,
   bookingWorkout,
+  isDebtSettlement,
+  setIsDebtSettlement,
 }: {
   mode: 'create' | 'edit';
   // Al crear, siempre se puede elegir. Al editar, solo si esta sesión
@@ -80,6 +82,8 @@ export default function BookingFormFields({
   onOpenNotes: () => void;
   onOpenTraining: () => void;
   bookingWorkout: any | null;
+  isDebtSettlement: boolean;
+  setIsDebtSettlement: (v: boolean) => void;
 }) {
   return (
     <>
@@ -289,6 +293,28 @@ export default function BookingFormFields({
               </div>
             )}
           </div>
+
+          {selectedClientIds.length > 0 && (
+            <div className="mb-3 rounded-lg border border-gray-200 px-3 py-2">
+              <label className="flex cursor-pointer items-center justify-between gap-2">
+                <span className="flex items-center gap-1.5 text-xs font-semibold text-[#868585]">
+                  <RotateCcw size={14} />
+                  Clase debida (no cuenta en Contabilidad)
+                </span>
+                <Switch
+                  checked={isDebtSettlement}
+                  onChange={() => setIsDebtSettlement(!isDebtSettlement)}
+                  activeColor="#6aa842"
+                  size="sm"
+                />
+              </label>
+              {isDebtSettlement && selectedClientIds.length > 1 && (
+                <p className="mt-2 border-t border-gray-100 pt-2 text-[11px] text-[#868585]">
+                  Se recupera para los {selectedClientIds.length} clientes de la sesión.
+                </p>
+              )}
+            </div>
+          )}
 
           <label className="mb-1.5 block text-xs font-semibold text-[#868585]">Más</label>
           <div className="mb-3 flex gap-2">

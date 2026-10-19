@@ -12,8 +12,9 @@ import ProgresoTab from './ProgresoTab';
 import PlanTab from './PlanTab';
 import HistorialTab from './HistorialTab';
 import SesionesTab from './SesionesTab';
+import ClasesDebidasTab from './ClasesDebidasTab';
 
-type Tab = 'sesiones' | 'info' | 'progreso' | 'plan' | 'historial';
+type Tab = 'sesiones' | 'info' | 'progreso' | 'plan' | 'historial' | 'debidas';
 
 function tabButtonClass(active: boolean) {
   return `px-4 py-2.5 text-sm font-semibold transition ${
@@ -106,6 +107,9 @@ export default function DetalleClientePage() {
         <button onClick={() => setTab('plan')} className={`shrink-0 whitespace-nowrap ${tabButtonClass(tab === 'plan')}`}>
           Plan activo
         </button>
+        <button onClick={() => setTab('debidas')} className={`shrink-0 whitespace-nowrap ${tabButtonClass(tab === 'debidas')}`}>
+          Clases debidas
+        </button>
         {isAdmin && (
           <button onClick={() => setTab('historial')} className={`shrink-0 whitespace-nowrap ${tabButtonClass(tab === 'historial')}`}>
             Historial de planes
@@ -125,6 +129,7 @@ export default function DetalleClientePage() {
         {tab === 'historial' && isAdmin && (
           <HistorialTab purchases={purchases} clientName={`${form.firstName} ${form.lastName}`} />
         )}
+        {tab === 'debidas' && <ClasesDebidasTab id={id} />}
       </div>
     </div>
   );

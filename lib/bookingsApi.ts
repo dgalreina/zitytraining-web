@@ -23,6 +23,8 @@ export interface Booking {
   workout?: Workout | null;
   series?: string;
   holidaySkip?: boolean;
+  // Si esta sesión recupera una clase debida (es para todo el grupo).
+  isDebtSettlement?: boolean;
 }
 
 export interface CreateBookingPayload {
@@ -35,6 +37,10 @@ export interface CreateBookingPayload {
   isInterview?: boolean;
   workoutId?: string | null;
   recurrence?: string;
+  // Marca esta sesión como recuperación de una clase debida: no cuenta en
+  // Contabilidad para ninguno de sus clientes, y a cada uno se le da por
+  // recuperada su clase debida más antigua.
+  isDebtSettlement?: boolean;
 }
 
 export interface UpdateBookingPayload {
@@ -46,6 +52,7 @@ export interface UpdateBookingPayload {
   isPrivate?: boolean;
   isInterview?: boolean;
   workoutId?: string | null;
+  isDebtSettlement?: boolean;
   // Solo tiene efecto si la sesión pertenece a una serie: aplica el
   // entrenamiento (o su borrado) también a las futuras ya generadas, y
   // a la plantilla de la serie.

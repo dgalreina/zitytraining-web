@@ -8,6 +8,7 @@ import {
   deleteBookingSeriesOrQueue as deleteBookingSeries,
 } from '@/lib/offlineBookings';
 import { getWorkouts } from '@/lib/workoutsApi';
+import { createOwedSession } from '@/lib/owedSessionsApi';
 import { INTERVIEW_COLOR, PRIVATE_COLOR } from '@/lib/colors';
 import type { ModalState } from './BookingModal';
 
@@ -64,7 +65,12 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
   // Si esta sesión pertenece a una serie y cae en festivo.
   const [seriesId, setSeriesId] = useState<string | null>(null);
   const [holidaySkip, setHolidaySkip] = useState(false);
+  // Si esta sesión recupera una clase debida (de todos sus clientes a la
+  // vez: una cancelación/recuperación es para todo el grupo, no para uno
+  // suelto).
+  const [isDebtSettlement, setIsDebtSettlement] = useState(false);
   const [deleteChoiceOpen, setDeleteChoiceOpen] = useState(false);
+  const [deleteBookingDialogOpen, setDeleteBookingDialogOpen] = useState(false);
   // Confirmación genérica con nuestro propio estilo (ver ConfirmDialog),
   // en vez de window.confirm: se usa para "salir sin guardar" y para
   // borrar una sesión suelta. Cuando ya hay otro diálogo propio que hace
@@ -114,6 +120,7 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
     setPickerOpen(false);
     setWorkoutSearch('');
     setDeleteChoiceOpen(false);
+    setDeleteBookingDialogOpen(false);
     setConfirmDialog(null);
     setRecurrence('once');
     setWorkoutSeriesChoiceOpen(false);
@@ -132,6 +139,7 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
       originalWorkoutIdRef.current = raw.workout?._id || null;
       setSeriesId(raw.series ? String(raw.series) : null);
       setHolidaySkip(!!raw.holidaySkip);
+      setIsDebtSettlement(!!raw.isDebtSettlement);
       setEndTime(rawEnd);
       if (diff === 40) {
         setDurationOption('40');
@@ -155,6 +163,7 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
       setKind('normal');
       setSeriesId(null);
       setHolidaySkip(false);
+      setIsDebtSettlement(false);
       const defaultEnd = new Date(modal.start);
       defaultEnd.setMinutes(defaultEnd.getMinutes() + 60);
       setEndTime(defaultEnd);
@@ -326,6 +335,7 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
           isInterview: kind === 'interview',
           workoutId: bookingWorkout?._id,
           recurrence,
+          isDebtSettlement: !isPrivate && isDebtSettlement ? true : undefined,
         });
       } else {
         await updateBooking(token, (modal as { mode: 'edit'; booking: any }).booking._id, {
@@ -345,6 +355,7 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
           // una serie (ver BookingFormFields: el selector ni se muestra
           // en ese caso, así que aquí sigue siendo 'once').
           recurrence,
+          isDebtSettlement: !isPrivate && isDebtSettlement ? true : undefined,
         });
       }
       onSaved();
@@ -366,7 +377,40 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
       setDeleteChoiceOpen(true);
       return;
     }
-    askConfirm('¿Seguro que quieres eliminar esta sesión? No se puede deshacer.', handleDelete);
+    setDeleteBookingDialogOpen(true);
+  }
+
+  // Borrado de una sesión suelta (ver DeleteBookingDialog), con la opción
+  // de añadirla de paso a la lista de clases que se debe a uno de sus
+  // clientes. Si eso falla no bloquea el borrado: se puede añadir a mano
+  // luego desde la pestaña del cliente.
+  async function confirmDeleteBooking(addOwed: boolean) {
+    setDeleteBookingDialogOpen(false);
+    if (modal!.mode !== 'edit') return;
+    setSaving(true);
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    try {
+      const bookingClients: { _id: string }[] = modal!.booking.clients || [];
+      await deleteBooking(token, modal!.booking._id);
+      // Se cancela para todo el grupo: cada cliente de la sesión pasa a
+      // deber una clase, no solo uno.
+      if (addOwed) {
+        for (const c of bookingClients) {
+          try {
+            await createOwedSession(token, c._id, 'Sesión borrada');
+          } catch {
+            // No pasa nada si esto falla para alguno: el borrado ya se hizo.
+          }
+        }
+      }
+      onSaved();
+    } catch (err: any) {
+      setError(err.message || 'No se pudo eliminar la sesión');
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function handleDelete() {
@@ -462,8 +506,13 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
     seriesId,
     holidaySkip,
     setHolidaySkip,
+    isDebtSettlement,
+    setIsDebtSettlement,
     deleteChoiceOpen,
     setDeleteChoiceOpen,
+    deleteBookingDialogOpen,
+    setDeleteBookingDialogOpen,
+    confirmDeleteBooking,
     confirmDialog,
     resolveConfirm,
     bookingWorkout,

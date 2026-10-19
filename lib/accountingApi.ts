@@ -37,6 +37,8 @@ export interface AccountingDay {
   holiday: boolean;
   // Cancelada, pero se cobra igual (se pinta aparte para que se note).
   cancelled: boolean;
+  // Recupera una clase debida de este cliente: no cuenta ni se cobra.
+  debtSettled: boolean;
 }
 
 export interface AccountingPayment {

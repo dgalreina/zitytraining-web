@@ -10,6 +10,7 @@ import BookingFormFields from './BookingFormFields';
 import BookingNotesView from './BookingNotesView';
 import BookingTrainingView from './BookingTrainingView';
 import DeleteSeriesChoiceDialog from './DeleteSeriesChoiceDialog';
+import DeleteBookingDialog from './DeleteBookingDialog';
 import ConfirmDialog from './ConfirmDialog';
 import WorkoutSeriesChoiceDialog from './WorkoutSeriesChoiceDialog';
 import { useBookingForm, KIND_OPTIONS } from './useBookingForm';
@@ -164,6 +165,8 @@ export default function BookingModal({
               onOpenNotes={form.enterNotesView}
               onOpenTraining={form.enterTrainingView}
               bookingWorkout={form.bookingWorkout}
+              isDebtSettlement={form.isDebtSettlement}
+              setIsDebtSettlement={form.setIsDebtSettlement}
             />
           )}
 
@@ -279,6 +282,14 @@ export default function BookingModal({
         onCancel={form.cancelWorkoutScopeChoice}
         onApplyToThisOnly={() => form.confirmWorkoutScope('single')}
         onApplyToSeries={() => form.confirmWorkoutScope('series')}
+        saving={form.saving}
+      />
+
+      <DeleteBookingDialog
+        open={form.deleteBookingDialogOpen}
+        clients={modal.mode === 'edit' ? modal.booking.clients || [] : []}
+        onCancel={() => form.setDeleteBookingDialogOpen(false)}
+        onConfirm={form.confirmDeleteBooking}
         saving={form.saving}
       />
     </>

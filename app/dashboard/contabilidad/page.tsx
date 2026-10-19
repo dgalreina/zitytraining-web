@@ -370,6 +370,11 @@ export default function ContabilidadPage() {
                               className="h-2.5 w-2.5 rounded-full bg-red-500"
                               title="Cancelada, pero se cobra"
                             />
+                          ) : d.debtSettled ? (
+                            <span
+                              className="h-2.5 w-2.5 rounded-full bg-sky-500"
+                              title="Recupera una clase debida: no cuenta ni se cobra"
+                            />
                           ) : null}
                         </div>
                       </td>

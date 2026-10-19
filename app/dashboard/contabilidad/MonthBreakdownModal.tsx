@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { X, Pencil, Minus, Plus } from 'lucide-react';
 import { AccountingClientMonth, AccountingSegment, setAccountingPayment } from '@/lib/accountingApi';
+import { createOwedSession } from '@/lib/owedSessionsApi';
 
 function monthLabel(year: number, month: number) {
   return new Date(year, month - 1, 1).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
@@ -46,6 +47,8 @@ export default function MonthBreakdownModal({
   const [editingAmount, setEditingAmount] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [addingOwed, setAddingOwed] = useState(false);
+  const [owedAddedForSegment, setOwedAddedForSegment] = useState<number | null>(null);
 
   // Sin importe propio guardado, "Cantidad recibida" sigue a lo que se
   // debe: si cambia el total (p.ej. al elegir cuántas sueltas cobrar),
@@ -95,6 +98,26 @@ export default function MonthBreakdownModal({
     persist({ chargedExtraSessions: clamped });
   }
 
+  // No descuenta nada (eso ya lo decide missingSessions, que es solo
+  // informativo): apunta las que faltaron en la lista de clases que se
+  // debe, para gestionarlas luego desde la pestaña del cliente.
+  async function addMissingToOwed(segmentIndex: number, count: number) {
+    setAddingOwed(true);
+    setError('');
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    try {
+      for (let i = 0; i < count; i++) {
+        await createOwedSession(token, client.clientId, `No dio clase en ${monthLabel(year, month)}`);
+      }
+      setOwedAddedForSegment(segmentIndex);
+    } catch (err: any) {
+      setError(err.message || 'No se pudo añadir a clases debidas');
+    } finally {
+      setAddingOwed(false);
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={onClose}>
       <div
@@ -130,16 +153,42 @@ export default function MonthBreakdownModal({
                     <p className="mt-0.5 text-xs text-[#868585]">
                       {seg.fromDay} – {seg.toDay} · {billingDetail(seg)}
                     </p>
-                    {!!seg.missingSessions && (
-                      <p className="mt-0.5 text-xs font-medium text-[#868585]">
-                        Ha dado {seg.missingSessions} {seg.missingSessions === 1 ? 'clase de menos' : 'clases de menos'}
-                      </p>
+                  </div>
+                  {/* Con un solo tramo, el importe ya se ve abajo en
+                      "Total a pagar": repetirlo aquí era ruido. Con varios
+                      (p.ej. un cambio de plan a mitad de mes) sí hace
+                      falta, para saber cuánto pone cada uno. */}
+                  {client.segments.length > 1 && (
+                    <span className="font-[family-name:var(--font-work-sans)] text-sm font-bold text-[#4b7a1f]">
+                      {seg.amount}€
+                    </span>
+                  )}
+                </div>
+
+                {/* No descuenta nada: solo deja apuntadas en la lista de
+                    clases debidas las que faltaron, para gestionarlas
+                    luego desde la pestaña del cliente. */}
+                {!!seg.missingSessions && (
+                  <div className="mt-2 flex items-center justify-between gap-2 rounded-lg bg-gray-50 px-2.5 py-2">
+                    <p className="text-xs font-medium text-[#868585]">
+                      Ha dado {seg.missingSessions} {seg.missingSessions === 1 ? 'clase de menos' : 'clases de menos'}
+                    </p>
+                    {owedAddedForSegment === i ? (
+                      <span className="shrink-0 text-[11px] font-semibold text-[#4b7a1f]">
+                        Añadida{seg.missingSessions === 1 ? '' : 's'} a clases debidas
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => addMissingToOwed(i, seg.missingSessions!)}
+                        disabled={addingOwed}
+                        className="shrink-0 rounded-lg border border-gray-300 px-2 py-1 text-[11px] font-semibold text-[#2b2b2a] hover:border-[#6aa842] disabled:opacity-60"
+                      >
+                        Añadir a clases debidas
+                      </button>
                     )}
                   </div>
-                  <span className="font-[family-name:var(--font-work-sans)] text-sm font-bold text-[#4b7a1f]">
-                    {seg.amount}€
-                  </span>
-                </div>
+                )}
 
                 {/* Dar más del cupo no se cobra por defecto: el admin elige
                     cuántas de esas sueltas quiere cobrar aparte. */}
