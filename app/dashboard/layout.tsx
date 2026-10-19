@@ -229,7 +229,7 @@ export default function DashboardLayout({
             <LogOut size={17} />
             Cerrar sesión
           </button>
-          <p className="px-3 pt-1 text-[11px] text-gray-300">
+          <p className="px-3 pt-1 text-[11px] text-gray-400">
             v{pkg.version}
             {apiVersion && apiVersion !== pkg.version && ` · api v${apiVersion}`}
           </p>

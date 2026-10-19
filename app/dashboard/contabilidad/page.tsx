@@ -281,17 +281,17 @@ export default function ContabilidadPage() {
                       rowSpan={2}
                       className={`sticky left-0 z-10 ${CLIENT_COL_CLASS} max-w-0 touch-pan-y border-b border-r border-gray-200 bg-white px-3 sm:px-4`}
                     >
-                      <p className="truncate font-[family-name:var(--font-work-sans)] text-[13px] font-bold text-[#2b2b2a]">
+                      <p className="font-[family-name:var(--font-work-sans)] text-[13px] font-bold text-[#2b2b2a]">
                         {client.firstName} {client.lastName}
                       </p>
-                      <p className="flex items-center gap-1.5 truncate text-[11px] text-[#868585]">
+                      <p className="flex items-start gap-1.5 text-[11px] text-[#868585]">
                         {client.inactive && (
-                          <span className="shrink-0 rounded-full bg-gray-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-[#868585]">
+                          <span className="mt-0.5 shrink-0 rounded-full bg-gray-100 px-1.5 py-0.5 text-[9px] font-bold uppercase text-[#868585]">
                             Baja
                           </span>
                         )}
-                        <span className="truncate">
-                          {client.sessionCount} sesiones este mes
+                        <span>
+                          {client.sessionCount} sesiones
                           {client.cancelledCount > 0 && ` · ${client.cancelledCount} cancelada${client.cancelledCount === 1 ? '' : 's'}`}
                         </span>
                       </p>

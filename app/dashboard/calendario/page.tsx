@@ -501,7 +501,13 @@ export default function CalendarioPage() {
                 click: () => setFiltersOpen(true),
               },
             }}
-            dayHeaderFormat={{ weekday: 'short', day: 'numeric' }}
+            // En "Día" cabe de sobra el nombre completo ("martes 20"); en
+            // "Semana" hay 7 columnas, así que se queda abreviado ("mar 20").
+            dayHeaderFormat={
+              viewType === 'timeGridDay'
+                ? { weekday: 'long', day: 'numeric' }
+                : { weekday: 'short', day: 'numeric' }
+            }
             dayCellClassNames={(arg) =>
               holidaysByDate[dayKey(arg.date)] ? ['ziti-day-holiday'] : []
             }
