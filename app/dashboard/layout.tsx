@@ -22,7 +22,9 @@ import {
 } from 'lucide-react';
 import { getAvatarGradient } from '@/lib/colors';
 import { logout } from '@/lib/authApi';
+import { getApiVersion } from '@/lib/systemApi';
 import OfflineSyncBanner from '@/components/OfflineSyncBanner';
+import pkg from '../../package.json';
 
 const ADMIN_ONLY_PREFIXES = [
   '/dashboard/entrenadores',
@@ -49,6 +51,11 @@ export default function DashboardLayout({
   const [isClient, setIsClient] = useState(false);
   const [ready, setReady] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [apiVersion, setApiVersion] = useState<string | null>(null);
+
+  useEffect(() => {
+    getApiVersion().then(setApiVersion);
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -222,6 +229,10 @@ export default function DashboardLayout({
             <LogOut size={17} />
             Cerrar sesión
           </button>
+          <p className="px-3 pt-1 text-[11px] text-gray-300">
+            v{pkg.version}
+            {apiVersion && apiVersion !== pkg.version && ` · api v${apiVersion}`}
+          </p>
         </div>
       </aside>
 

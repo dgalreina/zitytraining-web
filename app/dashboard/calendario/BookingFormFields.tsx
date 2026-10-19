@@ -48,6 +48,7 @@ export default function BookingFormFields({
   bookingWorkout,
   isDebtSettlement,
   setIsDebtSettlement,
+  hasPendingOwed,
 }: {
   mode: 'create' | 'edit';
   // Al crear, siempre se puede elegir. Al editar, solo si esta sesión
@@ -84,6 +85,7 @@ export default function BookingFormFields({
   bookingWorkout: any | null;
   isDebtSettlement: boolean;
   setIsDebtSettlement: (v: boolean) => void;
+  hasPendingOwed: boolean;
 }) {
   return (
     <>
@@ -294,7 +296,7 @@ export default function BookingFormFields({
             )}
           </div>
 
-          {selectedClientIds.length > 0 && (
+          {hasPendingOwed && (
             <div className="mb-3 rounded-lg border border-gray-200 px-3 py-2">
               <label className="flex cursor-pointer items-center justify-between gap-2">
                 <span className="flex items-center gap-1.5 text-xs font-semibold text-[#868585]">

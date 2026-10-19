@@ -8,10 +8,11 @@ function formatDateShort(date: string) {
   return new Date(date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-// Lista plana de "le debemos una clase": añadir apunta una, quitar es la
-// forma de darla por recuperada (no hay estado aparte, ver backend). Al
-// marcar una sesión como "debida" al crearla, se quita sola la más
-// antigua (ver BookingTrainingView/BookingFormFields del calendario).
+// Lista plana de "se le deben clases a este cliente": añadir apunta una.
+// Marcar una sesión como "debida" al crearla (ver useBookingForm, en el
+// calendario) deja constancia en recoveredNote de qué sesión la
+// recuperó, pero NO la borra sola: es el usuario quien la quita de la
+// lista a mano, cuando quiera, desde aquí.
 export default function ClasesDebidasTab({ id }: { id: string }) {
   const [owed, setOwed] = useState<OwedSession[] | null>(null);
   const [note, setNote] = useState('');
@@ -63,15 +64,17 @@ export default function ClasesDebidasTab({ id }: { id: string }) {
     }
   }
 
+  const pendingCount = owed?.filter((o) => !o.recoveredNote).length ?? 0;
+
   return (
     <div className="rounded-xl bg-white p-6">
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-[#2b2b2a]">
-            {owed === null ? 'Clases debidas' : `Debe ${owed.length} ${owed.length === 1 ? 'clase' : 'clases'}`}
+            {owed === null ? 'Clases debidas' : `Se le ${pendingCount === 1 ? 'debe' : 'deben'} ${pendingCount} ${pendingCount === 1 ? 'clase' : 'clases'}`}
           </p>
           <p className="mt-0.5 text-xs text-[#868585]">
-            Quitar una de la lista es darla por recuperada.
+            Al marcar una sesión como "debida" se deja constancia aquí, pero no se quita sola: la quitas tú cuando quieras.
           </p>
         </div>
       </div>
@@ -108,14 +111,21 @@ export default function ClasesDebidasTab({ id }: { id: string }) {
               className="flex items-center justify-between gap-3 rounded-lg border border-gray-100 p-3"
             >
               <div className="min-w-0">
-                <p className="text-sm text-[#2b2b2a]">{o.note || 'Sin motivo'}</p>
+                <p className={`text-sm ${o.recoveredNote ? 'text-[#868585] line-through' : 'text-[#2b2b2a]'}`}>
+                  {o.note || 'Sin motivo'}
+                </p>
                 <p className="mt-0.5 text-xs text-[#868585]">Desde el {formatDateShort(o.createdAt)}</p>
+                {o.recoveredNote && (
+                  <p className="mt-0.5 text-xs font-medium text-[#4b7a1f]">
+                    Recuperada: sesión del {o.recoveredNote}
+                  </p>
+                )}
               </div>
               <button
                 type="button"
                 onClick={() => handleRemove(o._id)}
                 disabled={removingId === o._id}
-                title="Dar por recuperada"
+                title="Quitar de la lista"
                 className="shrink-0 rounded-lg bg-red-50 p-1.5 text-red-600 hover:bg-red-100 disabled:opacity-60"
               >
                 <Trash2 size={14} />

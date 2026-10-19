@@ -167,6 +167,7 @@ export default function BookingModal({
               bookingWorkout={form.bookingWorkout}
               isDebtSettlement={form.isDebtSettlement}
               setIsDebtSettlement={form.setIsDebtSettlement}
+              hasPendingOwed={form.hasPendingOwed}
             />
           )}
 
@@ -268,10 +269,11 @@ export default function BookingModal({
 
       <DeleteSeriesChoiceDialog
         open={form.deleteChoiceOpen}
+        clients={modal.mode === 'edit' ? modal.booking.clients || [] : []}
         onClose={() => form.setDeleteChoiceOpen(false)}
-        onDeleteOnly={() => {
+        onDeleteOnly={(addOwed) => {
           form.setDeleteChoiceOpen(false);
-          form.handleDelete();
+          form.handleDelete(addOwed);
         }}
         onDeleteSeriesFrom={form.handleDeleteSeriesFrom}
         saving={form.saving}

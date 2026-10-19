@@ -4,9 +4,8 @@ import { useEffect, useState } from 'react';
 
 // Confirmación al borrar una sesión suelta (no de serie, ver
 // DeleteSeriesChoiceDialog para esas): además de "¿seguro?", deja marcar
-// que esa sesión se añada a la lista de clases que se debe. Si la sesión
-// es de dúo/trío, se añade a TODOS sus clientes: se cancela para todo el
-// grupo, no para uno suelto.
+// que se le debe esa clase. Si la sesión es de dúo/trío, se añade a
+// TODOS sus clientes: se cancela para todo el grupo, no para uno suelto.
 export default function DeleteBookingDialog({
   open,
   clients,
@@ -44,7 +43,7 @@ export default function DeleteBookingDialog({
         {clients.length > 0 && (
           <label className="mb-5 flex cursor-pointer items-center justify-between gap-2 rounded-lg border border-gray-200 px-3 py-2">
             <span className="text-xs font-semibold text-[#868585]">
-              Añadir a clases que debe{clients.length > 1 ? ' (a todos)' : ''}
+              Se le debe esta clase{clients.length > 1 ? ' (a todos)' : ''}
             </span>
             <input
               type="checkbox"

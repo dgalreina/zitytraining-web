@@ -8,7 +8,7 @@ import {
   deleteBookingSeriesOrQueue as deleteBookingSeries,
 } from '@/lib/offlineBookings';
 import { getWorkouts } from '@/lib/workoutsApi';
-import { createOwedSession } from '@/lib/owedSessionsApi';
+import { createOwedSession, getPendingOwedCounts } from '@/lib/owedSessionsApi';
 import { INTERVIEW_COLOR, PRIVATE_COLOR } from '@/lib/colors';
 import type { ModalState } from './BookingModal';
 
@@ -69,6 +69,9 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
   // vez: una cancelación/recuperación es para todo el grupo, no para uno
   // suelto).
   const [isDebtSettlement, setIsDebtSettlement] = useState(false);
+  // El interruptor de "clase debida" solo se enseña si de verdad hay
+  // algo pendiente que recuperar entre los clientes elegidos.
+  const [hasPendingOwed, setHasPendingOwed] = useState(false);
   const [deleteChoiceOpen, setDeleteChoiceOpen] = useState(false);
   const [deleteBookingDialogOpen, setDeleteBookingDialogOpen] = useState(false);
   // Confirmación genérica con nuestro propio estilo (ver ConfirmDialog),
@@ -177,6 +180,32 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
       return [...prev, id];
     });
   }
+
+  // Cada vez que cambian los clientes elegidos, mira si a alguno se le
+  // debe de verdad algo: solo entonces tiene sentido enseñar la opción
+  // de marcar la sesión como "debida". Si deja de haber nada pendiente
+  // (p.ej. se quita al único cliente al que se le debía), se desmarca
+  // también el interruptor, para no mandar algo que ya no se ve.
+  useEffect(() => {
+    if (selectedClientIds.length === 0) {
+      setHasPendingOwed(false);
+      return;
+    }
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    let cancelled = false;
+    getPendingOwedCounts(token, selectedClientIds)
+      .then((counts) => {
+        if (cancelled) return;
+        const any = selectedClientIds.some((id) => (counts[id] || 0) > 0);
+        setHasPendingOwed(any);
+        if (!any) setIsDebtSettlement(false);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedClientIds]);
 
   function openWorkoutPicker() {
     setPickerOpen(true);
@@ -380,12 +409,12 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
     setDeleteBookingDialogOpen(true);
   }
 
-  // Borrado de una sesión suelta (ver DeleteBookingDialog), con la opción
-  // de añadirla de paso a la lista de clases que se debe a uno de sus
-  // clientes. Si eso falla no bloquea el borrado: se puede añadir a mano
-  // luego desde la pestaña del cliente.
-  async function confirmDeleteBooking(addOwed: boolean) {
-    setDeleteBookingDialogOpen(false);
+  // Borrado de una sesión (suelta, ver DeleteBookingDialog, o "solo esta"
+  // de una serie, ver DeleteSeriesChoiceDialog), con la opción de dejar
+  // constancia de que se le debe (a TODOS sus clientes: se cancela para
+  // todo el grupo, no para uno suelto). Si eso falla para alguno no
+  // bloquea el borrado: se puede añadir a mano luego desde su pestaña.
+  async function handleDelete(addOwed = false) {
     if (modal!.mode !== 'edit') return;
     setSaving(true);
     const token = localStorage.getItem('token');
@@ -394,8 +423,6 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
     try {
       const bookingClients: { _id: string }[] = modal!.booking.clients || [];
       await deleteBooking(token, modal!.booking._id);
-      // Se cancela para todo el grupo: cada cliente de la sesión pasa a
-      // deber una clase, no solo uno.
       if (addOwed) {
         for (const c of bookingClients) {
           try {
@@ -413,20 +440,9 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
     }
   }
 
-  async function handleDelete() {
-    if (modal!.mode !== 'edit') return;
-    setSaving(true);
-    const token = localStorage.getItem('token');
-    if (!token) return;
-
-    try {
-      await deleteBooking(token, modal!.booking._id);
-      onSaved();
-    } catch (err: any) {
-      setError(err.message || 'No se pudo eliminar la sesión');
-    } finally {
-      setSaving(false);
-    }
+  async function confirmDeleteBooking(addOwed: boolean) {
+    setDeleteBookingDialogOpen(false);
+    await handleDelete(addOwed);
   }
 
   // Borra esta sesión y todas las futuras de la serie; el pasado ya
@@ -508,6 +524,7 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
     setHolidaySkip,
     isDebtSettlement,
     setIsDebtSettlement,
+    hasPendingOwed,
     deleteChoiceOpen,
     setDeleteChoiceOpen,
     deleteBookingDialogOpen,
