@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { getOwedSessions, createOwedSession, deleteOwedSession, OwedSession } from '@/lib/owedSessionsApi';
 
 function formatDateShort(date: string) {
@@ -11,14 +11,16 @@ function formatDateShort(date: string) {
 // Lista plana de "se le deben clases a este cliente": añadir apunta una.
 // Marcar una sesión como "debida" al crearla (ver useBookingForm, en el
 // calendario) deja constancia en recoveredNote de qué sesión la
-// recuperó, pero NO la borra sola: es el usuario quien la quita de la
-// lista a mano, cuando quiera, desde aquí.
+// recuperó: es el único rastro de por qué esa sesión no se cobró, así
+// que una ya recuperada no se puede borrar (lo rechaza el backend). Para
+// que no se acumulen a la vista con los meses, se pliegan aparte.
 export default function ClasesDebidasTab({ id }: { id: string }) {
   const [owed, setOwed] = useState<OwedSession[] | null>(null);
   const [note, setNote] = useState('');
   const [adding, setAdding] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const [showRecovered, setShowRecovered] = useState(false);
 
   function load(token: string) {
     getOwedSessions(token, id)
@@ -64,17 +66,50 @@ export default function ClasesDebidasTab({ id }: { id: string }) {
     }
   }
 
-  const pendingCount = owed?.filter((o) => !o.recoveredNote).length ?? 0;
+  const pending = owed?.filter((o) => !o.recoveredNote) ?? [];
+  const recovered = owed?.filter((o) => o.recoveredNote) ?? [];
+
+  function renderEntry(o: OwedSession, deletable: boolean) {
+    return (
+      <div
+        key={o._id}
+        className="flex items-center justify-between gap-3 rounded-lg border border-gray-100 p-3"
+      >
+        <div className="min-w-0">
+          <p className={`text-sm ${o.recoveredNote ? 'text-[#868585] line-through' : 'text-[#2b2b2a]'}`}>
+            {o.note || 'Sin motivo'}
+          </p>
+          <p className="mt-0.5 text-xs text-[#868585]">Desde el {formatDateShort(o.createdAt)}</p>
+          {o.recoveredNote && (
+            <p className="mt-0.5 text-xs font-medium text-[#4b7a1f]">
+              Recuperada: sesión del {o.recoveredNote}
+            </p>
+          )}
+        </div>
+        {deletable && (
+          <button
+            type="button"
+            onClick={() => handleRemove(o._id)}
+            disabled={removingId === o._id}
+            title="Quitar de la lista"
+            className="shrink-0 rounded-lg bg-red-50 p-1.5 text-red-600 hover:bg-red-100 disabled:opacity-60"
+          >
+            <Trash2 size={14} />
+          </button>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-xl bg-white p-6">
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-[#2b2b2a]">
-            {owed === null ? 'Clases debidas' : `Se le ${pendingCount === 1 ? 'debe' : 'deben'} ${pendingCount} ${pendingCount === 1 ? 'clase' : 'clases'}`}
+            {owed === null ? 'Clases debidas' : `Se le ${pending.length === 1 ? 'debe' : 'deben'} ${pending.length} ${pending.length === 1 ? 'clase' : 'clases'}`}
           </p>
           <p className="mt-0.5 text-xs text-[#868585]">
-            Al marcar una sesión como "debida" se deja constancia aquí, pero no se quita sola: la quitas tú cuando quieras.
+            Al marcar una sesión como "debida" se deja constancia aquí; una vez recuperada ya no se puede borrar.
           </p>
         </div>
       </div>
@@ -101,38 +136,32 @@ export default function ClasesDebidasTab({ id }: { id: string }) {
 
       {owed === null ? (
         <p className="text-sm text-gray-400">Cargando...</p>
-      ) : owed.length === 0 ? (
-        <p className="text-sm text-gray-400">No se le debe ninguna clase.</p>
       ) : (
-        <div className="flex flex-col gap-2">
-          {owed.map((o) => (
-            <div
-              key={o._id}
-              className="flex items-center justify-between gap-3 rounded-lg border border-gray-100 p-3"
-            >
-              <div className="min-w-0">
-                <p className={`text-sm ${o.recoveredNote ? 'text-[#868585] line-through' : 'text-[#2b2b2a]'}`}>
-                  {o.note || 'Sin motivo'}
-                </p>
-                <p className="mt-0.5 text-xs text-[#868585]">Desde el {formatDateShort(o.createdAt)}</p>
-                {o.recoveredNote && (
-                  <p className="mt-0.5 text-xs font-medium text-[#4b7a1f]">
-                    Recuperada: sesión del {o.recoveredNote}
-                  </p>
-                )}
-              </div>
+        <>
+          {pending.length === 0 ? (
+            <p className="text-sm text-gray-400">No tiene clases pendientes.</p>
+          ) : (
+            <div className="flex flex-col gap-2">{pending.map((o) => renderEntry(o, true))}</div>
+          )}
+
+          {recovered.length > 0 && (
+            <div className="mt-4 border-t border-gray-100 pt-3">
               <button
                 type="button"
-                onClick={() => handleRemove(o._id)}
-                disabled={removingId === o._id}
-                title="Quitar de la lista"
-                className="shrink-0 rounded-lg bg-red-50 p-1.5 text-red-600 hover:bg-red-100 disabled:opacity-60"
+                onClick={() => setShowRecovered((v) => !v)}
+                className="flex items-center gap-1 text-xs font-semibold text-[#868585] hover:text-[#2b2b2a]"
               >
-                <Trash2 size={14} />
+                {showRecovered ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                {showRecovered ? 'Ocultar' : 'Ver'} recuperadas ({recovered.length})
               </button>
+              {showRecovered && (
+                <div className="mt-2 flex flex-col gap-2">
+                  {recovered.map((o) => renderEntry(o, false))}
+                </div>
+              )}
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
     </div>
   );
