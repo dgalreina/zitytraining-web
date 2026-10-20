@@ -22,7 +22,10 @@ export function useEdgeDragNavigation({
 }) {
   const dragStateRef = useRef<{ eventId: string; start: Date; end: Date } | null>(null);
   const edgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const edgeTriggeredRef = useRef(false);
+  // Lado en el que está el cursor ahora mismo (o null si no está en
+  // ninguno), para el ciclo de "sigue ahí -> repite" de abajo.
+  const nearEdgeDirectionRef = useRef<1 | -1 | null>(null);
+  const EDGE_DELAY_MS = 600;
 
   function clearEdgeTimer() {
     if (edgeTimerRef.current) {
@@ -31,13 +34,23 @@ export function useEdgeDragNavigation({
     }
   }
 
+  // Tras cada cambio de página, si el cursor seguía en el mismo borde
+  // (no se ha movido fuera desde entonces), se vuelve a armar el mismo
+  // plazo para la siguiente: así, mientras se aguante en el borde, sigue
+  // pasando de página cada EDGE_DELAY_MS, no solo una vez.
+  function scheduleEdgeTick() {
+    clearEdgeTimer();
+    edgeTimerRef.current = setTimeout(() => {
+      const direction = nearEdgeDirectionRef.current;
+      if (direction === null || !dragStateRef.current) return;
+      advanceDraggedEventByDays(direction);
+    }, EDGE_DELAY_MS);
+  }
+
   // direction: 1 = siguiente (borde derecho), -1 = anterior (borde izquierdo).
   // En vista "Semana" se desplaza 7 días (una semana entera) en vez de 1,
   // para caer en el mismo día de la semana siguiente/anterior.
   async function advanceDraggedEventByDays(direction: 1 | -1) {
-    edgeTriggeredRef.current = true;
-    clearEdgeTimer();
-
     const drag = dragStateRef.current;
     const api = calendarRef.current?.getApi();
     if (!drag || !api) return;
@@ -47,6 +60,14 @@ export function useEdgeDragNavigation({
     newStart.setDate(newStart.getDate() + direction * daysShift);
     const newEnd = new Date(drag.end);
     newEnd.setDate(newEnd.getDate() + direction * daysShift);
+    // Se guarda ya el nuevo hueco: si el cursor sigue en el borde y esto
+    // se repite, el siguiente salto cuenta desde aquí, no otra vez desde
+    // el sitio original.
+    dragStateRef.current = { eventId: drag.eventId, start: newStart, end: newEnd };
+    // Si seguimos en el mismo borde, se arma ya el siguiente plazo (no
+    // hace falta esperar a un nuevo pointermove, que con el dedo quieto
+    // no llegaría).
+    scheduleEdgeTick();
 
     // Avanza/retrocede el calendario visualmente, con el mismo deslizamiento
     // que usa el swipe.
@@ -78,7 +99,7 @@ export function useEdgeDragNavigation({
 
   function handleDragPointerMoveLogic(e: PointerEvent) {
     if (viewType !== 'timeGridDay' && viewType !== 'timeGridWeek') return;
-    if (!dragStateRef.current || edgeTriggeredRef.current) return;
+    if (!dragStateRef.current) return;
 
     const wrapper = calendarWrapperRef.current;
     if (!wrapper) return;
@@ -87,17 +108,19 @@ export function useEdgeDragNavigation({
     const EDGE_PX = 36;
     const nearRightEdge = e.clientX > rect.right - EDGE_PX && e.clientX <= rect.right + 15;
     const nearLeftEdge = e.clientX < rect.left + EDGE_PX && e.clientX >= rect.left - 15;
+    const direction: 1 | -1 | null = nearRightEdge ? 1 : nearLeftEdge ? -1 : null;
 
-    if (nearRightEdge || nearLeftEdge) {
+    if (direction !== null) {
       // Mantén el cursor ~600ms cerca del borde antes de cambiar de día, para
-      // que un simple roce al pasar por ahí no lo dispare sin querer.
-      if (!edgeTimerRef.current) {
-        const direction = nearRightEdge ? 1 : -1;
-        edgeTimerRef.current = setTimeout(() => {
-          advanceDraggedEventByDays(direction);
-        }, 600);
+      // que un simple roce al pasar por ahí no lo dispare sin querer. Si ya
+      // estábamos en ese mismo borde (p.ej. moviéndose un poco dentro de la
+      // misma zona), no se reinicia el plazo ya armado.
+      if (nearEdgeDirectionRef.current !== direction) {
+        nearEdgeDirectionRef.current = direction;
+        scheduleEdgeTick();
       }
     } else {
+      nearEdgeDirectionRef.current = null;
       clearEdgeTimer();
     }
   }
@@ -122,7 +145,7 @@ export function useEdgeDragNavigation({
       start: info.event.start,
       end: info.event.end,
     };
-    edgeTriggeredRef.current = false;
+    nearEdgeDirectionRef.current = null;
     window.addEventListener('pointermove', stablePointerMoveHandler);
     // La vista Semana tiene su propio scroll horizontal nativo (red de
     // seguridad para pantallas muy estrechas, ver fullcalendar-theme.css).
@@ -135,6 +158,7 @@ export function useEdgeDragNavigation({
   function handleEventDragStop() {
     window.removeEventListener('pointermove', stablePointerMoveHandler);
     clearEdgeTimer();
+    nearEdgeDirectionRef.current = null;
     dragStateRef.current = null;
     calendarWrapperRef.current?.classList.remove('ziti-dragging-event');
   }
