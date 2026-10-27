@@ -286,7 +286,7 @@ export default function ExerciseSlotInput({
               onChange={(e) => updateSet(i, { weight: e.target.value })}
               disabled={!slot.exerciseId}
               placeholder="kg"
-              className={setInputClass}
+              className={`${setInputClass} focus:placeholder:text-transparent`}
             />
           </div>
         ))}
