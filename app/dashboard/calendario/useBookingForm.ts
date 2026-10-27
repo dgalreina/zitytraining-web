@@ -10,9 +10,23 @@ import {
 import { getWorkouts } from '@/lib/workoutsApi';
 import { createOwedSession, getPendingOwedCounts } from '@/lib/owedSessionsApi';
 import { INTERVIEW_COLOR, PRIVATE_COLOR } from '@/lib/colors';
+import { effectiveSlots } from '@/lib/workoutOverrides';
 import type { ModalState } from './BookingModal';
 
 export type BookingKind = 'normal' | 'private' | 'interview';
+
+// Pesos/reps efectivos de esta sesión para un ejercicio (override si lo
+// hay, si no los de la plantilla); solo para mostrarlos en "Entrenamiento"
+// (ver BookingTrainingView). Como texto, no número (igual que SetInput en
+// ExerciseSlotInput): así no hace falta convertir ida y vuelta mientras
+// se pintan.
+export type WeightSlot = {
+  exerciseId: string;
+  exerciseName: string;
+  category?: string;
+  linkedToNext?: boolean;
+  sets: { reps: string; weight: string }[];
+};
 
 export const KIND_OPTIONS: { value: BookingKind; label: string; color: string }[] = [
   { value: 'normal', label: 'Normal', color: '#6aa842' },
@@ -110,6 +124,22 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
   const [applyWorkoutToSeries, setApplyWorkoutToSeries] = useState(false);
   const originalWorkoutIdRef = useRef<string | null>(null);
 
+  // Pesos/reps reales de esta sesión (no de la plantilla, ver
+  // lib/workoutOverrides.ts): se mantienen sincronizados con
+  // bookingWorkout (ver el useEffect de abajo). originalWeightOverridesRef
+  // solo es válido para el entrenamiento cuyo id guarda
+  // weightOverrideWorkoutIdRef — al abrir el modal es el que trae la
+  // sesión; tras editar pesos desde el lápiz (ver handleWorkoutCreated)
+  // pasa a ser el recién editado, así el useEffect no lo pisa con el
+  // valor guardado antiguo. weightsEditedRef marca si de verdad se han
+  // tocado pesos en este modal: si no, "Guardar" no manda weightOverrides
+  // (si los mandara siempre, guardar p.ej. solo una nota repropagaría el
+  // peso actual a toda la serie sin que nadie lo haya tocado).
+  const [weightSlots, setWeightSlots] = useState<WeightSlot[]>([]);
+  const weightOverrideWorkoutIdRef = useRef<string | null>(null);
+  const originalWeightOverridesRef = useRef<any[] | undefined>(undefined);
+  const weightsEditedRef = useRef(false);
+
   // Cada vez que se abre (o cambia lo que se está editando), recarga el
   // formulario desde cero a partir de esa sesión, o de los valores por
   // defecto si es una nueva.
@@ -128,6 +158,7 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
     setRecurrence('once');
     setWorkoutSeriesChoiceOpen(false);
     setApplyWorkoutToSeries(false);
+    weightsEditedRef.current = false;
 
     if (modal.mode === 'edit') {
       const raw = modal.booking;
@@ -140,6 +171,8 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
       setKind(raw.isInterview ? 'interview' : raw.isPrivate ? 'private' : 'normal');
       setBookingWorkout(raw.workout || null);
       originalWorkoutIdRef.current = raw.workout?._id || null;
+      weightOverrideWorkoutIdRef.current = raw.workout?._id || null;
+      originalWeightOverridesRef.current = raw.weightOverrides;
       setSeriesId(raw.series ? String(raw.series) : null);
       setHolidaySkip(!!raw.holidaySkip);
       setIsDebtSettlement(!!raw.isDebtSettlement);
@@ -157,6 +190,8 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
       // marcado en el checklist si eres admin puro; el selector siempre se
       // muestra, así que esto es solo un punto de partida cómodo.
       originalWorkoutIdRef.current = null;
+      weightOverrideWorkoutIdRef.current = null;
+      originalWeightOverridesRef.current = undefined;
       setModalTrainerId(defaultTrainerId);
       setSelectedClientIds([]);
       setNotes('');
@@ -223,7 +258,22 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
     setPickerOpen(false);
   }
 
-  function handleWorkoutCreated(workout: any) {
+  // weightOverrideSlots: solo viene relleno cuando WorkoutFormModal se usó
+  // en modo sesión para editar pesos de un entrenamiento ya adjunto (ver
+  // su prop sessionMode) — ahí es donde se marca que de verdad se han
+  // tocado pesos en esta sesión.
+  function handleWorkoutCreated(
+    workout: any,
+    weightOverrideSlots?: { exerciseId: string; sets: { reps?: number; weight?: number }[] }[],
+  ) {
+    if (weightOverrideSlots) {
+      weightOverrideWorkoutIdRef.current = workout._id;
+      originalWeightOverridesRef.current = weightOverrideSlots.map((s) => ({
+        exercise: s.exerciseId,
+        sets: s.sets,
+      }));
+      weightsEditedRef.current = true;
+    }
     attachWorkout(workout);
     setWorkoutFormOpen(false);
   }
@@ -231,6 +281,38 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
   function removeWorkout() {
     setBookingWorkout(null);
   }
+
+  // Cada vez que cambia el entrenamiento adjunto (al abrir el modal, al
+  // elegir uno distinto o al quitarlo), se recalculan los pesos
+  // editables: si sigue siendo el mismo que había al abrir el modal se
+  // parte de sus overrides guardados, si no (se acaba de adjuntar uno
+  // nuevo) se parte de los valores de la plantilla.
+  useEffect(() => {
+    if (!bookingWorkout) {
+      setWeightSlots([]);
+      return;
+    }
+    const overrides =
+      bookingWorkout._id === weightOverrideWorkoutIdRef.current ? originalWeightOverridesRef.current : undefined;
+    const merged = effectiveSlots(bookingWorkout.slots, overrides);
+    setWeightSlots(
+      merged
+        // Si el backend devolviera el ejercicio sin poblar (objeto con
+        // nombre/categoría) no hay con qué pintar la fila: se descarta en
+        // vez de romper con una key undefined.
+        .filter((s) => s.exercise && s.exercise._id)
+        .map((s) => ({
+          exerciseId: s.exercise!._id,
+          exerciseName: s.exercise!.name,
+          category: s.exercise!.category,
+          linkedToNext: s.linkedToNext,
+          sets: (s.sets || []).map((set) => ({
+            reps: set.reps != null ? String(set.reps) : '',
+            weight: set.weight != null ? String(set.weight) : '',
+          })),
+        })),
+    );
+  }, [bookingWorkout]);
 
   // Notas y entrenamiento se editan en su propia pantalla, aparte del
   // formulario principal: "Guardar" ahí guarda la sesión entera de
@@ -323,6 +405,18 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
     setStart(date);
   }
 
+  function serializeWeightSlots(slots: WeightSlot[]) {
+    return slots.map((s) => ({
+      exerciseId: s.exerciseId,
+      sets: s.sets
+        .map((set) => ({
+          reps: Number(set.reps) > 0 ? Number(set.reps) : undefined,
+          weight: Number(set.weight) > 0 ? Number(set.weight) : undefined,
+        }))
+        .filter((set) => set.reps !== undefined || set.weight !== undefined),
+    }));
+  }
+
   // applyWorkoutToSeriesOverride: para llamar justo después de elegir el
   // alcance en WorkoutSeriesChoiceDialog, sin esperar al siguiente render
   // (setState es async, así que leer el estado aquí mismo podría ver
@@ -365,6 +459,7 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
           workoutId: bookingWorkout?._id,
           recurrence,
           isDebtSettlement: !isPrivate && isDebtSettlement ? true : undefined,
+          ...(weightsEditedRef.current ? { weightOverrides: serializeWeightSlots(weightSlots) } : {}),
         });
       } else {
         await updateBooking(token, (modal as { mode: 'edit'; booking: any }).booking._id, {
@@ -380,6 +475,7 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
           // Solo tiene efecto si de verdad cambió el entrenamiento y la
           // sesión es de una serie (ver saveTrainingView).
           applyWorkoutToSeries: applyWorkoutToSeriesOverride ?? applyWorkoutToSeries,
+          ...(weightsEditedRef.current ? { weightOverrides: serializeWeightSlots(weightSlots) } : {}),
           // Solo tiene efecto de verdad si la sesión no era ya parte de
           // una serie (ver BookingFormFields: el selector ni se muestra
           // en ese caso, así que aquí sigue siendo 'once').
@@ -544,6 +640,7 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
     openWorkoutPicker,
     attachWorkout,
     handleWorkoutCreated,
+    weightSlots,
     handleStartTimeChange,
     handleSave,
     handleDeleteClick,

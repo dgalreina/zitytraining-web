@@ -13,8 +13,9 @@ import PlanTab from './PlanTab';
 import HistorialTab from './HistorialTab';
 import SesionesTab from './SesionesTab';
 import ClasesDebidasTab from './ClasesDebidasTab';
+import WeightEvolutionTab from './WeightEvolutionTab';
 
-type Tab = 'sesiones' | 'info' | 'progreso' | 'plan' | 'historial' | 'debidas';
+type Tab = 'sesiones' | 'info' | 'progreso' | 'entrenamiento' | 'plan' | 'historial' | 'debidas';
 
 function tabButtonClass(active: boolean) {
   return `px-4 py-2.5 text-sm font-semibold transition ${
@@ -104,6 +105,9 @@ export default function DetalleClientePage() {
         <button onClick={() => setTab('progreso')} className={`shrink-0 whitespace-nowrap ${tabButtonClass(tab === 'progreso')}`}>
           Progreso
         </button>
+        <button onClick={() => setTab('entrenamiento')} className={`shrink-0 whitespace-nowrap ${tabButtonClass(tab === 'entrenamiento')}`}>
+          Entrenamiento
+        </button>
         <button onClick={() => setTab('plan')} className={`shrink-0 whitespace-nowrap ${tabButtonClass(tab === 'plan')}`}>
           Plan activo
         </button>
@@ -123,6 +127,7 @@ export default function DetalleClientePage() {
           <InfoTab id={id} client={form} isAdmin={isAdmin} onClientUpdated={setForm} />
         )}
         {tab === 'progreso' && <ProgresoTab id={id} />}
+        {tab === 'entrenamiento' && <WeightEvolutionTab id={id} />}
         {tab === 'plan' && (
           <PlanTab id={id} purchases={purchases} isAdmin={isAdmin} onPurchasesChange={setPurchases} />
         )}

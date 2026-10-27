@@ -189,6 +189,7 @@ export default function BookingModal({
             <>
               <BookingTrainingView
                 bookingWorkout={form.bookingWorkout}
+                weightSlots={form.weightSlots}
                 removeWorkout={form.removeWorkout}
                 pickerOpen={form.pickerOpen}
                 setPickerOpen={form.setPickerOpen}
@@ -253,6 +254,7 @@ export default function BookingModal({
         <WorkoutFormModal
           editingWorkout={form.bookingWorkout}
           title={form.bookingWorkout ? undefined : 'Entrenamiento para esta sesión'}
+          sessionMode
           onClose={() => form.setWorkoutFormOpen(false)}
           onSaved={form.handleWorkoutCreated}
         />

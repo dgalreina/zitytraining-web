@@ -10,6 +10,20 @@ export interface BookingPersonRef {
   roles?: string[];
 }
 
+// Peso/reps reales de un ejercicio en ESTA sesión (no de la plantilla
+// compartida del catálogo). Ver lib/workoutOverrides.ts.
+export interface WeightOverrideSlot {
+  exercise: string;
+  sets: { reps?: number; weight?: number }[];
+}
+
+// Igual que WeightOverrideSlot pero como lo espera el backend al
+// escribir (exerciseId en vez del exercise ya poblado).
+export interface WeightOverrideInputSlot {
+  exerciseId: string;
+  sets: { reps?: number; weight?: number }[];
+}
+
 export interface Booking {
   _id: string;
   trainer: BookingPersonRef;
@@ -21,6 +35,7 @@ export interface Booking {
   isInterview?: boolean;
   notes?: string;
   workout?: Workout | null;
+  weightOverrides?: WeightOverrideSlot[];
   series?: string;
   holidaySkip?: boolean;
   // Si esta sesión recupera una clase debida (es para todo el grupo).
@@ -41,6 +56,9 @@ export interface CreateBookingPayload {
   // Contabilidad para ninguno de sus clientes, y a cada uno se le da por
   // recuperada su clase debida más antigua.
   isDebtSettlement?: boolean;
+  // Por si se editaron pesos desde el lápiz del entrenamiento antes del
+  // primer guardado de la sesión (ver WeightOverrideSlot).
+  weightOverrides?: WeightOverrideInputSlot[];
 }
 
 export interface UpdateBookingPayload {
@@ -66,6 +84,10 @@ export interface UpdateBookingPayload {
   // Solo tiene efecto si la sesión aún no pertenece a una serie: la
   // convierte en la primera ocurrencia de una semanal nueva.
   recurrence?: string;
+  // undefined = no tocar; [] = quitar overrides y volver a los de la
+  // plantilla. Si la sesión es de una serie, se propaga solo (nunca a
+  // las pasadas, no hace falta flag).
+  weightOverrides?: WeightOverrideInputSlot[];
 }
 
 export async function getBookings(

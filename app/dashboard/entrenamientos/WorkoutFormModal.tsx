@@ -41,13 +41,22 @@ function workoutToSlots(workout: any): Slot[] {
 export default function WorkoutFormModal({
   editingWorkout,
   title,
+  sessionMode,
   onClose,
   onSaved,
 }: {
   editingWorkout?: any | null;
   title?: string;
+  // Abierto desde una sesión del calendario (no desde la pestaña
+  // Entrenamientos): los ejercicios/estructura se siguen guardando en la
+  // plantilla compartida, pero los pesos/reps NO — esos se devuelven
+  // aparte (segundo argumento de onSaved) para que la sesión los guarde
+  // como suyos (ver useBookingForm.handleWorkoutCreated). Así no se
+  // repite para otro cliente que use la misma plantilla, ni para las
+  // sesiones pasadas de esta misma serie.
+  sessionMode?: boolean;
   onClose: () => void;
-  onSaved: (workout: any) => void;
+  onSaved: (workout: any, weightOverrides?: { exerciseId: string; sets: { reps?: number; weight?: number }[] }[]) => void;
 }) {
   const [name, setName] = useState(editingWorkout?.name || '');
   const [slots, setSlots] = useState<Slot[]>(() =>
@@ -131,26 +140,51 @@ export default function WorkoutFormModal({
     if (!token) return;
     setSaving(true);
     try {
-      const payload = {
-        name: name.trim(),
-        slots: filled.map((s) => ({
-          exerciseId: s.exerciseId!,
-          // Una serie sin reps ni peso es un hueco sin rellenar, no una serie.
-          sets: s.sets
-            .map((set) => ({
-              reps: Number(set.reps) > 0 ? Number(set.reps) : undefined,
-              weight: Number(set.weight) > 0 ? Number(set.weight) : undefined,
-            }))
-            .filter((set) => set.reps !== undefined || set.weight !== undefined),
-          linkedToNext: s.linkedToNext || undefined,
-          restPause: s.restPause || undefined,
-          notes: s.notes.trim() || undefined,
-        })),
-      };
+      const editedSlots = filled.map((s) => ({
+        exerciseId: s.exerciseId!,
+        // Una serie sin reps ni peso es un hueco sin rellenar, no una serie.
+        sets: s.sets
+          .map((set) => ({
+            reps: Number(set.reps) > 0 ? Number(set.reps) : undefined,
+            weight: Number(set.weight) > 0 ? Number(set.weight) : undefined,
+          }))
+          .filter((set) => set.reps !== undefined || set.weight !== undefined),
+        linkedToNext: s.linkedToNext || undefined,
+        restPause: s.restPause || undefined,
+        notes: s.notes.trim() || undefined,
+      }));
+
+      // Editando desde una sesión: a la plantilla compartida solo se le
+      // guarda la estructura (ejercicios/orden/superseries/notas), con
+      // los sets que ya tenía antes de este cambio — los pesos nuevos no
+      // se tocan ahí, se devuelven aparte para que los guarde la sesión.
+      const isSessionEdit = sessionMode && !!editingWorkout;
+      let structureSlots = editedSlots;
+      if (isSessionEdit) {
+        const originalSetsByExercise = new Map<string, any[]>(
+          (editingWorkout.slots || [])
+            .filter((s: any) => s.exercise?._id)
+            .map((s: any): [string, any[]] => [s.exercise._id, s.sets || []]),
+        );
+        structureSlots = editedSlots.map((s) => ({
+          ...s,
+          sets: originalSetsByExercise.get(s.exerciseId) || [],
+        }));
+      }
+
+      const payload = { name: name.trim(), slots: structureSlots };
       const result = editingWorkout
         ? await updateWorkout(token, editingWorkout._id, payload)
         : await createWorkout(token, payload);
-      onSaved(result);
+
+      if (isSessionEdit) {
+        onSaved(
+          result,
+          editedSlots.map(({ exerciseId, sets }) => ({ exerciseId, sets })),
+        );
+      } else {
+        onSaved(result);
+      }
     } catch (err: any) {
       setFormError(err.message || 'No se pudo guardar el entrenamiento');
     } finally {
@@ -169,6 +203,13 @@ export default function WorkoutFormModal({
             <X size={18} />
           </button>
         </div>
+
+        {sessionMode && editingWorkout && (
+          <p className="-mt-2 mb-4 shrink-0 text-xs text-[#868585]">
+            Los ejercicios se guardan en la plantilla (se comparten). Los pesos/reps solo se aplican a esta
+            sesión y a las futuras de la serie, nunca a las pasadas ni a otros clientes.
+          </p>
+        )}
 
         <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col gap-4">
           <div className="shrink-0">

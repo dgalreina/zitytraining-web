@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getBookings } from '@/lib/bookingsApi';
+import { effectiveSlots } from '@/lib/workoutOverrides';
 import WorkoutSummary from './entrenamientos/WorkoutSummary';
 
 export default function DashboardHome() {
@@ -124,7 +125,7 @@ export default function DashboardHome() {
                       <p className="mb-1 text-xs font-semibold text-[#868585]">
                         Entrenamiento: {b.workout.name}
                       </p>
-                      <WorkoutSummary slots={b.workout.slots} />
+                      <WorkoutSummary slots={effectiveSlots(b.workout.slots, b.weightOverrides)} />
                     </div>
                   )}
                 </div>

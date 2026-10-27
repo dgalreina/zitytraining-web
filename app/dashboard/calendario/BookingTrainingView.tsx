@@ -2,6 +2,23 @@
 
 import { Pencil, Trash2 } from 'lucide-react';
 import WorkoutSummary from '../entrenamientos/WorkoutSummary';
+import type { WeightSlot } from './useBookingForm';
+
+// weightSlots (del hook, ver useBookingForm) ya trae los pesos
+// efectivos de esta sesión (override si lo hay, si no los de la
+// plantilla): se adapta al shape que espera WorkoutSummary en vez de
+// pintar bookingWorkout.slots en crudo (eso serían los de la plantilla,
+// no los reales de esta sesión).
+function toSummarySlots(weightSlots: WeightSlot[]) {
+  return weightSlots.map((s) => ({
+    exercise: { name: s.exerciseName, category: s.category },
+    sets: s.sets.map((set) => ({
+      reps: set.reps ? Number(set.reps) : undefined,
+      weight: set.weight ? Number(set.weight) : undefined,
+    })),
+    linkedToNext: s.linkedToNext,
+  }));
+}
 
 // Vista "training": entrenamiento asignado a esta sesión, si tiene uno,
 // o el buscador/creador si todavía no. El entrenamiento es un campo más
@@ -9,6 +26,7 @@ import WorkoutSummary from '../entrenamientos/WorkoutSummary';
 // que se pulsa "Guardar" en la vista principal.
 export default function BookingTrainingView({
   bookingWorkout,
+  weightSlots,
   removeWorkout,
   pickerOpen,
   setPickerOpen,
@@ -21,6 +39,7 @@ export default function BookingTrainingView({
   openWorkoutPicker,
 }: {
   bookingWorkout: any | null;
+  weightSlots: WeightSlot[];
   removeWorkout: () => void;
   pickerOpen: boolean;
   setPickerOpen: (open: boolean) => void;
@@ -41,7 +60,7 @@ export default function BookingTrainingView({
             <button
               type="button"
               onClick={() => setWorkoutFormOpen(true)}
-              title="Editar este entrenamiento (afecta a todas las sesiones que lo usen)"
+              title="Editar este entrenamiento: los ejercicios se comparten con la plantilla, los pesos solo afectan a esta sesión y a las futuras de la serie"
               className="rounded-lg bg-gray-100 p-1.5 text-[#2b2b2a] hover:bg-gray-200"
             >
               <Pencil size={14} />
@@ -56,7 +75,7 @@ export default function BookingTrainingView({
             </button>
           </div>
         </div>
-        <WorkoutSummary slots={bookingWorkout.slots} />
+        <WorkoutSummary slots={toSummarySlots(weightSlots)} />
       </div>
     );
   }
