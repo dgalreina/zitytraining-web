@@ -57,8 +57,16 @@ export async function getAttendanceStatus(token: string): Promise<AttendanceStat
   return handleResponse(res);
 }
 
-export async function getMyAttendance(token: string): Promise<AttendanceEntry[]> {
-  const res = await apiFetch(`${API_URL}/attendance/me`, {
+export async function getMyAttendance(
+  token: string,
+  from?: string,
+  to?: string,
+): Promise<AttendanceEntry[]> {
+  const query = new URLSearchParams();
+  if (from) query.set('from', from);
+  if (to) query.set('to', to);
+  const qs = query.toString();
+  const res = await apiFetch(`${API_URL}/attendance/me${qs ? `?${qs}` : ''}`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return handleResponse(res);

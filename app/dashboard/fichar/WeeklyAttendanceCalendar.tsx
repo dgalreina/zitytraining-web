@@ -6,11 +6,12 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import '@/styles/fullcalendar-theme.css';
 import { ChevronDown, Check } from 'lucide-react';
 import { getUsers } from '@/lib/usersApi';
-import { getAllAttendance } from '@/lib/attendanceApi';
+import { getAllAttendance, getMyAttendance } from '@/lib/attendanceApi';
 import { getHolidays } from '@/lib/holidaysApi';
 import { DEFAULT_TRAINER_COLOR } from '@/lib/colors';
 import { dayKey } from '@/components/MiniCalendar';
 import ColorDot from '@/components/ColorDot';
+import { sumHoursWorked, formatHoursWorked } from '@/lib/attendanceHours';
 
 function hexToRgba(hex: string, alpha: number) {
   const clean = hex.replace('#', '');
@@ -105,11 +106,20 @@ function TrainerDropdown({
   );
 }
 
-export default function WeeklyAttendanceCalendar() {
+export default function WeeklyAttendanceCalendar({
+  lockedTrainerId,
+}: {
+  // Con esto puesto, es el propio entrenador mirando lo suyo: sin
+  // desplegable (no puede elegir a otro), y con el total de horas de
+  // este mes. Sin esto, es el admin, que puede elegir a cualquiera (como
+  // hasta ahora).
+  lockedTrainerId?: string;
+}) {
   const [trainers, setTrainers] = useState<any[]>([]);
-  const [selectedTrainerId, setSelectedTrainerId] = useState('');
+  const [selectedTrainerId, setSelectedTrainerId] = useState(lockedTrainerId || '');
   const [entries, setEntries] = useState<any[]>([]);
   const [range, setRange] = useState<{ start: string; end: string } | null>(null);
+  const [monthHours, setMonthHours] = useState<number | null>(null);
   const [topOffset, setTopOffset] = useState<number | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const calendarWrapperRef = useRef<HTMLDivElement>(null);
@@ -158,10 +168,30 @@ export default function WeeklyAttendanceCalendar() {
     if (!range) return;
     const token = localStorage.getItem('token');
     if (!token) return;
-    getAllAttendance(token, range.start, range.end)
-      .then(setEntries)
-      .catch(() => setEntries([]));
-  }, [range]);
+    // GET /attendance (todos los entrenadores) es solo para admin: un
+    // entrenador mirando lo suyo pide /attendance/me, que el backend ya
+    // acota a él mismo.
+    const fetchEntries = lockedTrainerId
+      ? getMyAttendance(token, range.start, range.end)
+      : getAllAttendance(token, range.start, range.end);
+    fetchEntries.then(setEntries).catch(() => setEntries([]));
+  }, [range, lockedTrainerId]);
+
+  // Horas de este mes (no de la semana que se esté viendo): se pide una
+  // vez, con el mes de hoy, independiente de a qué semana navegue el
+  // calendario de abajo. Un fichaje sin salida todavía cuenta hasta
+  // ahora mismo (ver sumHoursWorked).
+  useEffect(() => {
+    if (!lockedTrainerId) return;
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    getMyAttendance(token, monthStart.toISOString(), monthEnd.toISOString())
+      .then((data) => setMonthHours(sumHoursWorked(data)))
+      .catch(() => setMonthHours(null));
+  }, [lockedTrainerId]);
 
   // Igual que en Calendario: se mide cuánto ocupa lo que hay por encima
   // (aquí, solo el selector de entrenador) para que la tarjeta entera
@@ -348,8 +378,17 @@ export default function WeeklyAttendanceCalendar() {
       className="flex flex-col rounded-xl bg-white p-4"
       style={topOffset !== null ? { height: `calc(100dvh - ${topOffset}px)` } : undefined}
     >
-      <div className="mb-3 shrink-0">
-        <TrainerDropdown trainers={trainers} value={selectedTrainerId} onChange={setSelectedTrainerId} />
+      <div className="mb-3 flex shrink-0 items-center justify-between gap-3">
+        {lockedTrainerId ? (
+          <p className="text-sm text-gray-600">
+            Horas este mes:{' '}
+            <span className="font-semibold text-gray-900">
+              {monthHours !== null ? formatHoursWorked(monthHours) : '...'}
+            </span>
+          </p>
+        ) : (
+          <TrainerDropdown trainers={trainers} value={selectedTrainerId} onChange={setSelectedTrainerId} />
+        )}
       </div>
 
       {trainers.length === 0 ? (

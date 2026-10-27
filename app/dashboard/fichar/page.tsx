@@ -13,8 +13,9 @@ import {
   deleteAttendance,
 } from '@/lib/attendanceApi';
 import WeeklyAttendanceCalendar from './WeeklyAttendanceCalendar';
+import MonthlyHours from './MonthlyHours';
 
-type Tab = 'mine' | 'calendar';
+type Tab = 'mine' | 'calendar' | 'monthly';
 
 function tabButtonClass(active: boolean) {
   return `px-4 py-2.5 text-sm font-semibold transition ${
@@ -56,6 +57,7 @@ function formatDuration(ms: number) {
 export default function FicharPage() {
   const [tab, setTab] = useState<Tab>('mine');
   const [isAdmin, setIsAdmin] = useState(false);
+  const [userId, setUserId] = useState('');
   const [status, setStatus] = useState<{ clockedIn: boolean; since?: string } | null>(null);
   const [entries, setEntries] = useState<any[] | null>(null);
   const [saving, setSaving] = useState(false);
@@ -92,7 +94,11 @@ export default function FicharPage() {
       router.push('/login');
       return;
     }
-    setIsAdmin(storedUser ? JSON.parse(storedUser).roles?.includes('admin') : false);
+    if (storedUser) {
+      const parsed = JSON.parse(storedUser);
+      setIsAdmin(parsed.roles?.includes('admin'));
+      setUserId(parsed.id);
+    }
     load(token);
   }, [router]);
 
@@ -245,22 +251,25 @@ export default function FicharPage() {
   const clockedIn = status?.clockedIn ?? false;
 
   return (
-    <div className={tab === 'calendar' ? 'max-w-4xl' : 'max-w-2xl'}>
+    <div className={tab === 'calendar' || tab === 'monthly' ? 'max-w-4xl' : 'max-w-2xl'}>
       <h2 className="mb-5 flex items-center gap-2 font-[family-name:var(--font-work-sans)] text-lg font-bold text-[#2b2b2a]">
         <Fingerprint size={20} />
         Fichar
       </h2>
 
-      {isAdmin && (
-        <div className="mb-4 flex gap-1 border-b border-gray-200">
-          <button onClick={() => setTab('mine')} className={tabButtonClass(tab === 'mine')}>
-            Mi fichaje
+      <div className="mb-4 flex gap-1 border-b border-gray-200">
+        <button onClick={() => setTab('mine')} className={tabButtonClass(tab === 'mine')}>
+          Mi fichaje
+        </button>
+        <button onClick={() => setTab('calendar')} className={tabButtonClass(tab === 'calendar')}>
+          Calendario semanal
+        </button>
+        {isAdmin && (
+          <button onClick={() => setTab('monthly')} className={tabButtonClass(tab === 'monthly')}>
+            Horas mensuales
           </button>
-          <button onClick={() => setTab('calendar')} className={tabButtonClass(tab === 'calendar')}>
-            Calendario semanal
-          </button>
-        </div>
-      )}
+        )}
+      </div>
 
       <div
         ref={contentRef}
@@ -268,7 +277,9 @@ export default function FicharPage() {
         style={topOffset !== null ? { height: `calc(100dvh - ${topOffset}px)` } : undefined}
       >
         {tab === 'calendar' ? (
-          <WeeklyAttendanceCalendar />
+          <WeeklyAttendanceCalendar lockedTrainerId={isAdmin ? undefined : userId} />
+        ) : tab === 'monthly' ? (
+          <MonthlyHours />
         ) : (
           <>
             <div className="shrink-0 rounded-xl bg-white p-6 text-center">
