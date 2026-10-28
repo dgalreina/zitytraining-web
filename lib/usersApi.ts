@@ -12,6 +12,7 @@ export interface User {
   color?: string | null;
   status: string;
   isFavorite?: boolean;
+  defaultReminderMessage?: string;
 }
 
 export interface UpdateMePayload {
@@ -22,6 +23,7 @@ export interface UpdateMePayload {
   phone?: string;
   address?: string;
   color?: string | null;
+  defaultReminderMessage?: string;
 }
 
 export interface CreateUserByAdminPayload {

@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { X, Trash2, Send, Pencil, Check, PhoneOff, AlertTriangle } from 'lucide-react';
 import { getWeekReminders, logReminderSent } from '@/lib/remindersApi';
+import { getMe } from '@/lib/usersApi';
+import { renderRecordatorio } from '@/lib/reminderTemplate';
 
 interface Sesion {
   start: Date;
@@ -21,21 +23,6 @@ export interface Recordatorio {
 
 // Estado de cada uno frente a lo que ya se mandó.
 type Estado = 'nuevo' | 'enviado' | 'cambiado';
-
-function duracion(minutos: number) {
-  if (minutos < 60) return `${minutos} min`;
-  const horas = Math.floor(minutos / 60);
-  const resto = minutos % 60;
-  return resto === 0 ? `${horas}h` : `${horas}h ${resto}min`;
-}
-
-function fechaLarga(d: Date) {
-  return d.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
-}
-
-function hora(d: Date) {
-  return d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-}
 
 // wa.me quiere el numero en internacional y solo digitos. Los telefonos se
 // guardan como los escriba quien da de alta, asi que hay que limpiarlos. A
@@ -65,22 +52,6 @@ export function enlaceWhatsApp(
     : { url: `https://wa.me/${telefono}?text=${texto}`, nuevaPestana: true };
 }
 
-function redactar(nombre: string, sesiones: Sesion[]) {
-  const linea = (s: Sesion) => {
-    const mins = Math.round((s.end.getTime() - s.start.getTime()) / 60000);
-    return `${fechaLarga(s.start)} a las ${hora(s.start)} (${duracion(mins)})`;
-  };
-
-  if (sesiones.length === 1) {
-    return `Hola ${nombre}, te recordamos que tienes una sesión el ${linea(sesiones[0])}. ¡Te esperamos!`;
-  }
-  return [
-    `Hola ${nombre}, te recordamos tus próximas sesiones:`,
-    ...sesiones.map((s) => `· ${linea(s)}`),
-    '¡Te esperamos!',
-  ].join('\n');
-}
-
 // Un mensaje por cliente, no por sesión: si alguien entrena tres días esa
 // semana recibe un solo WhatsApp con las tres. Las sesiones privadas del
 // entrenador no llevan cliente, así que se quedan fuera.
@@ -90,7 +61,11 @@ function redactar(nombre: string, sesiones: Sesion[]) {
 // propio WhatsApp, y sería raro que a un cliente le escriba un entrenador
 // que no es el suyo. A quien entrene esa semana con dos entrenadores le
 // escribe cada uno lo suyo.
-export function construirRecordatorios(events: any[], trainerId: string): Recordatorio[] {
+export function construirRecordatorios(
+  events: any[],
+  trainerId: string,
+  template?: string,
+): Recordatorio[] {
   const porCliente = new Map<
     string,
     { nombre: string; telefono: string | null; sesiones: Sesion[] }
@@ -125,7 +100,7 @@ export function construirRecordatorios(events: any[], trainerId: string): Record
         clientId,
         nombre,
         telefono,
-        mensaje: redactar(nombre, ordenadas),
+        mensaje: renderRecordatorio(template, nombre, ordenadas),
         huella: ordenadas.map((s) => `${s.start.toISOString()}/${s.end.toISOString()}`).join(','),
       };
     })
@@ -143,9 +118,10 @@ export default function WhatsAppRemindersModal({
   weekStart: string;
   onClose: () => void;
 }) {
-  const [recordatorios, setRecordatorios] = useState<Recordatorio[]>(() =>
-    construirRecordatorios(events, trainerId),
-  );
+  // Vacío hasta que se sepa qué plantilla usar (ver el useEffect de abajo):
+  // así no se construye primero con la de siempre y se pisa después si el
+  // entrenador tiene una propia guardada en Ajustes.
+  const [recordatorios, setRecordatorios] = useState<Recordatorio[]>([]);
   const [editando, setEditando] = useState<string | null>(null);
   // Huella con la que se le escribió por última vez, por cliente. Vacío
   // mientras se consulta: hasta saberlo, nadie sale marcado.
@@ -155,13 +131,22 @@ export default function WhatsAppRemindersModal({
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token || !weekStart) {
+      setRecordatorios(construirRecordatorios(events, trainerId));
       setCargando(false);
       return;
     }
-    getWeekReminders(token, weekStart)
-      .then((logs) => setHuellaEnviada(new Map(logs.map((l) => [l.clientId, l.sessionsFingerprint]))))
-      .catch(() => {})
+    Promise.all([
+      getWeekReminders(token, weekStart).catch(() => []),
+      getMe(token).catch(() => null),
+    ])
+      .then(([logs, me]) => {
+        setHuellaEnviada(new Map(logs.map((l) => [l.clientId, l.sessionsFingerprint])));
+        setRecordatorios(construirRecordatorios(events, trainerId, me?.defaultReminderMessage));
+      })
       .finally(() => setCargando(false));
+    // events/trainerId no cambian mientras el modal está abierto (se monta
+    // de cero cada vez que se abre), igual que antes con el useState inicial.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weekStart]);
 
   function estadoDe(r: Recordatorio): Estado {
@@ -224,10 +209,10 @@ export default function WhatsAppRemindersModal({
               Recordatorios por WhatsApp
             </p>
             <p className="mt-0.5 text-xs text-[#868585]">
-              {recordatorios.length === 0
-                ? 'No hay clientes tuyos esta semana'
-                : cargando
-                  ? 'Comprobando a quién ya has avisado...'
+              {cargando
+                ? 'Comprobando a quién ya has avisado...'
+                : recordatorios.length === 0
+                  ? 'No hay clientes tuyos esta semana'
                   : pendientes === 0
                     ? `Todos avisados · ${conTelefono.length} de esta semana`
                     : `${pendientes} por avisar de ${conTelefono.length} · tus sesiones de esta semana`}
@@ -239,7 +224,9 @@ export default function WhatsAppRemindersModal({
         </div>
 
         <div className="flex-1 overflow-y-auto p-5">
-          {recordatorios.length === 0 ? (
+          {cargando ? (
+            <p className="py-6 text-center text-sm text-gray-400">Cargando...</p>
+          ) : recordatorios.length === 0 ? (
             <p className="py-6 text-center text-sm text-gray-400">
               No tienes sesiones con clientes esta semana.
             </p>

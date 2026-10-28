@@ -16,6 +16,7 @@ import {
   ClipboardList,
   CalendarDays,
   Wallet,
+  Settings,
   LogOut,
   Menu,
   X,
@@ -222,6 +223,19 @@ export default function DashboardLayout({
         </nav>
 
         <div className="flex flex-col gap-1 border-t border-gray-100 pt-3">
+          {isTrainer && (
+            <Link
+              href="/dashboard/ajustes"
+              className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition ${
+                pathname === '/dashboard/ajustes'
+                  ? 'border-l-[3px] border-[#6aa842] bg-gradient-to-r from-[#a2c037]/10 to-[#6aa842]/10 text-[#4b7a1f]'
+                  : 'text-[#868585] hover:bg-gray-50'
+              }`}
+            >
+              <Settings size={17} strokeWidth={2} />
+              Ajustes
+            </Link>
+          )}
           <button
             onClick={handleLogout}
             className="flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-gray-400 hover:bg-gray-50"
