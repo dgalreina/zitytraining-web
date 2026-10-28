@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { RotateCcw } from 'lucide-react';
 import { getMe, updateMe } from '@/lib/usersApi';
 import { inputClass, labelClass } from '@/lib/formStyles';
+import { useContentHeight } from '@/lib/useContentHeight';
 import { DEFAULT_REMINDER_TEMPLATE, renderRecordatorioSegmentos } from '@/lib/reminderTemplate';
 
 // Ejemplos fijos (no dependen de datos reales) para la vista previa: uno
@@ -57,6 +58,7 @@ export default function AjustesPage() {
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
   const router = useRouter();
+  const { ref: cardRef, style: cardStyle } = useContentHeight();
   const { unaSesion, variasSesiones } = useMemo(ejemplos, []);
 
   useEffect(() => {
@@ -104,15 +106,19 @@ export default function AjustesPage() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <div className="rounded-xl bg-white p-6">
-        <h2 className="mb-1 font-[family-name:var(--font-work-sans)] text-lg font-bold text-[#2b2b2a]">
-          Ajustes
-        </h2>
-        <p className="mb-5 text-sm text-[#868585]">
-          Mensaje con el que se precargan los recordatorios de WhatsApp (puedes seguir editando el
-          de cada cliente antes de enviarlo).
-        </p>
+      <h2 className="mb-1 font-[family-name:var(--font-work-sans)] text-lg font-bold text-[#2b2b2a]">
+        Ajustes
+      </h2>
+      <p className="mb-4 text-sm text-[#868585]">
+        Mensaje con el que se precargan los recordatorios de WhatsApp (puedes seguir editando el
+        de cada cliente antes de enviarlo).
+      </p>
 
+      <div
+        ref={cardRef}
+        style={cardStyle}
+        className="overflow-y-auto overscroll-none rounded-xl bg-white p-6"
+      >
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div>
             <label className={labelClass}>Mensaje por defecto</label>
