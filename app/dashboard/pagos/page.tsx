@@ -194,7 +194,7 @@ export default function PagosPage() {
         </div>
       )}
 
-      <div className="h-[calc(100dvh-230px)] overflow-y-auto pr-1">
+      <div className="h-[calc(100dvh-230px)] overflow-y-auto overscroll-none pr-1">
         {tab === 'plan' && (
           <div className="flex flex-col gap-3">
             {purchases === null ? (

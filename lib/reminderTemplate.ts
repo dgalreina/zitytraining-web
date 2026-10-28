@@ -46,3 +46,29 @@ export function renderRecordatorio(
   const t = template && template.trim() ? template : DEFAULT_REMINDER_TEMPLATE;
   return t.replaceAll('{nombre}', nombre).replaceAll('{fecha}', expandirFecha(sesiones));
 }
+
+export interface SegmentoRecordatorio {
+  texto: string;
+  // true si viene de {nombre}/{fecha} (para pintarlo distinto en la
+  // vista previa de Ajustes, no se usa en el mensaje real).
+  automatico: boolean;
+}
+
+// Igual que renderRecordatorio, pero trocea el resultado para poder
+// pintar en cursiva solo lo que viene de {nombre}/{fecha} (ver AjustesPage).
+export function renderRecordatorioSegmentos(
+  template: string | undefined,
+  nombre: string,
+  sesiones: SesionPlantilla[],
+): SegmentoRecordatorio[] {
+  const t = template && template.trim() ? template : DEFAULT_REMINDER_TEMPLATE;
+  const fecha = expandirFecha(sesiones);
+  return t
+    .split(/(\{nombre\}|\{fecha\})/)
+    .filter((parte) => parte !== '')
+    .map((parte) => {
+      if (parte === '{nombre}') return { texto: nombre, automatico: true };
+      if (parte === '{fecha}') return { texto: fecha, automatico: true };
+      return { texto: parte, automatico: false };
+    });
+}

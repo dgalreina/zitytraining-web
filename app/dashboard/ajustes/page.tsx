@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { RotateCcw } from 'lucide-react';
 import { getMe, updateMe } from '@/lib/usersApi';
 import { inputClass, labelClass } from '@/lib/formStyles';
-import { DEFAULT_REMINDER_TEMPLATE, renderRecordatorio } from '@/lib/reminderTemplate';
+import { DEFAULT_REMINDER_TEMPLATE, renderRecordatorioSegmentos } from '@/lib/reminderTemplate';
 
 // Ejemplos fijos (no dependen de datos reales) para la vista previa: uno
 // con una sola sesión esa semana y otro con dos, que es justo lo que
@@ -28,6 +28,26 @@ function ejemplos() {
       { start: miercoles, end: miercolesFin },
     ],
   };
+}
+
+// Lo que escribió el entrenador en negrita, lo que se rellena solo
+// ({nombre}/{fecha}) en normal, para distinguirlo de un vistazo.
+function Previsualizacion({ template, nombre, sesiones }: { template: string; nombre: string; sesiones: any[] }) {
+  return (
+    <p className="whitespace-pre-line text-[13px] leading-relaxed text-[#2b2b2a]">
+      {renderRecordatorioSegmentos(template, nombre, sesiones).map((s, i) =>
+        s.automatico ? (
+          <span key={i} className="font-normal">
+            {s.texto}
+          </span>
+        ) : (
+          <span key={i} className="font-bold">
+            {s.texto}
+          </span>
+        ),
+      )}
+    </p>
+  );
 }
 
 export default function AjustesPage() {
@@ -125,22 +145,24 @@ export default function AjustesPage() {
           </div>
 
           <div className="flex flex-col gap-2">
-            <p className={labelClass}>Así se vería</p>
+            <div>
+              <p className={labelClass}>Así se vería</p>
+              <p className="text-xs text-[#868585]">
+                Lo que has escrito tú sale en <span className="font-bold">negrita</span>; lo que
+                se rellena solo, en normal.
+              </p>
+            </div>
             <div className="rounded-lg border border-gray-100 bg-[#f7f7f5] p-3">
               <p className="mb-1 text-[10px] font-semibold uppercase text-gray-400">
                 Con una sesión esa semana
               </p>
-              <p className="whitespace-pre-line text-[13px] leading-relaxed text-[#2b2b2a]">
-                {renderRecordatorio(template, 'Pepe', unaSesion)}
-              </p>
+              <Previsualizacion template={template} nombre="Pepe" sesiones={unaSesion} />
             </div>
             <div className="rounded-lg border border-gray-100 bg-[#f7f7f5] p-3">
               <p className="mb-1 text-[10px] font-semibold uppercase text-gray-400">
                 Con varias sesiones esa semana
               </p>
-              <p className="whitespace-pre-line text-[13px] leading-relaxed text-[#2b2b2a]">
-                {renderRecordatorio(template, 'Pepe', variasSesiones)}
-              </p>
+              <Previsualizacion template={template} nombre="Pepe" sesiones={variasSesiones} />
             </div>
           </div>
 

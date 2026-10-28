@@ -63,7 +63,7 @@ export default function DashboardHome() {
         Clases de hoy
       </h2>
 
-      <div className="h-[calc(100dvh-200px)] overflow-y-auto pr-1">
+      <div className="h-[calc(100dvh-200px)] overflow-y-auto overscroll-none pr-1">
         {bookings === null ? (
           <p className="text-sm text-gray-400">Cargando...</p>
         ) : bookings.length === 0 ? (

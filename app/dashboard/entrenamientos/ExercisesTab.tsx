@@ -112,7 +112,7 @@ export default function ExercisesTab() {
       ) : exercises.length === 0 ? (
         <p className="text-sm text-gray-400">Todavía no hay ejercicios en el catálogo.</p>
       ) : (
-        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pr-1">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto overscroll-none pr-1">
           {EXERCISE_CATEGORIES.map((cat) => {
             const items = exercisesByCategory(cat.id);
             if (items.length === 0) return null;

@@ -29,7 +29,13 @@ export function useContentHeight(bottomGap = 24) {
   return {
     ref,
     // Hasta la primera medida no se fija alto, para no dejar un bloque
-    // con una altura provisional equivocada.
-    style: topOffset !== null ? { height: `calc(100dvh - ${topOffset}px)` } : undefined,
+    // con una altura provisional equivocada. overscrollBehavior quita el
+    // rebote de iOS al arrastrar más allá del borde (mismo motivo que en
+    // el contenedor de app/dashboard/layout.tsx), aquí porque este bloque
+    // hace su propio scroll aparte del de la página.
+    style:
+      topOffset !== null
+        ? { height: `calc(100dvh - ${topOffset}px)`, overscrollBehavior: 'none' as const }
+        : undefined,
   };
 }

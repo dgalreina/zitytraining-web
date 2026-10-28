@@ -76,7 +76,7 @@ export default function WorkoutsTab() {
       ) : workouts.length === 0 ? (
         <p className="text-sm text-gray-400">Todavía no hay entrenamientos creados.</p>
       ) : (
-        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto pr-1">
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-none pr-1">
           {workouts.map((w) => (
             <div key={w._id} className="rounded-xl bg-white p-5">
               <div className="mb-3 flex items-center justify-between">

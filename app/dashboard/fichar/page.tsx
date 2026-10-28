@@ -335,7 +335,7 @@ export default function FicharPage() {
               ) : entries.length === 0 ? (
                 <p className="text-sm text-gray-400">Todavía no tienes fichajes registrados.</p>
               ) : (
-                <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pr-1">
+                <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto overscroll-none pr-1">
                   {entries.map((entry) => (
                     <div key={entry._id} className="rounded-lg border border-gray-100 p-3">
                       <div className="flex flex-wrap items-center justify-between gap-2">
