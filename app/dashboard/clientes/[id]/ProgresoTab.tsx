@@ -13,6 +13,7 @@ import {
 } from 'recharts';
 import { getProgressByClient, createProgressEntry } from '@/lib/progressApi';
 import { inputClass, labelClass } from '@/lib/formStyles';
+import { sanitizeDecimalInput, parseDecimal } from '@/lib/decimalInput';
 
 const PROGRESS_METRICS: { key: string; label: string; unit: string }[] = [
   { key: 'weight', label: 'Peso', unit: 'kg' },
@@ -66,7 +67,7 @@ export default function ProgresoTab({ id }: { id: string }) {
       return;
     }
 
-    const toNum = (v: string) => (v.trim() === '' ? undefined : Number(v));
+    const toNum = parseDecimal;
 
     try {
       const created = await createProgressEntry(token, {
@@ -134,10 +135,10 @@ export default function ProgresoTab({ id }: { id: string }) {
                   {m.label} {m.unit && `(${m.unit})`}
                 </label>
                 <input
-                  type="number"
-                  step="0.1"
+                  type="text"
+                  inputMode="decimal"
                   value={(progressForm as any)[m.key]}
-                  onChange={(e) => setProgressField(m.key as any, e.target.value)}
+                  onChange={(e) => setProgressField(m.key as any, sanitizeDecimalInput(e.target.value))}
                   className={inputClass}
                 />
               </div>

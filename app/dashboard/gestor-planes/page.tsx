@@ -6,6 +6,7 @@ import { Plus, Pencil, Trash2, X, Check, Tags } from 'lucide-react';
 import { getPlans, createPlan, updatePlan, deletePlan } from '@/lib/plansApi';
 import { TRAINING_CATEGORIES, TrainingCategory, FREE_SESSIONS_SUBGROUPS } from '@/lib/pricing';
 import { inputClass, labelClass } from '@/lib/formStyles';
+import { sanitizeDecimalInput } from '@/lib/decimalInput';
 
 const emptyForm = {
   category: 'personal' as TrainingCategory,
@@ -307,11 +308,10 @@ export default function GestorPlanesPage() {
               <div>
                 <label className={labelClass}>Precio mensual (€)</label>
                 <input
-                  type="number"
-                  min={0}
-                  step="0.01"
+                  type="text"
+                  inputMode="decimal"
                   value={form.monthlyPrice}
-                  onChange={(e) => setForm({ ...form, monthlyPrice: e.target.value })}
+                  onChange={(e) => setForm({ ...form, monthlyPrice: sanitizeDecimalInput(e.target.value) })}
                   className={inputClass}
                 />
               </div>

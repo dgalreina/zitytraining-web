@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Search, Plus, X, Trash2, GripVertical, Link2, Timer, StickyNote } from 'lucide-react';
 import { searchExercises, createExercise } from '@/lib/exercisesApi';
+import { sanitizeDecimalInput } from '@/lib/decimalInput';
 
 const DEFAULT_SETS = 4;
 
@@ -146,6 +147,10 @@ export default function ExerciseSlotInput({
     onChange({ sets: next });
   }
 
+  function handleWeightChange(i: number, raw: string) {
+    updateSet(i, { weight: sanitizeDecimalInput(raw) });
+  }
+
   function addSet() {
     onChange({ sets: [...slot.sets, { reps: '', weight: '' }] });
   }
@@ -279,11 +284,10 @@ export default function ExerciseSlotInput({
               className={setInputClass}
             />
             <input
-              type="number"
-              min={0}
-              step="0.5"
+              type="text"
+              inputMode="decimal"
               value={set.weight}
-              onChange={(e) => updateSet(i, { weight: e.target.value })}
+              onChange={(e) => handleWeightChange(i, e.target.value)}
               disabled={!slot.exerciseId}
               placeholder="kg"
               className={`${setInputClass} focus:placeholder:text-transparent`}
