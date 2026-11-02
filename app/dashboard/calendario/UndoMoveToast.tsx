@@ -24,8 +24,8 @@ export default function UndoMoveToast({
   }, []);
 
   return (
-    <div className="fixed inset-x-0 bottom-5 z-[70] flex justify-center px-4">
-      <div className="flex items-center gap-4 rounded-xl bg-[#2b2b2a] py-2.5 pl-4 pr-3 text-sm text-white shadow-xl">
+    <div className="pointer-events-none fixed inset-x-0 bottom-5 z-[70] flex justify-center px-4">
+      <div className="pointer-events-auto flex items-center gap-4 rounded-xl bg-[#2b2b2a] py-2.5 pl-4 pr-3 text-sm text-white shadow-xl">
         <span>{message}</span>
         <button
           type="button"
