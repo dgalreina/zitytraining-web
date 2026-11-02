@@ -50,6 +50,15 @@ export function useSwipeNavigation({
 
     function handleTouchStart(e: TouchEvent) {
       if (e.touches.length !== 1) return;
+      // Si el toque empieza sobre una sesión (que FullCalendar va a poder
+      // arrastrar), no es un swipe del fondo: se deja el gesto entero en
+      // manos de FullCalendar. Si no, al soltar competían los dos cambios
+      // a la vez — el nuestro (cambiar de semana) reconstruía la vista
+      // antes de que FullCalendar terminara de resolver dónde soltaste la
+      // sesión, y este la descartaba en silencio (se veía la semana
+      // cambiar pero la sesión quedaba sin mover).
+      const target = e.target as HTMLElement | null;
+      if (target?.closest('.fc-event')) return;
       start = { x: e.touches[0].clientX, y: e.touches[0].clientY, time: Date.now() };
       decided = null;
     }
