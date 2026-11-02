@@ -38,15 +38,13 @@ export function useSwipeNavigation({
     const SWIPE_THRESHOLD = 60; // px para que cuente como swipe de verdad
     // Cuanto se tarda en asentar el cambio de semana (api.next()/prev() +
     // la animación de deslizar, ver useCalendarDaySlide: 260ms de
-    // transición + limpieza a los 300ms). api.next()/prev() no tiene
-    // protección propia — llamarlo dos veces seguidas avanza dos semanas
-    // — y en Android un solo swipe físico podía disparar el touchend dos
-    // veces (o llegar ya un touchstart nuevo) antes de que la animación
+    // transición más margen). api.next()/prev() no tiene protección
+    // propia — llamarlo dos veces seguidas avanza dos semanas — y en
+    // Android un solo swipe físico podía disparar el touchend dos veces
+    // (o llegar ya un touchstart nuevo) antes de que la animación
     // anterior terminara, saltando varias semanas de golpe. Mientras
-    // "locked" esté activo, se ignora cualquier gesto nuevo — por eso se
-    // deja lo justo por encima de los 300ms reales: más margen solo
-    // tapa gestos nuevos y legítimos (encadenar varias semanas rápido).
-    const NAVIGATION_LOCK_MS = 320;
+    // "locked" esté activo, se ignora cualquier gesto nuevo.
+    const NAVIGATION_LOCK_MS = 450;
 
     let start: { x: number; y: number; time: number } | null = null;
     let decided: 'horizontal' | 'vertical' | 'abandoned' | null = null;
