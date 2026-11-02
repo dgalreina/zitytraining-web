@@ -36,34 +36,20 @@ export function useSwipeNavigation({
     const DIRECTION_THRESHOLD = 10; // px para empezar a decidir la dirección
     const DECIDE_TIME_LIMIT = 180; // ms; pasado esto, se lo dejamos a FullCalendar
     const SWIPE_THRESHOLD = 60; // px para que cuente como swipe de verdad
-    // Cuanto se tarda en asentar el cambio de semana (api.next()/prev() +
-    // la animación de deslizar, ver useCalendarDaySlide: 260ms de
-    // transición más margen). api.next()/prev() no tiene protección
-    // propia — llamarlo dos veces seguidas avanza dos semanas — y en
-    // Android un solo swipe físico podía disparar el touchend dos veces
-    // (o llegar ya un touchstart nuevo) antes de que la animación
-    // anterior terminara, saltando varias semanas de golpe. Mientras
-    // "locked" esté activo, se ignora cualquier gesto nuevo.
-    const NAVIGATION_LOCK_MS = 450;
 
     let start: { x: number; y: number; time: number } | null = null;
     let decided: 'horizontal' | 'vertical' | 'abandoned' | null = null;
-    let locked = false;
 
     function startDaySlide(direction: 1 | -1) {
       const api = calendarRef.current?.getApi();
       if (!api) return;
-      locked = true;
-      setTimeout(() => {
-        locked = false;
-      }, NAVIGATION_LOCK_MS);
       prepareDaySlide(direction);
       if (direction > 0) api.next();
       else api.prev();
     }
 
     function handleTouchStart(e: TouchEvent) {
-      if (locked || e.touches.length !== 1) return;
+      if (e.touches.length !== 1) return;
       start = { x: e.touches[0].clientX, y: e.touches[0].clientY, time: Date.now() };
       decided = null;
     }
@@ -93,7 +79,7 @@ export function useSwipeNavigation({
       const startPoint = start;
       start = null;
       decided = null;
-      if (locked || !wasHorizontal || !startPoint) return;
+      if (!wasHorizontal || !startPoint) return;
 
       const touch = e.changedTouches[0];
       const dx = touch.clientX - startPoint.x;
@@ -103,25 +89,14 @@ export function useSwipeNavigation({
       startDaySlide(direction);
     }
 
-    // Android a veces manda touchcancel en vez de (o además de) touchend
-    // si el sistema se queda con el gesto a medias (p.ej. un scroll que
-    // se activa a la vez): sin esto, start/decided no se limpiaban hasta
-    // el siguiente touchstart.
-    function handleTouchCancel() {
-      start = null;
-      decided = null;
-    }
-
     el.addEventListener('touchstart', handleTouchStart, { passive: true });
     el.addEventListener('touchmove', handleTouchMove, { passive: false });
     el.addEventListener('touchend', handleTouchEnd, { passive: true });
-    el.addEventListener('touchcancel', handleTouchCancel, { passive: true });
 
     return () => {
       el.removeEventListener('touchstart', handleTouchStart);
       el.removeEventListener('touchmove', handleTouchMove);
       el.removeEventListener('touchend', handleTouchEnd);
-      el.removeEventListener('touchcancel', handleTouchCancel);
     };
   }, [viewType, ready, calendarWrapperRef, calendarRef, prepareDaySlide]);
 }
