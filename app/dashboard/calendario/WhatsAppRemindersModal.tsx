@@ -332,16 +332,10 @@ export default function WhatsAppRemindersModal({
           )}
         </div>
 
-        <div className="flex items-center justify-between gap-2 border-t border-gray-100 p-5">
+        <div className="border-t border-gray-100 p-5">
           <p className="text-xs text-[#868585]">
             Se abre WhatsApp con el mensaje escrito; el envío lo confirmas tú.
           </p>
-          <button
-            onClick={onClose}
-            className="shrink-0 rounded-lg px-4 py-2 text-sm font-medium text-[#868585] hover:bg-gray-100"
-          >
-            Cerrar
-          </button>
         </div>
       </div>
     </div>
