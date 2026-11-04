@@ -215,7 +215,7 @@ export default function WhatsAppRemindersModal({
                   ? 'No hay clientes tuyos esta semana'
                   : pendientes === 0
                     ? `Todos avisados · ${conTelefono.length} de esta semana`
-                    : `${pendientes} por avisar de ${conTelefono.length} · tus sesiones de esta semana`}
+                    : `${pendientes} por avisar de ${conTelefono.length} de esta semana`}
             </p>
           </div>
           <button onClick={onClose} className="shrink-0 text-gray-400 hover:text-gray-600">
