@@ -223,7 +223,7 @@ export default function DashboardLayout({
         </nav>
 
         <div className="flex flex-col gap-1 border-t border-gray-100 pt-3">
-          {isTrainer && (
+          {(isAdmin || isTrainer) && (
             <Link
               href="/dashboard/ajustes"
               className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition ${

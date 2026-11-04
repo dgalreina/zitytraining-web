@@ -70,7 +70,7 @@ export default function AjustesPage() {
 
     getMe(token)
       .then((user) => {
-        if (!user.roles?.includes('trainer')) {
+        if (!user.roles?.includes('trainer') && !user.roles?.includes('admin')) {
           router.push('/dashboard');
           return;
         }
