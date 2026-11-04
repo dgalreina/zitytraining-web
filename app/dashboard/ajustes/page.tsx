@@ -105,7 +105,7 @@ export default function AjustesPage() {
   return (
     <div className="max-w-2xl mx-auto">
       <h2 className="mb-4 font-[family-name:var(--font-work-sans)] text-lg font-bold text-[#2b2b2a]">
-        Mensaje por defecto en WhatsApp
+        Ajustes
       </h2>
 
       <div
@@ -118,7 +118,7 @@ export default function AjustesPage() {
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div>
-              <label className={labelClass}>Mensaje por defecto</label>
+              <label className={labelClass}>Mensaje por defecto en WhatsApp</label>
               <textarea
                 value={template}
                 onChange={(e) => {
@@ -129,10 +129,8 @@ export default function AjustesPage() {
                 className={`${inputClass} resize-none leading-relaxed`}
               />
               <p className="mt-1.5 text-xs text-[#868585]">
-                <span className="font-semibold">{'{nombre}'}</span> se cambia por el nombre del
-                cliente. <span className="font-semibold">{'{fecha}'}</span> se cambia sola por su
-                sesión (o sus próximas sesiones, si tiene varias esa semana) — mira los ejemplos de
-                abajo.
+                <span className="font-semibold">{'{nombre}'}</span> y{' '}
+                <span className="font-semibold">{'{fecha}'}</span> se rellenan solos.
               </p>
               <button
                 type="button"
@@ -151,8 +149,7 @@ export default function AjustesPage() {
               <div>
                 <p className={labelClass}>Así se vería</p>
                 <p className="text-xs text-[#868585]">
-                  Lo que has escrito tú sale en <span className="font-bold">negrita</span>; lo que
-                  se rellena solo, en normal.
+                  Lo tuyo en <span className="font-bold">negrita</span>, lo automático en normal.
                 </p>
               </div>
               <div className="rounded-lg border border-gray-100 bg-[#f7f7f5] p-3">
