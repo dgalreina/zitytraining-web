@@ -11,13 +11,6 @@ export interface SesionPlantilla {
   end: Date;
 }
 
-function duracion(minutos: number) {
-  if (minutos < 60) return `${minutos} min`;
-  const horas = Math.floor(minutos / 60);
-  const resto = minutos % 60;
-  return resto === 0 ? `${horas}h` : `${horas}h ${resto}min`;
-}
-
 function fechaLarga(d: Date) {
   return d.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
 }
@@ -27,8 +20,7 @@ function hora(d: Date) {
 }
 
 function lineaSesion(s: SesionPlantilla) {
-  const mins = Math.round((s.end.getTime() - s.start.getTime()) / 60000);
-  return `${fechaLarga(s.start)} a las ${hora(s.start)} (${duracion(mins)})`;
+  return `${fechaLarga(s.start)} a las ${hora(s.start)}`;
 }
 
 export function expandirFecha(sesiones: SesionPlantilla[]): string {

@@ -102,8 +102,6 @@ export default function AjustesPage() {
     }
   }
 
-  if (loading) return <p className="text-sm text-gray-400">Cargando...</p>;
-
   return (
     <div className="max-w-2xl mx-auto">
       <h2 className="mb-1 font-[family-name:var(--font-work-sans)] text-lg font-bold text-[#2b2b2a]">
@@ -119,72 +117,76 @@ export default function AjustesPage() {
         style={cardStyle}
         className="overflow-y-auto overscroll-none rounded-xl bg-white p-6"
       >
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div>
-            <label className={labelClass}>Mensaje por defecto</label>
-            <textarea
-              value={template}
-              onChange={(e) => {
-                setTemplate(e.target.value);
-                setSaved(false);
-              }}
-              rows={4}
-              className={`${inputClass} resize-none leading-relaxed`}
-            />
-            <p className="mt-1.5 text-xs text-[#868585]">
-              <span className="font-semibold">{'{nombre}'}</span> se cambia por el nombre del
-              cliente. <span className="font-semibold">{'{fecha}'}</span> se cambia sola por su
-              sesión (o sus próximas sesiones, si tiene varias esa semana) — mira los ejemplos de
-              abajo.
-            </p>
-            <button
-              type="button"
-              onClick={() => {
-                setTemplate(DEFAULT_REMINDER_TEMPLATE);
-                setSaved(false);
-              }}
-              className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-[#868585] hover:text-[#2b2b2a]"
-            >
-              <RotateCcw size={12} />
-              Restablecer al mensaje predeterminado
-            </button>
-          </div>
-
-          <div className="flex flex-col gap-2">
+        {loading ? (
+          <p className="text-sm text-gray-400">Cargando...</p>
+        ) : (
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div>
-              <p className={labelClass}>Así se vería</p>
-              <p className="text-xs text-[#868585]">
-                Lo que has escrito tú sale en <span className="font-bold">negrita</span>; lo que
-                se rellena solo, en normal.
+              <label className={labelClass}>Mensaje por defecto</label>
+              <textarea
+                value={template}
+                onChange={(e) => {
+                  setTemplate(e.target.value);
+                  setSaved(false);
+                }}
+                rows={4}
+                className={`${inputClass} resize-none leading-relaxed`}
+              />
+              <p className="mt-1.5 text-xs text-[#868585]">
+                <span className="font-semibold">{'{nombre}'}</span> se cambia por el nombre del
+                cliente. <span className="font-semibold">{'{fecha}'}</span> se cambia sola por su
+                sesión (o sus próximas sesiones, si tiene varias esa semana) — mira los ejemplos de
+                abajo.
               </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setTemplate(DEFAULT_REMINDER_TEMPLATE);
+                  setSaved(false);
+                }}
+                className="mt-2 flex items-center gap-1.5 text-xs font-semibold text-[#868585] hover:text-[#2b2b2a]"
+              >
+                <RotateCcw size={12} />
+                Restablecer al mensaje predeterminado
+              </button>
             </div>
-            <div className="rounded-lg border border-gray-100 bg-[#f7f7f5] p-3">
-              <p className="mb-1 text-[10px] font-semibold uppercase text-gray-400">
-                Con una sesión esa semana
-              </p>
-              <Previsualizacion template={template} nombre="Pepe" sesiones={unaSesion} />
-            </div>
-            <div className="rounded-lg border border-gray-100 bg-[#f7f7f5] p-3">
-              <p className="mb-1 text-[10px] font-semibold uppercase text-gray-400">
-                Con varias sesiones esa semana
-              </p>
-              <Previsualizacion template={template} nombre="Pepe" sesiones={variasSesiones} />
-            </div>
-          </div>
 
-          {error && <p className="text-sm font-medium text-red-600">{error}</p>}
-          {saved && !error && (
-            <p className="text-sm font-medium text-[#4b7a1f]">Guardado.</p>
-          )}
+            <div className="flex flex-col gap-2">
+              <div>
+                <p className={labelClass}>Así se vería</p>
+                <p className="text-xs text-[#868585]">
+                  Lo que has escrito tú sale en <span className="font-bold">negrita</span>; lo que
+                  se rellena solo, en normal.
+                </p>
+              </div>
+              <div className="rounded-lg border border-gray-100 bg-[#f7f7f5] p-3">
+                <p className="mb-1 text-[10px] font-semibold uppercase text-gray-400">
+                  Con una sesión esa semana
+                </p>
+                <Previsualizacion template={template} nombre="Pepe" sesiones={unaSesion} />
+              </div>
+              <div className="rounded-lg border border-gray-100 bg-[#f7f7f5] p-3">
+                <p className="mb-1 text-[10px] font-semibold uppercase text-gray-400">
+                  Con varias sesiones esa semana
+                </p>
+                <Previsualizacion template={template} nombre="Pepe" sesiones={variasSesiones} />
+              </div>
+            </div>
 
-          <button
-            type="submit"
-            disabled={saving}
-            className="rounded-lg bg-gradient-to-r from-[#a2c037] to-[#6aa842] py-2.5 font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
-          >
-            {saving ? 'Guardando...' : 'Guardar cambios'}
-          </button>
-        </form>
+            {error && <p className="text-sm font-medium text-red-600">{error}</p>}
+            {saved && !error && (
+              <p className="text-sm font-medium text-[#4b7a1f]">Guardado.</p>
+            )}
+
+            <button
+              type="submit"
+              disabled={saving}
+              className="rounded-lg bg-gradient-to-r from-[#a2c037] to-[#6aa842] py-2.5 font-semibold text-white transition hover:opacity-90 disabled:opacity-60"
+            >
+              {saving ? 'Guardando...' : 'Guardar cambios'}
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );
