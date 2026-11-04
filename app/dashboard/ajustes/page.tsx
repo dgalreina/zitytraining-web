@@ -104,13 +104,9 @@ export default function AjustesPage() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <h2 className="mb-1 font-[family-name:var(--font-work-sans)] text-lg font-bold text-[#2b2b2a]">
-        Ajustes
+      <h2 className="mb-4 font-[family-name:var(--font-work-sans)] text-lg font-bold text-[#2b2b2a]">
+        Mensaje por defecto en WhatsApp
       </h2>
-      <p className="mb-4 text-sm text-[#868585]">
-        Mensaje con el que se precargan los recordatorios de WhatsApp (puedes seguir editando el
-        de cada cliente antes de enviarlo).
-      </p>
 
       <div
         ref={cardRef}
