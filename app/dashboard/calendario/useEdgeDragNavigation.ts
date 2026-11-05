@@ -11,11 +11,13 @@ export function useEdgeDragNavigation({
   calendarRef,
   calendarWrapperRef,
   viewType,
+  prepareDaySlide,
   loadMonthDots,
 }: {
   calendarRef: RefObject<FullCalendar | null>;
   calendarWrapperRef: RefObject<HTMLDivElement | null>;
   viewType: string;
+  prepareDaySlide: (direction: 1 | -1) => boolean;
   loadMonthDots: (date: Date) => void;
 }) {
   const dragStateRef = useRef<{ eventId: string; start: Date; end: Date } | null>(null);
@@ -67,11 +69,9 @@ export function useEdgeDragNavigation({
     // no llegaría).
     scheduleEdgeTick();
 
-    // Avanza/retrocede el calendario visualmente. A propósito SIN la
-    // animación de deslizamiento que usa el swipe (ver el comentario en
-    // page.tsx, donde se pasa prepareDaySlide solo a useSwipeNavigation):
-    // transformar el .fc-view-harness mientras este drag sigue activo es
-    // lo que desincronizaba a FullCalendar y disparaba el bug.
+    // Avanza/retrocede el calendario visualmente, con el mismo deslizamiento
+    // que usa el swipe.
+    prepareDaySlide(direction);
     if (direction > 0) api.next();
     else api.prev();
     // Usamos la fecha real del calendario (no el estado "selectedDate",
@@ -139,29 +139,6 @@ export function useEdgeDragNavigation({
     latestPointerMoveRef.current(e);
   }).current;
 
-  // Red de seguridad: el ciclo de "sigue en el borde -> repite" de arriba
-  // solo se para si FullCalendar avisa con eventDragStop de que el
-  // arrastre ha terminado. Si ese aviso no llega — p.ej. porque algo
-  // interrumpe el seguimiento táctil nativo a mitad de un drag — nada
-  // más lo detiene, y se queda reprogramándose cada EDGE_DELAY_MS para
-  // siempre (moviendo la sesión real cada vez), sin que soltar el dedo
-  // sirva de nada. Por eso esto NO depende solo de eventDragStop: también
-  // escucha directamente pointerup/pointercancel (la señal nativa de "se
-  // acabó el toque"), que es quien de verdad decide si hay que parar.
-  function stopEdgeDragTracking() {
-    window.removeEventListener('pointermove', stablePointerMoveHandler);
-    window.removeEventListener('pointerup', stablePointerEndHandler);
-    window.removeEventListener('pointercancel', stablePointerEndHandler);
-    clearEdgeTimer();
-    nearEdgeDirectionRef.current = null;
-    dragStateRef.current = null;
-    calendarWrapperRef.current?.classList.remove('ziti-dragging-event');
-  }
-
-  const stablePointerEndHandler = useRef(() => {
-    stopEdgeDragTracking();
-  }).current;
-
   function handleEventDragStart(info: any) {
     dragStateRef.current = {
       eventId: info.event.id,
@@ -170,8 +147,6 @@ export function useEdgeDragNavigation({
     };
     nearEdgeDirectionRef.current = null;
     window.addEventListener('pointermove', stablePointerMoveHandler);
-    window.addEventListener('pointerup', stablePointerEndHandler);
-    window.addEventListener('pointercancel', stablePointerEndHandler);
     // La vista Semana tiene su propio scroll horizontal nativo (red de
     // seguridad para pantallas muy estrechas, ver fullcalendar-theme.css).
     // Si la sesión arrastrada está en la última columna, ese scroll
@@ -181,7 +156,11 @@ export function useEdgeDragNavigation({
   }
 
   function handleEventDragStop() {
-    stopEdgeDragTracking();
+    window.removeEventListener('pointermove', stablePointerMoveHandler);
+    clearEdgeTimer();
+    nearEdgeDirectionRef.current = null;
+    dragStateRef.current = null;
+    calendarWrapperRef.current?.classList.remove('ziti-dragging-event');
   }
 
   return { handleEventDragStart, handleEventDragStop };
