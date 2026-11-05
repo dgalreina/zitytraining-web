@@ -1,9 +1,6 @@
 import { AttendanceEntry } from './attendanceApi';
 
-// Suma de horas trabajadas a partir de una lista de fichajes. Uno sin
-// clockOut (fichado ahora mismo) cuenta hasta este instante, no se
-// descarta: así el total "lleva esto en lo que va de mes" es correcto
-// aunque se mire a media tarde con el fichaje todavía abierto.
+// Un fichaje sin clockOut cuenta hasta ahora mismo, no se descarta.
 export function sumHoursWorked(entries: AttendanceEntry[]): number {
   const now = Date.now();
   const totalMs = entries.reduce((acc, e) => {

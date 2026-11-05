@@ -19,17 +19,15 @@ import AssignPlanModal from './AssignPlanModal';
 import EditDatesModal from './EditDatesModal';
 import FinalMonthBillingModal from './FinalMonthBillingModal';
 
-// La compra no guarda su categoría, pero el itemLabel de "Sesiones
-// libres" lo pone siempre el backend (plans.service.ts), así que sirve
-// para distinguirlas y no mostrarles un total al mes que no existe.
+// La compra no guarda categoría, pero el backend siempre pone este
+// itemLabel para "Sesiones libres" (plans.service.ts); sirve para no
+// mostrarles un total al mes que no existe.
 function isFreeSessionsPurchase(item: any) {
   return typeof item.itemLabel === 'string' && item.itemLabel.startsWith('Sesiones libres');
 }
 
-// Un plan mensual normal (no puntual, no sesiones libres) es el único
-// caso donde parar/cambiar a mitad de mes es ambiguo de facturar: los
-// puntuales ya tienen un precio cerrado para su periodo, y las sesiones
-// libres ya se cobran por sesión.
+// Solo un plan mensual normal es ambiguo de facturar a mitad de mes: los
+// puntuales tienen precio cerrado y las sesiones libres se cobran por sesión.
 function needsFinalMonthChoice(item: any) {
   return !isFreeSessionsPurchase(item) && !item.scheduledEndDate;
 }
@@ -74,8 +72,7 @@ export default function PlanTab({
 }: {
   id: string;
   purchases: any[] | null;
-  // Contratar y modificar planes es cosa de administracion: el entrenador
-  // ve el plan en curso de su cliente, pero sin botones para tocarlo.
+  // El entrenador ve el plan en curso pero sin botones para tocarlo.
   isAdmin: boolean;
   onPurchasesChange: (updated: any[]) => void;
 }) {
@@ -118,8 +115,7 @@ export default function PlanTab({
   function openAssignModal(plan: any) {
     setSelectedPlan(plan);
     setAssignError('');
-    // Los planes mensuales (todo menos sesiones libres) solo pueden
-    // empezar el día 1: se normaliza en cuanto se elige el plan.
+    // Los planes mensuales solo pueden empezar el día 1.
     if (plan.category !== 'sesiones_libres') {
       setAssignStartDate((prev) => `${prev.slice(0, 7)}-01`);
     }
@@ -132,9 +128,8 @@ export default function PlanTab({
       return;
     }
 
-    // Al cambiar de plan a mitad de mes, el plan que se sustituye tiene
-    // el mismo problema de facturación que al pararlo: se pregunta antes
-    // de mandar nada, y esta función se vuelve a llamar con la elección.
+    // El plan sustituido tiene el mismo problema de facturación que al
+    // pararlo: se pregunta antes, y esta función se vuelve a llamar con la elección.
     if (assignMode === 'change' && !finalMonthBilling && planNeedingChoiceOnChange) {
       setChangeChoiceOpen(true);
       return;
@@ -150,9 +145,7 @@ export default function PlanTab({
     }
 
     try {
-      // El label de "Sesiones libres" ya dice de qué va (no es un número
-      // de sesiones/semana ambiguo como el resto), así que ahí no hace
-      // falta repetir la categoría entre paréntesis.
+      // "Sesiones libres" ya dice de qué va; no hace falta repetir la categoría.
       const categoryTitle = TRAINING_CATEGORIES.find((c) => c.id === selectedPlan.category)?.title;
       const itemLabel =
         selectedPlan.category === 'sesiones_libres'
@@ -173,9 +166,8 @@ export default function PlanTab({
       } else {
         await assignPlan(token, payload);
       }
-      // Un plan puntual (o un cambio de plan) puede afectar a otro plan
-      // existente; recargamos del todo en vez de solo anteponer el
-      // nuevo, para reflejarlo.
+      // Puede afectar a otro plan existente; recarga del todo en vez de
+      // solo anteponer el nuevo.
       const refreshed = await getClientPurchases(token, id);
       onPurchasesChange(refreshed);
       setAssignModalOpen(false);
@@ -188,9 +180,7 @@ export default function PlanTab({
     }
   }
 
-  // Los planes mensuales normales no pueden pararse sin decidir cómo se
-  // factura el mes en curso; los puntuales y las sesiones libres ya
-  // tienen un precio cerrado, así que se paran directamente.
+  // Los puntuales y sesiones libres ya tienen precio cerrado, se paran directamente.
   function requestCancelPlan(item: any) {
     if (needsFinalMonthChoice(item)) {
       setCancelChoiceItem(item);
@@ -206,9 +196,7 @@ export default function PlanTab({
 
     try {
       await cancelPurchase(token, purchaseId, finalMonthBilling);
-      // Cancelar un plan puntual retoma el que hubiera pausado, y el
-      // registro que vuelve trae el autor sin popular; recargamos del
-      // todo en vez de solo sustituir este, para reflejar ambas cosas.
+      // Retoma el plan pausado (si lo había); recarga del todo en vez de sustituir solo este.
       const refreshed = await getClientPurchases(token, id);
       onPurchasesChange(refreshed);
       setCancelChoiceItem(null);
@@ -219,8 +207,7 @@ export default function PlanTab({
     }
   }
 
-  // Distinto de "parar": esto es para un plan que no debia existir (plan
-  // o persona equivocados). No factura nada y desaparece de Contabilidad.
+  // Distinto de "parar": para un plan que no debía existir. No factura nada.
   async function handleVoidPlan(item: any) {
     const seguro = window.confirm(
       `¿Anular "${item.itemLabel}"?
@@ -257,9 +244,7 @@ No se cobrará nada por él en ningún mes y desaparecerá de Contabilidad. Qued
       setEditError('Elige la fecha de inicio');
       return;
     }
-    // Solo los puntuales tienen fecha de fin; si este plan no la tiene, no
-    // se manda (no vale la pena convertir una suscripción en puntual desde
-    // aquí, solo corregir fechas que ya existían).
+    // Solo corrige fechas que ya existían; no convierte una suscripción en puntual.
     if (editDatesItem.scheduledEndDate && !editEndDate) {
       setEditError('Elige la fecha de fin');
       return;
@@ -293,10 +278,8 @@ No se cobrará nada por él en ningún mes y desaparecerá de Contabilidad. Qued
     purchases?.filter((p) => p.type === 'plan' && p.status === 'cancelled') || [];
   const hasActivePlan = activeItems.some((p) => p.status === 'active');
 
-  // Al cambiar de plan se cierra el activo y, si este era un puntual,
-  // también el mensual que tenía pausado. El que puede quedar con un mes
-  // cojo es el mensual, así que la pregunta de facturación es sobre él,
-  // esté activo o pausado debajo de un puntual.
+  // El mensual es el que puede quedar con mes cojo, esté activo o pausado
+  // debajo de un puntual, así que la pregunta de facturación es sobre él.
   const currentPlan = activeItems.find((p) => p.status === 'active');
   const planNeedingChoiceOnChange = (() => {
     if (!currentPlan) return null;
@@ -464,9 +447,7 @@ No se cobrará nada por él en ningún mes y desaparecerá de Contabilidad. Qued
                       {formatDateTime(item.endedAt)}
                     </p>
                   )}
-                  {/* Un error se puede descubrir tarde (al repasar
-                      Contabilidad), así que se puede anular también un
-                      plan ya parado: deja de cobrarse en todos sus meses. */}
+                  {/* También se puede anular un plan ya parado (error descubierto tarde). */}
                   {isAdmin && item.assignedInPerson && (
                     <button
                       onClick={() => handleVoidPlan(item)}

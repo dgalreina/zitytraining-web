@@ -76,9 +76,7 @@ export default function AssignPlanModal({
               <div key={category.id}>
                 <h4 className="mb-2 text-sm font-bold text-[#2b2b2a]">{category.title}</h4>
                 {category.id === 'sesiones_libres' ? (
-                  // Hasta 12 variantes a la vez (personal/dúo/trío × 2 días
-                  // de referencia × 2 duraciones): sin subgrupos, elegir
-                  // una es buscar en una lista larga sin ningún orden.
+                  // Hasta 12 variantes a la vez: sin subgrupos sería una lista larga sin orden.
                   <div className="flex flex-col gap-3">
                     {FREE_SESSIONS_SUBGROUPS.map((group) => {
                       const groupPlans = plans.filter(

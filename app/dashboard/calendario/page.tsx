@@ -48,17 +48,14 @@ export default function CalendarioPage() {
 
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [modal, setModal] = useState<ModalState>(null);
-  // Arrastrar una sesión de una serie no se guarda al momento: se espera a
-  // que el usuario elija "solo esta" o "esta y todas las futuras" (ver
-  // MoveSeriesChoiceDialog). FullCalendar ya la ha movido en pantalla para
-  // entonces; si se cancela, se deshace con el propio info.revert().
+  // Mover una sesión de serie espera a elegir "solo esta" o "esta y las
+  // futuras" (MoveSeriesChoiceDialog) antes de guardar; si se cancela, se
+  // deshace con info.revert().
   const [pendingDrop, setPendingDrop] = useState<any | null>(null);
   const [movingSeries, setMovingSeries] = useState(false);
-  // Tras mover una sesión arrastrando, un aviso con "Deshacer" (como
-  // Google Calendar) en vez de preguntar antes de mover. Guarda lo
-  // necesario para repetir el mismo update() con los valores de antes del
-  // arrastre: para una serie, el propio shiftKeepingWeekPattern del
-  // backend deshace el desplazamiento igual de bien en sentido contrario.
+  // Aviso con "Deshacer" tras mover, en vez de preguntar antes (como
+  // Google Calendar). Guarda los valores de antes del arrastre para poder
+  // repetir el mismo update() al revés.
   const [undoToast, setUndoToast] = useState<{
     id: number;
     message: string;
@@ -74,9 +71,8 @@ export default function CalendarioPage() {
   const [remindersOpen, setRemindersOpen] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [weekStart, setWeekStart] = useState('');
-  // Solo aplica a la vista "Semana": en "Día" el fin de semana se ve
-  // siempre. Se pliega por defecto para que la semana entre sin scroll
-  // horizontal en la mayoría de móviles; el icono lo despliega.
+  // Solo para vista "Semana" (en "Día" el fin de semana se ve siempre);
+  // plegado por defecto para que quepa sin scroll horizontal en móvil.
   const [showWeekendsInWeek, setShowWeekendsInWeek] = useState(false);
   const [topOffset, setTopOffset] = useState<number | null>(null);
   const calendarRef = useRef<FullCalendar>(null);
@@ -84,13 +80,8 @@ export default function CalendarioPage() {
   const gridRowRef = useRef<HTMLDivElement>(null);
 
   const isTrainerPerspective = isAdmin || isTrainer;
-  // Un admin o entrenador puede crear/editar/borrar aunque el filtro esté
-  // acotado a un cliente o entrenador concreto. El modal siempre pregunta
-  // a qué entrenador pertenece cada sesión nueva, así que no hace falta
-  // tener exactamente uno marcado en el checklist para poder crear.
   const canEdit = isTrainerPerspective;
-  // Sin conexión solo el admin puede seguir creando/moviendo/borrando
-  // sesiones (se guardan en cola); el resto de roles pasan a solo lectura.
+  // Sin conexión solo el admin sigue pudiendo editar (se guarda en cola).
   const canEditOffline = isOnline ? canEdit : isAdmin;
 
   const { pendingQueue, refreshPendingQueue } = useOfflineCalendarQueue({
@@ -104,12 +95,9 @@ export default function CalendarioPage() {
     () => applyPendingQueueToEvents(events, pendingQueue, trainers, clients),
     [events, pendingQueue, trainers, clients],
   );
-  // El ResizeObserver de fitEventText necesita los datos MÁS RECIENTES del
-  // evento, no los que había en el momento en que se montó el elemento: si
-  // FullCalendar reutiliza el mismo nodo del DOM tras una edición (en vez
-  // de recrearlo), "info.event" capturado en el closure del observer se
-  // queda con los datos viejos, y un resize posterior (p.ej. al cambiar de
-  // vista) volvía a pintar el texto antiguo encima del ya corregido.
+  // fitEventText necesita los datos más recientes del evento, no los del
+  // montaje: FullCalendar reutiliza el nodo DOM tras editar, y el closure
+  // del observer se quedaría con datos viejos.
   const eventsRef = useRef<any[]>([]);
   useEffect(() => {
     eventsRef.current = displayEvents;
@@ -117,12 +105,9 @@ export default function CalendarioPage() {
 
   const { handleEventDidMount, handleEventWillUnmount } = useFitEventText(eventsRef);
 
-  // Se cuentan aquí para saber si el botón de recordatorios tiene algo que
-  // ofrecer: un admin puede estar viendo la semana entera de todos y no
-  // impartir ninguna clase, y entonces no hay nada suyo que mandar.
-  // Va con el resto de hooks, antes del "Cargando..." de más abajo: si se
-  // declara después de ese return, React ve un número distinto de hooks
-  // según la pasada y revienta la página.
+  // Para saber si "Enviar recordatorios" tiene algo que ofrecer (un admin
+  // puede no impartir ninguna clase esa semana). Antes del return de
+  // "Cargando...": declarado después, cambiaría el nº de hooks entre renders.
   const misRecordatorios = useMemo(
     () => construirRecordatorios(events, userId),
     [events, userId],
@@ -131,14 +116,9 @@ export default function CalendarioPage() {
   function handleDatesSet(info: any) {
     loadBookings(info.startStr, info.endStr);
     setSelectedDate(info.view.currentStart);
-    // Identifica la semana en el registro de recordatorios. Es
-    // currentStart y no activeStart porque este último se corre al lunes
-    // cuando el fin de semana está plegado, y entonces la misma semana
-    // cambiaría de identidad según cómo tuvieras puesta la vista.
-    //
-    // Se manda como día suelto y no en ISO porque toISOString() pasa a UTC:
-    // la medianoche del lunes en España es el domingo a las 22:00, y la
-    // semana quedaría archivada con la fecha del día anterior.
+    // currentStart (no activeStart, que se corre al lunes con el finde
+    // plegado) y como día suelto (no toISOString, que pasa a UTC y
+    // movería la medianoche española al día anterior).
     const lunes = info.view.currentStart as Date;
     setWeekStart(
       `${lunes.getFullYear()}-${String(lunes.getMonth() + 1).padStart(2, '0')}-${String(lunes.getDate()).padStart(2, '0')}`,
@@ -150,10 +130,8 @@ export default function CalendarioPage() {
       loadHolidaysForYear(info.end.getFullYear());
     }
 
-    // Si el cambio de fecha viene de un swipe o de arrastrar hasta el
-    // borde, FullCalendar ya ha terminado de pintar la vista nueva en este
-    // punto: es el momento exacto de deslizar la copia congelada de la
-    // vista vieja hacia fuera y la nueva hacia dentro.
+    // FullCalendar ya pintó la vista nueva: momento de deslizar la copia
+    // congelada de la vieja hacia fuera (swipe o arrastre al borde).
     runPendingSlideAnimation();
   }
 
@@ -168,19 +146,12 @@ export default function CalendarioPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roleReady, selectedTrainerIds, selectedClientId]);
 
-  // El alto disponible se sigue calculando con 100dvh (fiable en móvil: sí
-  // tiene en cuenta la barra de direcciones dinámica, a diferencia de
-  // window.innerHeight). Lo único que medimos en JS es cuánto ocupa lo que
-  // hay encima del calendario, en vez de un número mágico fijo tipo "190px"
-  // que se desincroniza en cuanto cambia algo arriba (saludo, filtros...).
-  //
-  // Ojo: mientras loadingLists es true se muestra "Cargando..." en vez del
-  // calendario (ver el guard más abajo), así que gridRowRef.current todavía
-  // no existe cuando roleReady se pone a true (se pone antes de que
-  // termine la carga). Sin loadingLists aquí, este efecto se quedaba
-  // midiendo "null" para siempre y el alto se quedaba pegado al 190px de
-  // repuesto, dejando un hueco vacío cuando el contenido real ya ocupaba
-  // menos que eso.
+  // Alto con 100dvh (sí cuenta la barra de direcciones móvil, a diferencia
+  // de innerHeight); solo medimos en JS lo que ocupa lo de encima, para no
+  // depender de un número fijo que se desincroniza si cambia algo arriba.
+  // loadingLists en las deps: gridRowRef aún no existe cuando roleReady se
+  // pone a true (antes de terminar de cargar), si no, el alto se queda
+  // pegado al valor de repuesto.
   useEffect(() => {
     function recalcOffset() {
       const el = gridRowRef.current;
@@ -192,11 +163,8 @@ export default function CalendarioPage() {
     recalcOffset();
     window.addEventListener('resize', recalcOffset);
     return () => window.removeEventListener('resize', recalcOffset);
-    // isOnline/pendingQueue.length: el banner de "Sin conexión" (montado en
-    // el layout, por encima de este componente) ocupa una línea más y
-    // empuja el calendario hacia abajo; sin esto, el alto se quedaba
-    // calculado como si el banner no estuviera, tapando el botón de
-    // "Enviar recordatorios".
+    // isOnline/pendingQueue.length: el banner de "Sin conexión" empuja el
+    // calendario hacia abajo; sin esto el alto no lo tendría en cuenta.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roleReady, loadingLists, isOnline, pendingQueue.length]);
 
@@ -265,15 +233,9 @@ export default function CalendarioPage() {
         endTime: info.event.end.toISOString(),
         applyTimeToSeries,
       });
-      // Si se quedó en cola (sin conexión), FullCalendar ya movió este
-      // evento a mano por el propio arrastre, así que displayEvents no lo
-      // "cambia" de verdad (mismo id, misma hora) y a veces no vuelve a
-      // pasar por eventClassNames hasta el siguiente remontado.
-      // setExtendedProp por sí solo no bastaba (FullCalendar sigue
-      // "asentando" el arrastre justo después de soltarlo y a veces no
-      // repinta ese evento concreto), así que se quita y se vuelve a
-      // añadir con el dato actualizado: así FullCalendar lo trata como
-      // nuevo y lo pinta de cero, con el filo ya puesto.
+      // En cola (sin conexión) displayEvents no "cambia" de verdad (mismo
+      // id/hora), así que no se repinta solo; se quita y se vuelve a
+      // añadir para forzar a FullCalendar a tratarlo como nuevo.
       if (result?._pendingSync) {
         const calApi = calendarRef.current?.getApi();
         if (calApi && info.event.start && info.event.end) {
@@ -290,10 +252,8 @@ export default function CalendarioPage() {
         }
       }
       if (info.oldEvent?.start && info.oldEvent?.end) {
-        // Deshacer funciona igual sin conexión: vuelve a pasar por
-        // updateBookingOrQueue con la hora de antes, así que se encola
-        // (o se funde con el cambio ya en cola) y se aplica del todo en
-        // cuanto sincronice, igual que cualquier otra edición offline.
+        // Deshacer pasa por updateBookingOrQueue igual que cualquier
+        // edición: funciona también sin conexión (se encola).
         undoToastIdRef.current += 1;
         setUndoToast({
           id: undoToastIdRef.current,
@@ -304,12 +264,9 @@ export default function CalendarioPage() {
           appliedToSeries: applyTimeToSeries,
         });
       }
-      // Sin esto, el "raw" que lleva colgado el evento (con la hora vieja)
-      // se queda tal cual, y si reabres el modal para editar te sale la
-      // hora/día de antes de arrastrar, aunque el evento ya se vea movido.
-      // Si no hay conexión loadBookings no trae nada nuevo (falla en
-      // silencio), pero refreshPendingQueue hace que displayEvents
-      // recalcule con la hora nueva de todos modos.
+      // Sin recargar, el "raw" colgado del evento se queda con la hora
+      // vieja y el modal de editar la mostraría mal. Sin conexión
+      // loadBookings no trae nada, pero refreshPendingQueue sí recalcula.
       const api = calendarRef.current?.getApi();
       if (api) {
         loadBookings(api.view.activeStart.toISOString(), api.view.activeEnd.toISOString());
@@ -537,16 +494,12 @@ export default function CalendarioPage() {
             expandRows
             selectable={canEditOffline}
             selectLongPressDelay={200}
-            // Más alto que selectLongPressDelay a propósito: mover una
-            // sesión ya existente es más delicado que crear una nueva (si
-            // se confunde un toque con el inicio de un arrastre, aquí se
-            // desplaza de verdad una sesión real). 200ms quedaba demasiado
-            // cerca de lo que tarda un toque normal en un móvil, y algún
-            // toque se colaba como un arrastre mínimo.
+            // Más alto que selectLongPressDelay: mover una sesión existente
+            // es más delicado que crear una (un toque confundido con un
+            // arrastre la desplaza de verdad); 200ms colaba toques sueltos.
             eventLongPressDelay={500}
-            // Sin esto, al soltar el dedo el bloque desliza 500ms de vuelta
-            // a su sitio con top/left (no transform), lo que en Safari/iOS
-            // puede provocar un filo gris de repintado durante el gesto.
+            // Evita el filo gris de repintado en Safari/iOS al volver el
+            // bloque a su sitio (con top/left, no transform) si no se guarda.
             dragRevertDuration={0}
             eventStartEditable={canEditOffline}
             eventDurationEditable={false}
@@ -603,10 +556,7 @@ export default function CalendarioPage() {
           />
         </div>
 
-          {/* Solo en la vista de semana: los recordatorios se mandan de una
-              tacada para toda la semana, no dia a dia. Y en modo cliente el
-              calendario muestra entrenadores, no clientes, asi que ahi no
-              hay a quien recordarle nada. */}
+          {/* Recordatorios se mandan por semana entera, no día a día. */}
           {canEdit && viewType === 'timeGridWeek' && (
             <button
               type="button"

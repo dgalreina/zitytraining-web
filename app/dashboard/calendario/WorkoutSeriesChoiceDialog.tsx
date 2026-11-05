@@ -1,11 +1,7 @@
 'use client';
 
-// Preguntado al cambiar (o quitar) el entrenamiento de una sesión que
-// pertenece a una serie: solo esta sesión, o esta y todas las futuras ya
-// generadas (más la plantilla de la serie, para las que se generen más
-// adelante). Las sesiones pasadas nunca se tocan, se decida lo que se
-// decida aquí. Elegir una opción guarda ya de verdad (como el Guardar
-// general), no hace falta confirmar otra vez.
+// Al cambiar/quitar el entrenamiento de una sesión de serie: solo esta,
+// o esta y las futuras + plantilla (pasadas nunca se tocan). Elegir ya guarda de verdad.
 export default function WorkoutSeriesChoiceDialog({
   open,
   onCancel,

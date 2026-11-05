@@ -16,15 +16,12 @@ const PAYMENT_FILTER_OPTIONS = [
 ];
 
 const DAY_WIDTH = 40;
-// Mismo gris que "border-gray-200" de las celdas de dia. La fila de las
-// barras de plan es una unica celda que abarca todo el mes, asi que sus
-// separadores verticales no pueden ser bordes: se pintan con un degradado
-// repetido cada columna, para que la rejilla no se corte en cada cliente.
+// La fila de barras de plan es una única celda para todo el mes: sin
+// bordes de columna, se pintan con un degradado repetido.
 const GRID_LINE = '#e5e7eb';
 const DAY_GRID_BACKGROUND = `repeating-linear-gradient(to right, transparent 0 ${DAY_WIDTH - 1}px, ${GRID_LINE} ${DAY_WIDTH - 1}px ${DAY_WIDTH}px)`;
 const PAGE_SIZE = 30;
-// Hueco que hay que dejarle a los botones de página bajo la tabla.
-const PAGER_HEIGHT = 56;
+const PAGER_HEIGHT = 56; // hueco para los botones de página bajo la tabla
 const CLIENT_COL_CLASS = 'w-[108px] sm:w-[236px]';
 const TOTAL_COL_CLASS = 'w-[80px] sm:w-[132px]';
 const WEEKDAY_LETTERS = ['D', 'L', 'M', 'X', 'J', 'V', 'S'];
@@ -63,8 +60,7 @@ export default function ContabilidadPage() {
     setPage(0);
   }, [search, year, month, paymentFilter]);
 
-  // Igual que en Entrenamientos/Fichar: solo la tabla hace scroll, no la
-  // página entera (el contenedor del dashboard ya hace overflow-y-auto).
+  // Solo la tabla hace scroll, no la página entera.
   useEffect(() => {
     function recalcOffset() {
       const el = tableWrapRef.current;
@@ -92,8 +88,7 @@ export default function ContabilidadPage() {
     setYear(y);
   }
 
-  // Un color estable por etiqueta de plan (mismo color cada vez que
-  // aparece esa etiqueta en la página); sesiones libres siempre en gris.
+  // Color estable por etiqueta de plan; sesiones libres siempre en gris.
   const colorForLabel = useMemo(() => {
     const assigned = new Map<string, string>();
     let next = 0;
@@ -120,9 +115,8 @@ export default function ContabilidadPage() {
     });
   }, [data, search, paymentFilter]);
 
-  // Se pagina al pintar, no al pedir: el mes entero ya viene en dos
-  // consultas, lo que cuesta con cien clientes es dibujar un día por
-  // columna para cada uno. Así el buscador sigue mirando el mes entero.
+  // Pagina al pintar, no al pedir: con cien clientes lo caro es dibujar un
+  // día por columna, no la consulta. El buscador sigue mirando el mes entero.
   const totalPages = Math.max(1, Math.ceil(visibleClients.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages - 1);
   const pageClients = visibleClients.slice(
@@ -195,26 +189,12 @@ export default function ContabilidadPage() {
 
       {error && <p className="text-sm font-medium text-red-600">{error}</p>}
 
-      {/* Un unico contenedor con scroll en los dos ejes: lo que se queda
-          quieto lo hace con "position: sticky" sobre las propias celdas
-          (nunca sobre <thead>/<tr>, que Safari ignora). Asi no hay nada
-          que sincronizar a mano y es imposible que las columnas se
-          desalineen mientras se arrastra.
-
-          "isolate" encierra los z-index de las celdas fijas en su propio
-          contexto: si no, competirian con el resto de la app y la
-          cabecera se colaba por encima del menu lateral.
-
-          El precio de un solo scroller es que cualquier gesto mueve los
-          dos ejes: bajar el dedo por la columna de clientes desviandose
-          un poco de lado tambien desplazaba los dias. De ahi el
-          "touch-pan-y" de las celdas fijas, que no se mueven en
-          horizontal y por tanto solo deben responder al eje vertical.
-
-          "overscroll-none" quita el rebote de iOS al arrastrar mas alla
-          del borde: durante ese rebote el scroll ya esta a 0 y no puede
-          ir a menos, asi que las celdas sticky no tienen a que
-          reaccionar y se despegan con el contenido. */}
+      {/* Un solo scroller en los dos ejes; lo fijo usa "position: sticky"
+          en las celdas (nunca en <thead>/<tr>, que Safari ignora).
+          "isolate" encierra sus z-index para que no compitan con el resto
+          de la app. "touch-pan-y" en las celdas fijas evita que un gesto
+          vertical desvíe también el eje horizontal. "overscroll-none"
+          quita el rebote de iOS, que despegaría las celdas sticky. */}
       <div
         ref={tableWrapRef}
         className="relative isolate overflow-auto overscroll-none rounded-2xl border border-gray-200 bg-white shadow-sm"
@@ -297,10 +277,7 @@ export default function ContabilidadPage() {
                       </p>
                     </td>
 
-                    {/* Las franjas de plan van sobre un lienzo del ancho
-                        exacto del mes, cada una colocada por su dia: un
-                        hueco o un solape en los datos no puede estirar
-                        la fila mas alla del mes. */}
+                    {/* Lienzo del ancho exacto del mes: un hueco o solape no estira la fila. */}
                     <td colSpan={data.daysInMonth} className="h-[22px] p-0 align-top">
                       <div
                         className="relative h-[22px] overflow-hidden"

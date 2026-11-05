@@ -22,13 +22,8 @@ export type ModalState =
   | { mode: 'edit'; booking: any; start: Date }
   | null;
 
-// Modal de crear/editar sesión. Todo el estado del formulario vive en
-// useBookingForm; este componente solo decide QUÉ vista mostrar (la
-// cabecera, el formulario principal, notas a pantalla completa, o
-// entrenamiento) y ensambla las piezas. El padre solo decide QUÉ se está
-// editando (o "nueva sesión" a partir de qué hora) a través de la prop
-// `modal`, y se entera de cuándo hay que recargar y cerrar mediante
-// `onSaved`.
+// Modal de crear/editar sesión. Todo el estado vive en useBookingForm;
+// este componente solo decide QUÉ vista mostrar y ensambla las piezas.
 export default function BookingModal({
   modal,
   trainers,
@@ -57,15 +52,12 @@ export default function BookingModal({
     w.name.toLowerCase().includes(form.workoutSearch.trim().toLowerCase()),
   );
 
-  // El centro cierra a las 22:00, pero a veces la sesión se alarga más
-  // allá del cierre, así que se deja empezar hasta las 23:00.
+  // El centro cierra a las 22:00, pero se deja empezar hasta las 23:00 por si se alarga.
   const minStartTime = new Date(form.start);
   minStartTime.setHours(7, 0, 0, 0);
   const maxStartTime = new Date(form.start);
   maxStartTime.setHours(23, 0, 0, 0);
-  // react-datepicker exige minTime y maxTime juntos: el de "Hora fin" no
-  // tiene un mínimo natural más que "después de empezar", así que se le
-  // da el mismo margen que a la franja visible del calendario.
+  // react-datepicker exige min/maxTime juntos; "Hora fin" usa el mismo margen.
   const maxEndTime = new Date(form.start);
   maxEndTime.setHours(23, 59, 0, 0);
 
@@ -84,10 +76,7 @@ export default function BookingModal({
                     Cancelada
                   </span>
                 )}
-                {/* Desplegable nativo del tamaño del antiguo switch, teñido
-                    del color del tipo: el tipo se ve de un vistazo sin robar
-                    una línea al formulario. Una cancelada es siempre normal
-                    (las privadas se borran, no se cancelan): ahí no se enseña. */}
+                {/* Teñido del color del tipo, se ve de un vistazo sin robar línea al formulario. */}
                 {form.status !== 'cancelled' && (
                   <span className="relative ml-1 inline-flex items-center">
                     <select

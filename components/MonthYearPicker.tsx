@@ -10,9 +10,7 @@ import '@/styles/datepicker-theme.css';
 
 registerLocale('es', es);
 
-// Disparador alternativo para cuando no hace falta el campo de texto
-// completo (p. ej. junto a un selector de mes ya compacto): un simple
-// icono que abre el mismo desplegable de mes/año.
+// Disparador alternativo (icono) para cuando no hace falta el campo de texto completo.
 const IconTrigger = forwardRef<HTMLButtonElement, React.ComponentProps<'button'>>(
   (props, ref) => (
     <button
@@ -38,10 +36,8 @@ function toMonthValue(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
 
-// Selector de mes y año (sin día): un desplegable propio en vez del
-// <input type="month"> nativo, que en iOS Safari renderiza su control
-// interno más ancho que la caja y no respeta overflow/max-width del
-// contenedor (probado: sigue saliéndose incluso con CSS de contención).
+// Desplegable propio en vez de <input type="month"> nativo: en iOS Safari
+// su control renderiza más ancho que la caja, ignorando overflow/max-width.
 export default function MonthYearPicker({
   value,
   minMonth,

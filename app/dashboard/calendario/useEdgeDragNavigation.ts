@@ -2,11 +2,9 @@ import { useEffect, useRef, type RefObject } from 'react';
 import type FullCalendar from '@fullcalendar/react';
 import { updateBooking } from '@/lib/bookingsApi';
 
-// Arrastrar una sesión hasta el borde de la pantalla, con el dedo aún
-// pulsado, cambia de día/semana y la sesión se ve ya en la página nueva
-// (imprescindible: no vale esperar a soltar el dedo). El "fantasma"
-// duplicado que esto producía se arregló en fullcalendar-theme.css con
-// un selector :has(), sin tocar nada de esta lógica.
+// Arrastrar una sesión hasta el borde cambia de día/semana con el dedo aún
+// pulsado (no vale esperar a soltarlo). El "fantasma" duplicado que esto
+// producía se arregló en fullcalendar-theme.css con un selector :has().
 export function useEdgeDragNavigation({
   calendarRef,
   calendarWrapperRef,
@@ -22,8 +20,7 @@ export function useEdgeDragNavigation({
 }) {
   const dragStateRef = useRef<{ eventId: string; start: Date; end: Date } | null>(null);
   const edgeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Lado en el que está el cursor ahora mismo (o null si no está en
-  // ninguno), para el ciclo de "sigue ahí -> repite" de abajo.
+  // Lado donde está el cursor ahora (o null), para el ciclo "sigue ahí -> repite".
   const nearEdgeDirectionRef = useRef<1 | -1 | null>(null);
   const EDGE_DELAY_MS = 600;
 
@@ -34,10 +31,8 @@ export function useEdgeDragNavigation({
     }
   }
 
-  // Tras cada cambio de página, si el cursor seguía en el mismo borde
-  // (no se ha movido fuera desde entonces), se vuelve a armar el mismo
-  // plazo para la siguiente: así, mientras se aguante en el borde, sigue
-  // pasando de página cada EDGE_DELAY_MS, no solo una vez.
+  // Si el cursor sigue en el borde tras cambiar de página, se rearma para
+  // la siguiente: así repite cada EDGE_DELAY_MS mientras se aguante ahí.
   function scheduleEdgeTick() {
     clearEdgeTimer();
     edgeTimerRef.current = setTimeout(() => {
@@ -47,9 +42,7 @@ export function useEdgeDragNavigation({
     }, EDGE_DELAY_MS);
   }
 
-  // direction: 1 = siguiente (borde derecho), -1 = anterior (borde izquierdo).
-  // En vista "Semana" se desplaza 7 días (una semana entera) en vez de 1,
-  // para caer en el mismo día de la semana siguiente/anterior.
+  // direction: 1 = siguiente (derecha), -1 = anterior (izquierda).
   async function advanceDraggedEventByDays(direction: 1 | -1) {
     const drag = dragStateRef.current;
     const api = calendarRef.current?.getApi();
@@ -60,23 +53,15 @@ export function useEdgeDragNavigation({
     newStart.setDate(newStart.getDate() + direction * daysShift);
     const newEnd = new Date(drag.end);
     newEnd.setDate(newEnd.getDate() + direction * daysShift);
-    // Se guarda ya el nuevo hueco: si el cursor sigue en el borde y esto
-    // se repite, el siguiente salto cuenta desde aquí, no otra vez desde
-    // el sitio original.
+    // Para que el siguiente salto cuente desde aquí, no desde el original.
     dragStateRef.current = { eventId: drag.eventId, start: newStart, end: newEnd };
-    // Si seguimos en el mismo borde, se arma ya el siguiente plazo (no
-    // hace falta esperar a un nuevo pointermove, que con el dedo quieto
-    // no llegaría).
+    // Rearma ya el siguiente plazo: con el dedo quieto no llegaría otro pointermove.
     scheduleEdgeTick();
 
-    // Avanza/retrocede el calendario visualmente, con el mismo deslizamiento
-    // que usa el swipe.
     prepareDaySlide(direction);
     if (direction > 0) api.next();
     else api.prev();
-    // Usamos la fecha real del calendario (no el estado "selectedDate",
-    // que aquí estaría congelado del primer render) por si el cambio
-    // cruza también a un mes distinto.
+    // Fecha real del calendario, no "selectedDate" (congelado del primer render).
     const currentApiDate = api.getDate();
 
     const token = localStorage.getItem('token');
@@ -111,10 +96,8 @@ export function useEdgeDragNavigation({
     const direction: 1 | -1 | null = nearRightEdge ? 1 : nearLeftEdge ? -1 : null;
 
     if (direction !== null) {
-      // Mantén el cursor ~600ms cerca del borde antes de cambiar de día, para
-      // que un simple roce al pasar por ahí no lo dispare sin querer. Si ya
-      // estábamos en ese mismo borde (p.ej. moviéndose un poco dentro de la
-      // misma zona), no se reinicia el plazo ya armado.
+      // ~600ms cerca del borde antes de cambiar, para que un roce no lo
+      // dispare sin querer; si ya estábamos en ese borde no se reinicia.
       if (nearEdgeDirectionRef.current !== direction) {
         nearEdgeDirectionRef.current = direction;
         scheduleEdgeTick();
@@ -125,12 +108,8 @@ export function useEdgeDragNavigation({
     }
   }
 
-  // Patrón "última versión siempre fresca": guardamos la lógica de arriba
-  // (que sí depende de estado/props actuales) en una ref que se actualiza
-  // en cada render. El listener que de verdad se engancha a window es un
-  // envoltorio con identidad ESTABLE para siempre, que simplemente delega
-  // a lo que haya en la ref en ese momento — así addEventListener y
-  // removeEventListener siempre coinciden, y la lógica nunca queda obsoleta.
+  // Ref con identidad estable para window.addEventListener; delega a la
+  // versión más reciente de la lógica (que sí depende de props/estado).
   const latestPointerMoveRef = useRef(handleDragPointerMoveLogic);
   useEffect(() => {
     latestPointerMoveRef.current = handleDragPointerMoveLogic;
@@ -147,11 +126,8 @@ export function useEdgeDragNavigation({
     };
     nearEdgeDirectionRef.current = null;
     window.addEventListener('pointermove', stablePointerMoveHandler);
-    // La vista Semana tiene su propio scroll horizontal nativo (red de
-    // seguridad para pantallas muy estrechas, ver fullcalendar-theme.css).
-    // Si la sesión arrastrada está en la última columna, ese scroll
-    // competía con el propio arrastre. Se desactiva mientras se arrastra
-    // y se repone al soltar.
+    // Desactiva el scroll horizontal nativo de la vista Semana (ver
+    // fullcalendar-theme.css): competía con el arrastre en la última columna.
     calendarWrapperRef.current?.classList.add('ziti-dragging-event');
   }
 

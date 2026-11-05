@@ -21,10 +21,7 @@ export default function FilterDropdown({
   value: string;
   onChange: (id: string) => void;
   showColorDot?: boolean;
-  // Por defecto ocupa toda la fila en móvil y 224px en escritorio (como
-  // en los filtros de Calendario); un caller que necesite un tamaño fijo
-  // más compacto en las dos anchuras (p.ej. junto a un selector de mes)
-  // puede pasar el suyo.
+  // Por defecto toda la fila en móvil y 224px en escritorio; un caller puede pasar la suya.
   widthClassName?: string;
 }) {
   const [open, setOpen] = useState(false);

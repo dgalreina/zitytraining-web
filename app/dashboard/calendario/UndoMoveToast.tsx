@@ -2,10 +2,8 @@
 
 import { useEffect } from 'react';
 
-// Aviso flotante tras mover una sesión arrastrando, con un botón para
-// deshacerlo (como hace Google Calendar), en vez de preguntar "¿seguro?"
-// antes de mover, que sería un paso de más en un gesto que ya es
-// reversible. Se cierra solo pasados unos segundos.
+// Aviso con "Deshacer" tras mover (como Google Calendar), en vez de
+// preguntar antes. Se cierra solo pasados unos segundos.
 export default function UndoMoveToast({
   message,
   onUndo,

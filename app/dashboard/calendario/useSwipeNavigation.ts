@@ -1,12 +1,9 @@
 import { useEffect, type RefObject } from 'react';
 import type FullCalendar from '@fullcalendar/react';
 
-// Swipe táctil para cambiar de día/semana (como Google Calendar), en las
-// vistas "Día" y "Semana". Solo móvil: son eventos touch, un ratón no los
-// dispara. Si el gesto no se decide como horizontal en los primeros
-// ~180ms, lo soltamos sin tocar nada, para no interferir con el
-// long-press que ya usa FullCalendar para seleccionar un hueco o
-// arrastrar un evento.
+// Swipe táctil para cambiar de día/semana (como Google Calendar), solo
+// móvil (eventos touch). Si no se decide horizontal en ~180ms, se suelta
+// sin tocar nada, para no pisar el long-press de FullCalendar.
 export function useSwipeNavigation({
   calendarWrapperRef,
   calendarRef,
@@ -18,15 +15,11 @@ export function useSwipeNavigation({
   calendarRef: RefObject<FullCalendar | null>;
   viewType: string;
   prepareDaySlide: (direction: 1 | -1) => boolean;
-  // Cuándo existe ya de verdad el div de calendarWrapperRef (no durante el
-  // "Cargando..." inicial). Hace falta como dependencia explícita: un ref
-  // no dispara un re-render al rellenarse solo, así que sin esto el efecto
-  // se ejecuta primero con el div todavía sin montar, ve calendarWrapperRef
-  // .current a null, y no hay nada que le avise para reintentarlo después
-  // — se queda sin enganchar el swipe hasta que algo MÁS cambie viewType
-  // de verdad (p.ej. tocar "Día"), que es justo el síntoma reportado: el
-  // deslizamiento no funciona nada más abrir, pero en cuanto se cambia de
-  // vista una vez, ya funciona siempre.
+  // Si el div de calendarWrapperRef ya existe (no durante "Cargando...").
+  // Necesario como dependencia explícita: un ref no dispara re-render al
+  // rellenarse, así que sin esto el efecto se queda enganchado a null
+  // hasta que algo MÁS cambie viewType (el swipe no funcionaba al abrir,
+  // solo tras cambiar de vista una vez).
   ready: boolean;
 }) {
   useEffect(() => {
@@ -50,13 +43,10 @@ export function useSwipeNavigation({
 
     function handleTouchStart(e: TouchEvent) {
       if (e.touches.length !== 1) return;
-      // Si el toque empieza sobre una sesión (que FullCalendar va a poder
-      // arrastrar), no es un swipe del fondo: se deja el gesto entero en
-      // manos de FullCalendar. Si no, al soltar competían los dos cambios
-      // a la vez — el nuestro (cambiar de semana) reconstruía la vista
-      // antes de que FullCalendar terminara de resolver dónde soltaste la
-      // sesión, y este la descartaba en silencio (se veía la semana
-      // cambiar pero la sesión quedaba sin mover).
+      // Si empieza sobre una sesión, se deja el gesto entero a
+      // FullCalendar: si no, al soltar competían los dos cambios y el
+      // nuestro reconstruía la vista antes de que resolviera el drag,
+      // descartándolo en silencio.
       const target = e.target as HTMLElement | null;
       if (target?.closest('.fc-event')) return;
       start = { x: e.touches[0].clientX, y: e.touches[0].clientY, time: Date.now() };

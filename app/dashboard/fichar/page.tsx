@@ -108,10 +108,8 @@ export default function FicharPage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Igual que en Calendario: en vez de un numero fijo (que se desincroniza
-  // en cuanto cambia algo por encima, como las pestañas de admin), se mide
-  // cuanto ocupa lo que hay antes del bloque, para que "Tus fichajes"
-  // ocupe justo lo que queda de pantalla y no la propia pagina.
+  // Igual que en Calendario: mide lo que hay antes del bloque, para que
+  // "Tus fichajes" ocupe justo lo que queda de pantalla.
   useEffect(() => {
     function recalcOffset() {
       const el = contentRef.current;

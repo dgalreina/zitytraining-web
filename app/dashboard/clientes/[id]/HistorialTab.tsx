@@ -17,11 +17,8 @@ function formatDateTimeShort(date: string | Date) {
   return `${dateStr} · ${timeStr}`;
 }
 
-// Convierte cada compra en 1 o 2 eventos: cuando se contrato y, si
-// aplica, cuando/por que acabo (cancelada, cambiada por otra, o
-// caducada sola si era un plan puntual). Cada evento lleva fecha,
-// concepto (nombre del plan + accion) y autor (con su color, como en
-// el calendario) por separado, para pintarlos en columnas.
+// Convierte cada compra en 1 o 2 eventos: contratación, y si aplica,
+// cómo acabó (cancelada, cambiada, anulada, o caducada sola).
 function buildHistoryEvents(purchases: any[], clientName: string) {
   const events: {
     id: string;

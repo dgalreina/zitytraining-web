@@ -1,16 +1,11 @@
 'use client';
-//
 
 import { useEffect, useRef, useState } from 'react';
 
-// Hace que solo el bloque de contenido haga scroll, en vez de la página
-// entera: se mide cuánto ocupa lo que queda por encima (título, filtros,
-// pestañas...) y el resto del alto visible es para él.
-//
-// El alto se expresa en 100dvh y no con window.innerHeight porque en el
-// móvil sí tiene en cuenta la barra de direcciones cuando se pliega. Y lo
-// de arriba se mide en vez de restar un número fijo, que se desincroniza
-// en cuanto cambia algo de la cabecera.
+// Hace que solo el bloque de contenido haga scroll, no la página entera:
+// mide lo que ocupa la cabecera y el resto del alto es para él. 100dvh en
+// vez de window.innerHeight (cuenta la barra de direcciones móvil); se
+// mide en vez de restar un número fijo, que se desincroniza con la cabecera.
 export function useContentHeight(bottomGap = 24) {
   const ref = useRef<HTMLDivElement>(null);
   const [topOffset, setTopOffset] = useState<number | null>(null);
@@ -28,11 +23,9 @@ export function useContentHeight(bottomGap = 24) {
 
   return {
     ref,
-    // Hasta la primera medida no se fija alto, para no dejar un bloque
-    // con una altura provisional equivocada. overscrollBehavior quita el
-    // rebote de iOS al arrastrar más allá del borde (mismo motivo que en
-    // el contenedor de app/dashboard/layout.tsx), aquí porque este bloque
-    // hace su propio scroll aparte del de la página.
+    // Sin alto hasta la primera medida, para no dejar uno provisional
+    // equivocado. overscrollBehavior quita el rebote de iOS al arrastrar
+    // más allá del borde (igual que en app/dashboard/layout.tsx).
     style:
       topOffset !== null
         ? { height: `calc(100dvh - ${topOffset}px)`, overscrollBehavior: 'none' as const }

@@ -2,10 +2,8 @@
 
 import { Trash2 } from 'lucide-react';
 
-// Notas a pantalla completa (vista "notes"): más sitio para escribir que
-// el textarea pequeño de la vista normal. El botón "Guardar" (en
-// BookingModal) confirma el texto y vuelve al formulario; "Atrás" lo
-// descarta y recupera lo que había antes de entrar aquí.
+// Notas a pantalla completa: "Guardar" (en BookingModal) confirma y
+// vuelve al formulario; "Atrás" descarta y recupera lo anterior.
 export default function BookingNotesView({
   notes,
   setNotes,

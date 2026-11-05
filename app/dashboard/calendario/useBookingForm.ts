@@ -15,11 +15,8 @@ import type { ModalState } from './BookingModal';
 
 export type BookingKind = 'normal' | 'private' | 'interview';
 
-// Pesos/reps efectivos de esta sesión para un ejercicio (override si lo
-// hay, si no los de la plantilla); solo para mostrarlos en "Entrenamiento"
-// (ver BookingTrainingView). Como texto, no número (igual que SetInput en
-// ExerciseSlotInput): así no hace falta convertir ida y vuelta mientras
-// se pintan.
+// Como texto, no número (igual que SetInput en ExerciseSlotInput): evita
+// convertir ida y vuelta mientras se pintan.
 export type WeightSlot = {
   exerciseId: string;
   exerciseName: string;
@@ -41,23 +38,19 @@ function minutesBetween(start: Date, end: Date) {
   return Math.round((end.getTime() - start.getTime()) / 60000);
 }
 
-// Todo el estado y la lógica del formulario de crear/editar sesión. El
-// componente (BookingModal y sus vistas) solo lee de aquí y llama a estas
-// funciones; no queda estado de formulario fuera de este hook.
+// Todo el estado del formulario de crear/editar sesión; BookingModal y sus
+// vistas solo leen de aquí.
 export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSaved: () => void) {
   const [start, setStart] = useState<Date>(() => modal?.start ?? new Date());
   const [modalTrainerId, setModalTrainerId] = useState('');
-  // Hasta 3 clientes, sin distinguir uno "principal" de los demás.
+  // Hasta 3 clientes, sin un "principal".
   const [selectedClientIds, setSelectedClientIds] = useState<string[]>([]);
   const [clientSearch, setClientSearch] = useState('');
   const [notes, setNotes] = useState('');
   const [durationOption, setDurationOption] = useState<DurationOption>('60');
-  // Como texto, no numero: un input numerico controlado no deja vaciar
-  // del todo el campo (React lo fuerza de vuelta a "0" antes del
-  // siguiente tecleo), lo que impedia escribir p.ej. "70" sin que
-  // quedara "070". Se convierte a numero solo donde hace falta.
+  // Texto, no número: un input numérico controlado fuerza "0" al vaciarlo,
+  // lo que impedía escribir p.ej. "70" sin que quedara "070".
   const [customMinutes, setCustomMinutes] = useState('60');
-  // Hora de finalización cuando se elige la opción "endTime"
   const [endTime, setEndTime] = useState<Date>(() => {
     const d = new Date(modal?.start ?? new Date());
     d.setHours(d.getHours() + 1);
@@ -67,32 +60,22 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
   const [error, setError] = useState('');
   const [view, setView] = useState<ModalView>('form');
   const [status, setStatus] = useState<'active' | 'cancelled'>('active');
-  // Normal (con clientes), privada (hueco personal del entrenador) o
-  // entrevista (con alguien que aún no es cliente). Las dos últimas no
-  // llevan clientes y solo las ve quien las crea.
+  // Privada y entrevista no llevan clientes y solo las ve quien las crea.
   const [kind, setKind] = useState<BookingKind>('normal');
   const isPrivate = kind !== 'normal';
   const kindColor = KIND_OPTIONS.find((o) => o.value === kind)!.color;
-  // Solo se elige al crear; una sesión ya creada no se puede convertir en
-  // serie ni al revés desde aquí.
+  // Solo se elige al crear; no se puede convertir en serie después.
   const [recurrence, setRecurrence] = useState<'once' | 'weekly'>('once');
-  // Si esta sesión pertenece a una serie y cae en festivo.
   const [seriesId, setSeriesId] = useState<string | null>(null);
   const [holidaySkip, setHolidaySkip] = useState(false);
-  // Si esta sesión recupera una clase debida (de todos sus clientes a la
-  // vez: una cancelación/recuperación es para todo el grupo, no para uno
-  // suelto).
+  // Recupera una clase debida de TODOS sus clientes a la vez (el grupo, no uno suelto).
   const [isDebtSettlement, setIsDebtSettlement] = useState(false);
-  // El interruptor de "clase debida" solo se enseña si de verdad hay
-  // algo pendiente que recuperar entre los clientes elegidos.
   const [hasPendingOwed, setHasPendingOwed] = useState(false);
   const [deleteChoiceOpen, setDeleteChoiceOpen] = useState(false);
   const [deleteBookingDialogOpen, setDeleteBookingDialogOpen] = useState(false);
-  // Confirmación genérica con nuestro propio estilo (ver ConfirmDialog),
-  // en vez de window.confirm: se usa para "salir sin guardar" y para
-  // borrar una sesión suelta. Cuando ya hay otro diálogo propio que hace
-  // de confirmación (elegir "esta sesión o toda la serie"), no se pasa
-  // por aquí: preguntarlo dos veces sería redundante.
+  // Confirmación con nuestro estilo (ver ConfirmDialog) en vez de
+  // window.confirm; no se usa cuando ya hay otro diálogo haciendo de
+  // confirmación (p.ej. elegir "esta sesión o toda la serie").
   const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(
     null,
   );
@@ -106,43 +89,33 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
     if (confirmed) pending?.onConfirm();
   }
 
-  // El entrenamiento es un campo mas del formulario: se queda en local
-  // hasta que se pulsa "Guardar", igual que las notas o los clientes.
-  // Al crear uno nuevo desde aqui si que se crea de verdad en el
-  // catalogo (es un recurso aparte), pero solo queda "enganchado" a
-  // esta sesion cuando se guarda la sesion.
+  // Igual que notas o clientes: queda en local hasta "Guardar". Uno nuevo
+  // sí se crea ya de verdad en el catálogo, pero solo queda enganchado a
+  // la sesión al guardar esta.
   const [bookingWorkout, setBookingWorkout] = useState<any | null>(null);
   const [workoutFormOpen, setWorkoutFormOpen] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [allWorkouts, setAllWorkouts] = useState<any[] | null>(null);
   const [workoutSearch, setWorkoutSearch] = useState('');
-  // Si esta sesión es de una serie y se cambia el entrenamiento, se
-  // pregunta si aplicarlo solo aquí o también a las futuras (ver
-  // saveTrainingView). originalWorkoutIdRef guarda el que tenía la
-  // sesión al abrir el modal, para saber si de verdad ha cambiado.
+  // originalWorkoutIdRef guarda el que tenía al abrir el modal, para
+  // saber si de verdad cambió (ver saveTrainingView).
   const [workoutSeriesChoiceOpen, setWorkoutSeriesChoiceOpen] = useState(false);
   const [applyWorkoutToSeries, setApplyWorkoutToSeries] = useState(false);
   const originalWorkoutIdRef = useRef<string | null>(null);
 
-  // Pesos/reps reales de esta sesión (no de la plantilla, ver
-  // lib/workoutOverrides.ts): se mantienen sincronizados con
-  // bookingWorkout (ver el useEffect de abajo). originalWeightOverridesRef
-  // solo es válido para el entrenamiento cuyo id guarda
-  // weightOverrideWorkoutIdRef — al abrir el modal es el que trae la
-  // sesión; tras editar pesos desde el lápiz (ver handleWorkoutCreated)
-  // pasa a ser el recién editado, así el useEffect no lo pisa con el
-  // valor guardado antiguo. weightsEditedRef marca si de verdad se han
-  // tocado pesos en este modal: si no, "Guardar" no manda weightOverrides
-  // (si los mandara siempre, guardar p.ej. solo una nota repropagaría el
-  // peso actual a toda la serie sin que nadie lo haya tocado).
+  // Pesos/reps reales de la sesión (no de la plantilla, ver
+  // lib/workoutOverrides.ts). originalWeightOverridesRef solo vale para el
+  // entrenamiento en weightOverrideWorkoutIdRef (se actualiza tras editar
+  // desde el lápiz, ver handleWorkoutCreated, para que el useEffect de
+  // abajo no lo pise). weightsEditedRef evita mandar weightOverrides si no
+  // se tocó nada (si no, guardar solo una nota repropagaría el peso actual
+  // a toda la serie).
   const [weightSlots, setWeightSlots] = useState<WeightSlot[]>([]);
   const weightOverrideWorkoutIdRef = useRef<string | null>(null);
   const originalWeightOverridesRef = useRef<any[] | undefined>(undefined);
   const weightsEditedRef = useRef(false);
 
-  // Cada vez que se abre (o cambia lo que se está editando), recarga el
-  // formulario desde cero a partir de esa sesión, o de los valores por
-  // defecto si es una nueva.
+  // Recarga el formulario desde cero cada vez que se abre o cambia lo editado.
   useEffect(() => {
     if (!modal) return;
     setStart(modal.start);
@@ -188,9 +161,8 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
         setCustomMinutes(String(diff));
       }
     } else {
-      // Preseleccionamos tu propio usuario si eres entrenador, o el primero
-      // marcado en el checklist si eres admin puro; el selector siempre se
-      // muestra, así que esto es solo un punto de partida cómodo.
+      // Punto de partida cómodo: tu usuario si eres entrenador, o el
+      // primero marcado si eres admin; el selector siempre se muestra.
       originalWorkoutIdRef.current = null;
       weightOverrideWorkoutIdRef.current = null;
       originalWeightOverridesRef.current = undefined;
@@ -218,11 +190,8 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
     });
   }
 
-  // Cada vez que cambian los clientes elegidos, mira si a alguno se le
-  // debe de verdad algo: solo entonces tiene sentido enseñar la opción
-  // de marcar la sesión como "debida". Si deja de haber nada pendiente
-  // (p.ej. se quita al único cliente al que se le debía), se desmarca
-  // también el interruptor, para no mandar algo que ya no se ve.
+  // Si ya no hay nada pendiente (p.ej. se quita al cliente al que se
+  // debía), desmarca el interruptor para no mandar algo que ya no se ve.
   useEffect(() => {
     if (selectedClientIds.length === 0) {
       setHasPendingOwed(false);
@@ -260,10 +229,8 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
     setPickerOpen(false);
   }
 
-  // weightOverrideSlots: solo viene relleno cuando WorkoutFormModal se usó
-  // en modo sesión para editar pesos de un entrenamiento ya adjunto (ver
-  // su prop sessionMode) — ahí es donde se marca que de verdad se han
-  // tocado pesos en esta sesión.
+  // weightOverrideSlots solo viene relleno cuando WorkoutFormModal se usó
+  // en modo sesión (prop sessionMode) para editar pesos ya adjuntos.
   function handleWorkoutCreated(
     workout: any,
     weightOverrideSlots?: { exerciseId: string; sets: { reps?: number; weight?: number }[] }[],
@@ -284,11 +251,8 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
     setBookingWorkout(null);
   }
 
-  // Cada vez que cambia el entrenamiento adjunto (al abrir el modal, al
-  // elegir uno distinto o al quitarlo), se recalculan los pesos
-  // editables: si sigue siendo el mismo que había al abrir el modal se
-  // parte de sus overrides guardados, si no (se acaba de adjuntar uno
-  // nuevo) se parte de los valores de la plantilla.
+  // Recalcula los pesos editables al cambiar el entrenamiento adjunto: si
+  // es el mismo de al abrir el modal parte de sus overrides, si no, de la plantilla.
   useEffect(() => {
     if (!bookingWorkout) {
       setWeightSlots([]);
@@ -299,9 +263,7 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
     const merged = effectiveSlots(bookingWorkout.slots, overrides);
     setWeightSlots(
       merged
-        // Si el backend devolviera el ejercicio sin poblar (objeto con
-        // nombre/categoría) no hay con qué pintar la fila: se descarta en
-        // vez de romper con una key undefined.
+        // Descarta si el ejercicio viene sin poblar (rompería con key undefined).
         .filter((s) => s.exercise && s.exercise._id)
         .map((s) => ({
           exerciseId: s.exercise!._id,
@@ -316,12 +278,9 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
     );
   }, [bookingWorkout]);
 
-  // Notas y entrenamiento se editan en su propia pantalla, aparte del
-  // formulario principal: "Guardar" ahí guarda la sesión entera de
-  // verdad (igual que el Guardar general) y cierra el modal, para no
-  // obligar a confirmar dos veces. "Atrás" descarta el cambio y vuelve
-  // al valor que había al entrar — pero si de verdad hay algo sin
-  // guardar, antes se pregunta, para no perderlo con un solo toque.
+  // Notas y entrenamiento se editan en su propia pantalla: "Guardar" ahí
+  // guarda la sesión entera y cierra el modal; "Atrás" descarta y vuelve
+  // al valor de entrada, preguntando antes si de verdad hay cambios.
   const notesBackupRef = useRef('');
   const workoutBackupRef = useRef<any | null>(null);
 
@@ -350,9 +309,7 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
   }
   async function saveTrainingView() {
     setPickerOpen(false);
-    // Si la sesión es de una serie y el entrenamiento de verdad ha
-    // cambiado respecto al que tenía al abrir el modal, se pregunta a
-    // qué alcance aplicarlo antes de guardar de verdad.
+    // Si es de una serie y el entrenamiento cambió, pregunta el alcance antes de guardar.
     const changedFromOriginal = (bookingWorkout?._id ?? null) !== originalWorkoutIdRef.current;
     if (seriesId && changedFromOriginal) {
       setWorkoutSeriesChoiceOpen(true);
@@ -397,10 +354,8 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
 
   function handleStartTimeChange(date: Date | null) {
     if (!date) return;
-    // Si la hora de fin quedara antes (o igual) que la nueva hora de
-    // inicio, se desplaza con ella manteniendo la misma duración: si no,
-    // el picker de "Hora fin" queda con un valor fuera de su propio
-    // rango permitido (minTime=start) y se rompe al abrirlo.
+    // Si el fin quedara antes del nuevo inicio, se desplaza con él (si no,
+    // el picker de "Hora fin" queda fuera de su rango minTime=start).
     if (endTime.getTime() <= date.getTime()) {
       const durationMs = endTime.getTime() - start.getTime();
       setEndTime(new Date(date.getTime() + Math.max(durationMs, 5 * 60000)));
@@ -420,10 +375,8 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
     }));
   }
 
-  // applyWorkoutToSeriesOverride: para llamar justo después de elegir el
-  // alcance en WorkoutSeriesChoiceDialog, sin esperar al siguiente render
-  // (setState es async, así que leer el estado aquí mismo podría ver
-  // todavía el valor viejo).
+  // applyWorkoutToSeriesOverride evita leer el estado recién puesto
+  // (setState es async) justo tras elegir el alcance en WorkoutSeriesChoiceDialog.
   async function handleSave(applyWorkoutToSeriesOverride?: boolean) {
     if (!modalTrainerId) {
       setView('form');
@@ -475,13 +428,11 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
           isPrivate,
           isInterview: kind === 'interview',
           workoutId: bookingWorkout?._id || null,
-          // Solo tiene efecto si de verdad cambió el entrenamiento y la
-          // sesión es de una serie (ver saveTrainingView).
+          // Solo tiene efecto si de verdad cambió el entrenamiento de una serie.
           applyWorkoutToSeries: applyWorkoutToSeriesOverride ?? applyWorkoutToSeries,
           ...(weightsEditedRef.current ? { weightOverrides: serializeWeightSlots(weightSlots) } : {}),
-          // Solo tiene efecto de verdad si la sesión no era ya parte de
-          // una serie (ver BookingFormFields: el selector ni se muestra
-          // en ese caso, así que aquí sigue siendo 'once').
+          // Solo tiene efecto si la sesión no era ya de una serie (si lo
+          // era, BookingFormFields ni muestra el selector).
           recurrence,
           isDebtSettlement: !isPrivate && isDebtSettlement ? true : undefined,
         });
@@ -497,10 +448,8 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
 
   function handleDeleteClick() {
     if (modal!.mode !== 'edit') return;
-    // Si es de una serie, elegir "esta sesión" o "esta y todas las
-    // futuras" ya hace de confirmación (ver deleteChoiceOpen más abajo):
-    // preguntar "¿seguro?" otra vez encima sería redundante. Si es una
-    // sesión suelta, no hay ese otro diálogo, así que aquí sí hace falta.
+    // Si es de una serie, elegir "esta" o "esta y las futuras" ya hace de
+    // confirmación; si es suelta, hace falta la confirmación de abajo.
     if (seriesId) {
       setDeleteChoiceOpen(true);
       return;
@@ -508,11 +457,8 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
     setDeleteBookingDialogOpen(true);
   }
 
-  // Borrado de una sesión (suelta, ver DeleteBookingDialog, o "solo esta"
-  // de una serie, ver DeleteSeriesChoiceDialog), con la opción de dejar
-  // constancia de que se le debe (a TODOS sus clientes: se cancela para
-  // todo el grupo, no para uno suelto). Si eso falla para alguno no
-  // bloquea el borrado: se puede añadir a mano luego desde su pestaña.
+  // addOwed deja constancia de deuda para TODOS sus clientes (el grupo);
+  // si falla para alguno no bloquea el borrado (se añade a mano después).
   async function handleDelete(addOwed = false) {
     if (modal!.mode !== 'edit') return;
     setSaving(true);
@@ -544,9 +490,7 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
     await handleDelete(addOwed);
   }
 
-  // Borra esta sesión y todas las futuras de la serie; el pasado ya
-  // generado no se toca, y la serie deja de generar sesiones a partir de
-  // aquí.
+  // Borra esta sesión y las futuras de la serie; el pasado ya generado no se toca.
   async function handleDeleteSeriesFrom() {
     if (modal!.mode !== 'edit') return;
     setDeleteChoiceOpen(false);
@@ -564,9 +508,7 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
     }
   }
 
-  // Cancelar es distinto de borrar: la sesión se queda (se ve en el
-  // calendario, en su color pero transparente, con "CANCELADA"), solo
-  // cambia de estado. Se puede revertir volviendo a marcarla como activa.
+  // Cancelar no borra: la sesión queda visible, transparente y "CANCELADA"; reversible.
   async function handleToggleCancelled() {
     if (modal!.mode !== 'edit') return;
     const nextStatus = status === 'cancelled' ? 'active' : 'cancelled';

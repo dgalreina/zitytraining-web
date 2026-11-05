@@ -10,11 +10,8 @@ import { bookingToEvent, FALLBACK_COLOR } from './bookingEvents';
 
 export const ALL_VALUE = 'all';
 
-// Rol del usuario (admin/entrenador/sin acceso), listas de entrenadores y
-// clientes, las reservas cargadas, los puntitos del minicalendario y los
-// festivos. Todo lo que el calendario necesita PEDIR, no lo que hace con
-// ello en pantalla (eso se queda en page.tsx, que también tiene el ref de
-// FullCalendar y la fecha seleccionada).
+// Todo lo que el calendario necesita PEDIR (rol, listas, reservas, puntitos,
+// festivos); lo que hace con ello en pantalla se queda en page.tsx.
 export function useCalendarData() {
   const router = useRouter();
 
@@ -67,13 +64,9 @@ export function useCalendarData() {
             (u: any) => u.roles?.includes('trainer') && u.status === 'active',
           );
           setTrainers(activeTrainers);
-          // Todos los entrenadores marcados por defecto, sea admin o
-          // entrenador: al entrar se ve el calendario completo, no solo
-          // las propias sesiones.
+          // Todos marcados por defecto: al entrar se ve el calendario completo.
           setSelectedTrainerIds(activeTrainers.map((t: any) => t._id));
-          // El backend ya manda los favoritos primero; aquí solo se
-          // desempata alfabéticamente dentro de cada grupo (favoritos /
-          // resto), sin deshacer ese orden.
+          // El backend ya manda favoritos primero; aquí solo desempata alfabéticamente.
           const sortedClients = [...activeClients].sort((a: any, b: any) => {
             if (!!a.isFavorite !== !!b.isFavorite) return a.isFavorite ? -1 : 1;
             return `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`, 'es');
@@ -87,9 +80,8 @@ export function useCalendarData() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
-  // El backend, cuando se le pide un cliente concreto, devuelve TODAS sus
-  // sesiones sin mirar el filtro de entrenadores (son dos filtros que no
-  // sabe combinar). Si además hay entrenadores marcados, se cruza aquí.
+  // El backend devuelve TODAS las sesiones de un cliente sin filtrar por
+  // entrenador (no sabe combinar ambos filtros); se cruza aquí.
   async function fetchFilteredBookings(token: string, from: string, to: string): Promise<any[]> {
     if (selectedClientId !== ALL_VALUE) {
       if (selectedTrainerIds.length === 0) return [];

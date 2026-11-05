@@ -1,8 +1,5 @@
-// Recorta el contenido de un evento del calendario según el espacio real
-// disponible: nombre completo -> solo nombre, dejando que el texto se
-// parta en varias líneas si hace falta (nunca desaparece del todo, como
-// mucho se corta a medias si de verdad no cabe ni en alto); hora -> se
-// oculta si no cabe.
+// Recorta el contenido de un evento según el espacio real: nombre
+// completo -> solo nombre (nunca desaparece del todo); hora -> se oculta si no cabe.
 function fitEventText(el: HTMLElement, event: any) {
   const boxEl = el.querySelector('.ziti-event-box') as HTMLElement | null;
   const nameEl = el.querySelector('.ziti-event-name') as HTMLElement | null;
@@ -13,9 +10,8 @@ function fitEventText(el: HTMLElement, event: any) {
     ? event.extendedProps.candidates
     : [event.title];
 
-  // El propio texto nunca desborda de sí mismo (crece a su contenido), así
-  // que hay que medir el desbordamiento contra la caja real (que sí tiene
-  // alto fijo y overflow:hidden), no contra el texto.
+  // El texto crece a su contenido y nunca desborda de sí mismo: hay que
+  // medir contra la caja real (alto fijo, overflow:hidden).
   function tryFitName(): boolean {
     for (const candidate of candidates) {
       nameEl!.textContent = candidate;
@@ -48,11 +44,9 @@ function fitEventText(el: HTMLElement, event: any) {
   }
 }
 
-// `eventsRef` lleva siempre los datos MÁS RECIENTES de los eventos
-// (incluidos los pendientes de sincronizar): el ResizeObserver no puede
-// fiarse de "info.event" capturado en su propio closure, porque si
-// FullCalendar reutiliza el mismo nodo del DOM tras una edición (en vez de
-// recrearlo), ese closure se queda con los datos de cuando se montó.
+// eventsRef lleva los datos más recientes: el ResizeObserver no puede
+// fiarse de "info.event", que se queda con los datos de al montar si
+// FullCalendar reutiliza el mismo nodo del DOM tras editar.
 export function useFitEventText(eventsRef: { current: any[] }) {
   function handleEventDidMount(info: any) {
     const eventId = info.event.id;

@@ -47,13 +47,10 @@ export default function WorkoutFormModal({
 }: {
   editingWorkout?: any | null;
   title?: string;
-  // Abierto desde una sesión del calendario (no desde la pestaña
-  // Entrenamientos): los ejercicios/estructura se siguen guardando en la
-  // plantilla compartida, pero los pesos/reps NO — esos se devuelven
-  // aparte (segundo argumento de onSaved) para que la sesión los guarde
-  // como suyos (ver useBookingForm.handleWorkoutCreated). Así no se
-  // repite para otro cliente que use la misma plantilla, ni para las
-  // sesiones pasadas de esta misma serie.
+  // Abierto desde una sesión: la estructura se guarda en la plantilla
+  // compartida, pero los pesos/reps NO — se devuelven aparte (2º arg de
+  // onSaved) para que la sesión los guarde como suyos (ver
+  // useBookingForm.handleWorkoutCreated), sin afectar a otros clientes ni sesiones pasadas.
   sessionMode?: boolean;
   onClose: () => void;
   onSaved: (workout: any, weightOverrides?: { exerciseId: string; sets: { reps?: number; weight?: number }[] }[]) => void;
@@ -154,10 +151,8 @@ export default function WorkoutFormModal({
         notes: s.notes.trim() || undefined,
       }));
 
-      // Editando desde una sesión: a la plantilla compartida solo se le
-      // guarda la estructura (ejercicios/orden/superseries/notas), con
-      // los sets que ya tenía antes de este cambio — los pesos nuevos no
-      // se tocan ahí, se devuelven aparte para que los guarde la sesión.
+      // A la plantilla solo se le guarda la estructura, con los sets de
+      // antes de este cambio; los pesos nuevos se devuelven aparte.
       const isSessionEdit = sessionMode && !!editingWorkout;
       let structureSlots = editedSlots;
       if (isSessionEdit) {

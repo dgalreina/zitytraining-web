@@ -1,9 +1,6 @@
-// Para campos numéricos con decimales (peso, precio, %...) se usa
-// type="text" + inputMode="decimal" en vez de type="number": así se
-// puede escribir con coma (lo natural en español, "72,5") y no hay
-// validación nativa de "step" que rechace cifras como 2.76 en un campo
-// pensado con step="0.5" — con type="number" el navegador bloqueaba el
-// envío del formulario en silencio en ambos casos.
+// Para campos con decimales se usa type="text" + inputMode="decimal" en
+// vez de type="number": permite coma ("72,5") y evita que la validación
+// nativa de "step" bloquee el envío en silencio.
 
 export function sanitizeDecimalInput(raw: string): string {
   const unified = raw.replace(',', '.').replace(/[^0-9.]/g, '');

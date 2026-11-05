@@ -8,12 +8,9 @@ function formatDateShort(date: string) {
   return new Date(date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-// Lista plana de "se le deben clases a este cliente": añadir apunta una.
-// Marcar una sesión como "debida" al crearla (ver useBookingForm, en el
-// calendario) deja constancia en recoveredNote de qué sesión la
-// recuperó: es el único rastro de por qué esa sesión no se cobró, así
-// que una ya recuperada no se puede borrar (lo rechaza el backend). Para
-// que no se acumulen a la vista con los meses, se pliegan aparte.
+// Marcar una sesión como "debida" al crearla (useBookingForm) deja
+// constancia en recoveredNote de qué sesión la recuperó: una ya
+// recuperada no se puede borrar (lo rechaza el backend), y se pliega aparte.
 export default function ClasesDebidasTab({ id }: { id: string }) {
   const [owed, setOwed] = useState<OwedSession[] | null>(null);
   const [note, setNote] = useState('');

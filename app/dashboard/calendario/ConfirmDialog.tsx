@@ -1,9 +1,6 @@
 'use client';
 
-// Confirmación genérica con nuestro estilo (mismo molde que
-// DeleteSeriesChoiceDialog/WorkoutSeriesChoiceDialog), para no usar
-// window.confirm: ese sale con el aspecto nativo del navegador/móvil, que
-// no pega con el resto de la app.
+// Confirmación con nuestro estilo, en vez de window.confirm (aspecto nativo, no pega con la app).
 export default function ConfirmDialog({
   open,
   message,

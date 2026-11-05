@@ -1,8 +1,6 @@
-// Mensaje de recordatorio por WhatsApp: plantilla con {nombre} y {fecha}.
-// {fecha} se expande sola según cuántas sesiones tenga esa semana (ver
-// expandirFecha). Compartido entre WhatsAppRemindersModal (el envío real)
-// y la página de Ajustes (donde cada entrenador escribe la suya, con una
-// vista previa que usa estas mismas funciones).
+// Plantilla con {nombre} y {fecha} (se expande según cuántas sesiones
+// tenga la semana, ver expandirFecha). Compartida entre
+// WhatsAppRemindersModal y la vista previa de Ajustes.
 
 export const DEFAULT_REMINDER_TEMPLATE = 'Hola {nombre}, te recordamos {fecha}. ¡Te esperamos!';
 

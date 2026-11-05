@@ -11,19 +11,14 @@ export function bookingToEvent(b: any) {
   let color = FALLBACK_COLOR;
 
   if (b.isInterview) {
-    // Entrevista con alguien que aún no es cliente: como una privada,
-    // pero en beige para distinguirla.
+    // Como una privada, pero en beige para distinguirla.
     candidates = ['Entrevista'];
     color = INTERVIEW_COLOR;
   } else if (b.isPrivate) {
-    // Sesión personal del entrenador: no lleva clientes, siempre en
-    // salmón (independiente del color que tenga asignado el entrenador),
-    // para que se distinga a simple vista de una sesión normal.
+    // Siempre en salmón, independiente del color del entrenador.
     candidates = ['Privada'];
     color = PRIVATE_COLOR;
   } else {
-    // Nombres de clientes, color del entrenador de esa sesión concreta
-    // (funciona igual con 1, varios, o todos los entrenadores marcados)
     const clients = b.clients || [];
     const full = clients.map((c: any) => `${c.firstName} ${c.lastName}`).join(', ');
     const initials = clients
@@ -47,10 +42,8 @@ export function bookingToEvent(b: any) {
   };
 }
 
-// Un payload de la cola offline lleva ids en crudo (trainer: string,
-// clients: string[]); bookingToEvent espera los objetos ya poblados, así
-// que se resuelven aquí contra las listas ya cargadas en memoria para los
-// desplegables de filtro.
+// La cola offline lleva ids en crudo; bookingToEvent espera objetos
+// poblados, se resuelven aquí contra las listas ya en memoria.
 export function resolveTrainerRef(trainers: any[], id: string | undefined) {
   return (
     trainers.find((t) => t._id === id) || {
@@ -68,10 +61,8 @@ export function resolveClientRefs(clients: any[], ids: string[] | undefined) {
   );
 }
 
-// Aplica, por orden, la cola de acciones sin sincronizar sobre la lista de
-// eventos ya cargada: añade las creadas offline, parchea las editadas y
-// quita las borradas. Así el admin ve al momento lo que ha hecho sin
-// conexión, sin esperar a que sincronice de verdad.
+// Aplica la cola offline sobre los eventos ya cargados (crea/parchea/
+// borra), para verlo al momento sin esperar a sincronizar.
 export function applyPendingQueueToEvents(
   baseEvents: any[],
   queue: PendingBookingEntry[],

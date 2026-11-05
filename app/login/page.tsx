@@ -1,5 +1,4 @@
 'use client';
-//
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -17,18 +16,14 @@ export default function LoginPage() {
   const [forgotSent, setForgotSent] = useState(false);
   const [forgotSending, setForgotSending] = useState(false);
   const [forgotError, setForgotError] = useState('');
-  // Empieza en true para no pintar el formulario ni un instante si
-  // resulta que ya hay sesión guardada (evita el parpadeo antes de
-  // mandar al calendario). Se pasa a false solo si de verdad hace
-  // falta iniciar sesión.
+  // Empieza en true para no pintar el formulario ni un instante si ya hay
+  // sesión guardada (evita el parpadeo antes de ir al calendario).
   const [checkingAuth, setCheckingAuth] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    // Si llegamos aquí con una sesión perfectamente válida (ej. iOS
-    // abriendo la PWA directamente en /login porque fue la URL que
-    // quedó guardada al "Añadir a pantalla de inicio"), no tiene
-    // sentido mostrar el formulario: nos vamos derechos al calendario.
+    // Con sesión válida (p.ej. iOS abriendo la PWA directa en /login) se va
+    // derecho al calendario sin mostrar el formulario.
     const token = localStorage.getItem('token');
     if (token) {
       router.push('/dashboard/calendario');

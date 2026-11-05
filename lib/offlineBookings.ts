@@ -1,8 +1,5 @@
-// Mismas firmas que lib/bookingsApi.ts, pero si no hay conexión la acción
-// se guarda en la cola local en vez de llamar a la API. Pensado para el
-// calendario, que es la única pantalla donde se puede editar sin conexión
-// (y solo admin: eso se controla en quien llama, aquí no se distingue el
-// rol).
+// Mismas firmas que lib/bookingsApi.ts, pero sin conexión la acción se
+// guarda en cola local en vez de llamar a la API.
 import { OFFLINE_MESSAGE } from './apiClient';
 import {
   Booking,
@@ -19,24 +16,20 @@ function isOfflineError(err: unknown): boolean {
   return err instanceof Error && err.message === OFFLINE_MESSAGE;
 }
 
-// Mover/editar varias veces la misma sesión sin conexión no apila una
-// acción por cada toque: se funde con la que ya hubiera en cola para esa
-// misma sesión, quedándose con los datos más recientes. Así "4 cambios
-// pendientes" refleja sesiones distintas tocadas, no toques sueltos.
+// Varios toques a la misma sesión sin conexión se funden en una sola
+// entrada de cola (los datos más recientes), no apilan una por toque.
 async function enqueue(action: PendingAction, targetId: string | null, payload: any): Promise<string> {
   const queue = await getQueue();
 
   if (action === 'delete' || action === 'deleteSeries') {
-    // Si lo que se borra es una sesión creada sin conexión y aún sin
-    // sincronizar, no hay nada que borrar en el servidor: basta con
-    // quitarla de la cola entera, como si nunca se hubiera creado.
+    // Si era una sesión creada sin conexión y aún sin sincronizar, no hay
+    // nada que borrar en el servidor: se quita de la cola entera.
     const createEntry = targetId ? queue.find((e) => e.action === 'create' && e.localId === targetId) : undefined;
     if (createEntry) {
       await removeFromQueue(createEntry.localId);
       return createEntry.localId;
     }
-    // Cualquier edición pendiente de esa sesión deja de tener sentido si
-    // se va a borrar.
+    // Cualquier edición pendiente de esa sesión deja de tener sentido.
     for (const e of queue) {
       if (e.targetId === targetId && e.action === 'update') {
         await removeFromQueue(e.localId);
@@ -68,11 +61,8 @@ export async function createBookingOrQueue(
   token: string,
   data: CreateBookingPayload,
 ): Promise<Booking & { _pendingSync?: boolean; _localId?: string }> {
-  // Si ya se sabe que no hay conexión (navigator.onLine, lo mismo que hace
-  // salir el aviso de "Sin conexión" arriba) ni se intenta la llamada real:
-  // directo a la cola. Si se intentara igualmente, con mala cobertura
-  // fetch() puede tardar mucho en rendirse por su cuenta, y hasta entonces
-  // el cambio no se vería reflejado en el calendario.
+  // Si navigator.onLine ya dice que no hay conexión, directo a la cola:
+  // con mala cobertura, fetch() puede tardar mucho en rendirse por su cuenta.
   if (!navigator.onLine) {
     const localId = await enqueue('create', null, data);
     return { _pendingSync: true, _localId: localId } as Booking & {
@@ -85,9 +75,7 @@ export async function createBookingOrQueue(
   } catch (err) {
     if (!isOfflineError(err)) throw err;
     const localId = await enqueue('create', null, data);
-    // No hay datos reales del servidor todavía: page.tsx fabrica el evento
-    // visible a partir de la propia cola (ver applyPendingQueueToEvents),
-    // así que aquí basta con devolver algo con el id local para encadenar.
+    // page.tsx fabrica el evento visible desde la cola (applyPendingQueueToEvents).
     return { _pendingSync: true, _localId: localId } as Booking & {
       _pendingSync: boolean;
       _localId: string;

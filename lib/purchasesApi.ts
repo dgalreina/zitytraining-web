@@ -1,15 +1,14 @@
 import { API_URL, apiFetch, handleResponse } from './apiClient';
-//
+
 export interface PurchaseActorRef {
   firstName?: string;
   lastName?: string;
   color?: string;
 }
 
-// Cómo se factura el mes en el que un plan mensual se para o se cambia a
-// mitad de mes (los mensuales no se prorratean por días). 'none' es para
-// corregir un error del admin (cambio hecho por un click equivocado), no
-// cuenta como una baja/cambio real. Ver purchases.schema.ts.
+// Cómo se factura el mes en que un plan mensual se para/cambia a mitad de
+// mes (no se prorratean por días). 'none' es para corregir un error del
+// admin, no cuenta como baja/cambio real.
 export type FinalMonthBilling = 'full_month' | 'sessions' | 'none';
 
 export interface Purchase {

@@ -9,11 +9,9 @@ function monthLabel(year: number, month: number) {
   return new Date(year, month - 1, 1).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
 }
 
-// Justifica el importe del tramo. Los días que abarca no lo explican
-// cuando se cobra por sesiones: un tramo de 22 días puede ser 2 clases.
-// Con basis 'full_month_plus_extra' el importe final (seg.amount) ya
-// lleva las sueltas sumadas, así que aquí se le resta lo cobrado de más
-// para poder decir el precio del mes normal por separado.
+// Justifica el importe: los días no lo explican cuando se cobra por
+// sesiones. Con 'full_month_plus_extra', seg.amount ya lleva las sueltas
+// sumadas, así que aquí se resta para decir el precio del mes aparte.
 function billingDetail(seg: AccountingSegment) {
   if (seg.basis === 'none') return 'sin cobrar';
   if (seg.basis === 'sessions') {
@@ -50,9 +48,7 @@ export default function MonthBreakdownModal({
   const [addingOwed, setAddingOwed] = useState(false);
   const [owedAddedForSegment, setOwedAddedForSegment] = useState<number | null>(null);
 
-  // Sin importe propio guardado, "Cantidad recibida" sigue a lo que se
-  // debe: si cambia el total (p.ej. al elegir cuántas sueltas cobrar),
-  // el campo tiene que seguirlo también, no quedarse con el valor viejo.
+  // Sin importe propio guardado, "Cantidad recibida" sigue al total si cambia.
   useEffect(() => {
     if (client.payment.amountReceived == null) {
       setAmount(String(client.due));
@@ -63,11 +59,9 @@ export default function MonthBreakdownModal({
   const amountNumber = Number(amount);
   const diff = Number.isFinite(amountNumber) ? Math.round((amountNumber - client.due) * 100) / 100 : 0;
 
-  // Cada acción solo manda lo que de verdad ha cambiado: amountReceived
-  // no se recalcula aquí a partir de lo que se ve en pantalla (ese valor
-  // es solo un valor por defecto para mostrar, no algo que el admin haya
-  // decidido), así que marcar "Recibido" o tocar las sueltas no deja
-  // guardado sin querer un importe que nadie ha escrito a mano.
+  // amountReceived no se recalcula desde lo que se ve en pantalla (solo
+  // un valor por defecto): marcar "Recibido" o tocar sueltas no guarda
+  // sin querer un importe que nadie escribió a mano.
   async function persist(opts: {
     received?: boolean;
     amountReceived?: number;
@@ -98,9 +92,7 @@ export default function MonthBreakdownModal({
     persist({ chargedExtraSessions: clamped });
   }
 
-  // No descuenta nada (eso ya lo decide missingSessions, que es solo
-  // informativo): apunta las que faltaron en la lista de clases que se
-  // debe, para gestionarlas luego desde la pestaña del cliente.
+  // No descuenta nada: solo apunta las que faltaron como clases debidas.
   async function addMissingToOwed(segmentIndex: number, count: number) {
     setAddingOwed(true);
     setError('');
@@ -154,10 +146,7 @@ export default function MonthBreakdownModal({
                       {seg.fromDay} – {seg.toDay} · {billingDetail(seg)}
                     </p>
                   </div>
-                  {/* Con un solo tramo, el importe ya se ve abajo en
-                      "Total a pagar": repetirlo aquí era ruido. Con varios
-                      (p.ej. un cambio de plan a mitad de mes) sí hace
-                      falta, para saber cuánto pone cada uno. */}
+                  {/* Con un solo tramo ya se ve en "Total a pagar"; con varios hace falta aquí. */}
                   {client.segments.length > 1 && (
                     <span className="font-[family-name:var(--font-work-sans)] text-sm font-bold text-[#4b7a1f]">
                       {seg.amount}€
@@ -165,9 +154,7 @@ export default function MonthBreakdownModal({
                   )}
                 </div>
 
-                {/* No descuenta nada: solo deja apuntadas en la lista de
-                    clases debidas las que faltaron, para gestionarlas
-                    luego desde la pestaña del cliente. */}
+                {/* No descuenta nada: solo deja las que faltaron como clases debidas. */}
                 {!!seg.missingSessions && (
                   <div className="mt-2 flex items-center justify-between gap-2 rounded-lg bg-gray-50 px-2.5 py-2">
                     <p className="text-xs font-medium text-[#868585]">

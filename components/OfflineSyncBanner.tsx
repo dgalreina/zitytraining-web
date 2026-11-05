@@ -86,14 +86,11 @@ export default function OfflineSyncBanner() {
         await removeFromQueue(entry.localId);
       } catch (err: any) {
         if (err?.message === OFFLINE_MESSAGE) {
-          // Seguimos sin red de verdad (falso positivo del evento "online"
-          // o se cortó otra vez): se deja el resto en cola para luego.
+          // Falso positivo del evento "online" o se cortó otra vez: deja el resto en cola.
           stillOffline = true;
           break;
         }
-        // Otro fallo (p.ej. la sesión ya no existe): se aparta, sin
-        // bloquear el resto de la cola, y se quita para no reintentar algo
-        // que no va a funcionar solo.
+        // Otro fallo (p.ej. sesión ya no existe): se aparta sin bloquear el resto.
         newFailures.push(`${describeAction(entry.action)}: ${err?.message || 'No se pudo guardar'}`);
         await removeFromQueue(entry.localId);
       }
@@ -121,13 +118,9 @@ export default function OfflineSyncBanner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOnline]);
 
-  // El calendario recalcula su alto escuchando el "resize" nativo de la
-  // ventana (ver app/dashboard/calendario/page.tsx), pero este banner vive
-  // en el layout, aparte: cuando cambia de tamaño por su cuenta (aparece,
-  // pasa a "Todo sincronizado", o se desvanece sola unos segundos después)
-  // esa página no se entera por ningún otro medio. Disparar un "resize" de
-  // mentira reutiliza ese mismo mecanismo sin tener que acoplar el banner
-  // al calendario.
+  // El calendario recalcula su alto con el "resize" nativo (page.tsx); este
+  // banner vive aparte en el layout, así que dispara uno de mentira cuando
+  // cambia de tamaño por su cuenta, sin acoplarse al calendario.
   useEffect(() => {
     window.dispatchEvent(new Event('resize'));
   }, [isOnline, isAdmin, pendingCount, syncing, justSynced, fadingOut, failures.length]);

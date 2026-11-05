@@ -1,8 +1,5 @@
-// Cola de acciones del calendario hechas sin conexión (solo admin). Se
-// guarda en IndexedDB a mano (sin librería: el modelo es muy simple, una
-// sola tabla) para que sobreviva a recargar la página mientras se sigue
-// sin red.
-//
+// Cola de acciones del calendario sin conexión. IndexedDB a mano (sin
+// librería, una sola tabla) para que sobreviva a recargar la página.
 
 const DB_NAME = 'zitytraining-offline';
 const DB_VERSION = 1;
@@ -33,11 +30,8 @@ function openDb(): Promise<IDBDatabase> {
   });
 }
 
-// Evento propio para que la página del calendario (donde vive el estado de
-// la cola en memoria) y OfflineSyncBanner (que la vacía al recuperar
-// conexión, montado aparte en el layout) se enteren el uno del otro sin
-// tener que compartir estado React entre componentes que no son
-// padre/hijo.
+// Para que el calendario y OfflineSyncBanner (montado aparte en el
+// layout) se enteren el uno del otro sin compartir estado React.
 export const QUEUE_CHANGED_EVENT = 'zitytraining:queue-changed';
 
 function notifyQueueChanged() {

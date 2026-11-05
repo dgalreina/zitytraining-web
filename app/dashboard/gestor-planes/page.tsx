@@ -15,9 +15,7 @@ const emptyForm = {
   monthlyPrice: '',
 };
 
-// Igual que en el backend (plans.service.ts): la vista previa del
-// precio por sesión y las sesiones/mes se calcula igual, para que se
-// vea antes de guardar.
+// Igual que en el backend (plans.service.ts), para verlo antes de guardar.
 function computePreview(sessionsPerWeek: string, monthlyPrice: string) {
   const weeks = Number(sessionsPerWeek);
   const price = Number(monthlyPrice);
@@ -169,9 +167,7 @@ export default function GestorPlanesPage() {
                     : 'Todavía no hay planes en esta categoría.'}
                 </p>
               ) : category.id === 'sesiones_libres' ? (
-                // Hasta 12 variantes a la vez (personal/dúo/trío × 2 días
-                // de referencia × 2 duraciones): sin subgrupos se ve como
-                // una lista enorme sin ningún orden aparente.
+                // Hasta 12 variantes a la vez: sin subgrupos sería una lista enorme sin orden.
                 <div className="flex flex-col gap-4">
                   {FREE_SESSIONS_SUBGROUPS.map((group) => {
                     const groupPlans = plansByCategory(category.id).filter(

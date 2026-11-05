@@ -4,11 +4,8 @@ import { Pencil, Trash2 } from 'lucide-react';
 import WorkoutSummary from '../entrenamientos/WorkoutSummary';
 import type { WeightSlot } from './useBookingForm';
 
-// weightSlots (del hook, ver useBookingForm) ya trae los pesos
-// efectivos de esta sesión (override si lo hay, si no los de la
-// plantilla): se adapta al shape que espera WorkoutSummary en vez de
-// pintar bookingWorkout.slots en crudo (eso serían los de la plantilla,
-// no los reales de esta sesión).
+// weightSlots ya trae los pesos efectivos de esta sesión (no los de
+// bookingWorkout.slots, que son los de la plantilla); se adapta al shape que espera WorkoutSummary.
 function toSummarySlots(weightSlots: WeightSlot[]) {
   return weightSlots.map((s) => ({
     exercise: { name: s.exerciseName, category: s.category },
@@ -20,10 +17,8 @@ function toSummarySlots(weightSlots: WeightSlot[]) {
   }));
 }
 
-// Vista "training": entrenamiento asignado a esta sesión, si tiene uno,
-// o el buscador/creador si todavía no. El entrenamiento es un campo más
-// del formulario (igual que notas o clientes): se queda en local hasta
-// que se pulsa "Guardar" en la vista principal.
+// Entrenamiento asignado a esta sesión, o el buscador/creador si no tiene;
+// queda en local hasta pulsar "Guardar" en la vista principal.
 export default function BookingTrainingView({
   bookingWorkout,
   weightSlots,

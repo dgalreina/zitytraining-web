@@ -249,10 +249,7 @@ export default function FichaSaludPage() {
       cholesterolHdl: toNumberOrUndefined(form.cholesterolHdl),
       objectives: form.objectives.filter((o) => o.trim() !== ''),
       dni: form.dni || undefined,
-      // Los selectores empiezan en "" mientras no se tocan; el backend
-      // valida contra el enum, y "" no es un valor válido (a diferencia
-      // de un texto libre vacío, que sí pasa). Sin no rellenar = no
-      // enviar, todo lo demás en el formulario sería obligatorio de facto.
+      // "" no pasa la validación del enum en el backend; sin tocar = no enviar.
       dailyActivityLevel: form.dailyActivityLevel || undefined,
       occupationActivityLevel: form.occupationActivityLevel || undefined,
       alcoholFrequency: form.alcoholFrequency || undefined,

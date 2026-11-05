@@ -4,10 +4,9 @@ import { Timer, StickyNote, Link2 } from 'lucide-react';
 import { categoryMeta } from './exerciseCategories';
 import { computeSlotLabels, groupSlotsForDisplay } from './workoutSlotLabels';
 
-// Vista de solo lectura de los ejercicios de un entrenamiento: icono +
-// nombre + etiqueta (1, 1a, 1b...), repeticiones, RP y notas, agrupando
-// las superseries con el filo verde. La usan la lista de Entrenamientos,
-// la ficha de sesión del calendario y el Dashboard.
+// Vista de solo lectura de los ejercicios de un entrenamiento, agrupando
+// superseries con el filo verde. La usan Entrenamientos, la ficha de
+// sesión y el Dashboard.
 // "12 × 20 kg", o solo la parte que haya.
 function formatSet(set: { reps?: number; weight?: number }): string {
   const parts: string[] = [];

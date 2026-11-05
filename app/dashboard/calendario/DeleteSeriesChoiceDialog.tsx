@@ -2,11 +2,8 @@
 
 import { useEffect, useState } from 'react';
 
-// Preguntado al borrar una sesión que pertenece a una serie: solo esta,
-// o esta y todas las futuras. Las sesiones pasadas nunca se borran, se
-// decida lo que se decida aquí. "Se le debe esta clase" solo aplica a
-// "solo esta sesión": para "esta y todas las futuras" no tiene mucho
-// sentido (son sesiones que ni se habían dado todavía).
+// Al borrar una sesión de serie: solo esta, o esta y las futuras
+// (pasadas nunca se borran). "Se le debe" solo aplica a "solo esta".
 export default function DeleteSeriesChoiceDialog({
   open,
   clients,

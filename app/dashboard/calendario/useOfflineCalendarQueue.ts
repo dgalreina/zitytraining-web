@@ -4,10 +4,9 @@ import { useEffect, useRef, useState } from 'react';
 import type FullCalendar from '@fullcalendar/react';
 import { getQueue, PendingBookingEntry, QUEUE_CHANGED_EVENT } from '@/lib/offlineQueue';
 
-// Acciones hechas sin conexión (solo admin) que aún no se han mandado al
-// servidor; se mezclan sobre "events" para que se vean al momento (ver
-// applyPendingQueueToEvents en bookingEvents.ts) y las consume de verdad
-// OfflineSyncBanner al recuperar conexión.
+// Acciones sin conexión aún no mandadas al servidor; se mezclan sobre
+// "events" para verse al momento (applyPendingQueueToEvents en
+// bookingEvents.ts), y OfflineSyncBanner las consume al recuperar conexión.
 export function useOfflineCalendarQueue({
   calendarRef,
   selectedDate,
@@ -25,13 +24,9 @@ export function useOfflineCalendarQueue({
     getQueue().then(setPendingQueue).catch(() => {});
   }
 
-  // Cuando la cola cambia porque OfflineSyncBanner acaba de sincronizar un
-  // cambio de verdad con el servidor (no solo porque se encoló uno nuevo
-  // sin conexión), "events" se queda con los datos de antes de
-  // desconectarse: sin este refresco, al vaciarse la cola el calendario
-  // volvía a enseñar la posición vieja de la sesión en vez de la ya
-  // guardada. Pedirlo también cuando no hay red no hace daño: loadBookings
-  // ya falla en silencio en ese caso.
+  // Cuando OfflineSyncBanner sincroniza de verdad, "events" se queda con
+  // los datos de antes de desconectar; sin este refresco el calendario
+  // mostraría la posición vieja. Pedirlo sin red no hace daño (loadBookings falla en silencio).
   function handleQueueChanged() {
     refreshPendingQueue();
     const api = calendarRef.current?.getApi();
@@ -40,15 +35,10 @@ export function useOfflineCalendarQueue({
     }
     loadMonthDots(selectedDate);
   }
-  // El oyente de abajo se registra una sola vez (al montar), pero
-  // handleQueueChanged usa loadBookings, que a su vez lee
-  // selectedTrainerIds/selectedClientId/selectedDate del cierre de ESTE
-  // render. Sin la referencia, el oyente se quedaría para siempre con la
-  // versión de la primerísima carga (con selectedTrainerIds todavía
-  // vacío, antes de que terminara de pedirse la lista de entrenadores):
-  // cada sincronización pediría sesiones de "ningún entrenador" y
-  // vaciaría el calendario entero. Guardando la última versión en una
-  // referencia, el oyente (que no cambia) siempre llama a la actual.
+  // El oyente se registra una sola vez al montar, pero handleQueueChanged
+  // cierra sobre loadBookings (que lee selectedTrainerIds/etc. de ESTE
+  // render). Sin la ref, se quedaría para siempre con la versión de la
+  // primera carga (selectedTrainerIds vacío) y cada sync vaciaría el calendario entero.
   const handleQueueChangedRef = useRef(handleQueueChanged);
   useEffect(() => {
     handleQueueChangedRef.current = handleQueueChanged;

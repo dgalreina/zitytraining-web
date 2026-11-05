@@ -109,10 +109,8 @@ function TrainerDropdown({
 export default function WeeklyAttendanceCalendar({
   lockedTrainerId,
 }: {
-  // Con esto puesto, es el propio entrenador mirando lo suyo: sin
-  // desplegable (no puede elegir a otro), y con el total de horas de
-  // este mes. Sin esto, es el admin, que puede elegir a cualquiera (como
-  // hasta ahora).
+  // Con esto puesto es el propio entrenador (sin desplegable, con horas
+  // del mes); sin esto es el admin, que puede elegir a cualquiera.
   lockedTrainerId?: string;
 }) {
   const [trainers, setTrainers] = useState<any[]>([]);
@@ -168,19 +166,15 @@ export default function WeeklyAttendanceCalendar({
     if (!range) return;
     const token = localStorage.getItem('token');
     if (!token) return;
-    // GET /attendance (todos los entrenadores) es solo para admin: un
-    // entrenador mirando lo suyo pide /attendance/me, que el backend ya
-    // acota a él mismo.
+    // /attendance (todos) es solo para admin; el entrenador pide /attendance/me.
     const fetchEntries = lockedTrainerId
       ? getMyAttendance(token, range.start, range.end)
       : getAllAttendance(token, range.start, range.end);
     fetchEntries.then(setEntries).catch(() => setEntries([]));
   }, [range, lockedTrainerId]);
 
-  // Horas de este mes (no de la semana que se esté viendo): se pide una
-  // vez, con el mes de hoy, independiente de a qué semana navegue el
-  // calendario de abajo. Un fichaje sin salida todavía cuenta hasta
-  // ahora mismo (ver sumHoursWorked).
+  // Horas del mes de hoy, independiente de a qué semana navegue el
+  // calendario; un fichaje sin salida cuenta hasta ahora (sumHoursWorked).
   useEffect(() => {
     if (!lockedTrainerId) return;
     const token = localStorage.getItem('token');
@@ -193,9 +187,8 @@ export default function WeeklyAttendanceCalendar({
       .catch(() => setMonthHours(null));
   }, [lockedTrainerId]);
 
-  // Igual que en Calendario: se mide cuánto ocupa lo que hay por encima
-  // (aquí, solo el selector de entrenador) para que la tarjeta entera
-  // llegue justo hasta el borde de la pantalla, sin desplazar la página.
+  // Igual que en Calendario: mide lo que ocupa el selector de encima para
+  // que la tarjeta llegue justo al borde sin desplazar la página.
   useEffect(() => {
     function recalcOffset() {
       const el = cardRef.current;
@@ -209,9 +202,8 @@ export default function WeeklyAttendanceCalendar({
     return () => window.removeEventListener('resize', recalcOffset);
   }, [trainers.length]);
 
-  // Swipe táctil para cambiar de semana, igual que en Calendario: en
-  // móvil los botones prev/next se ocultan por CSS (ver
-  // fullcalendar-theme.css), así que sin esto no habría forma de moverse.
+  // Swipe táctil para cambiar de semana: en móvil prev/next se ocultan
+  // por CSS, sin esto no habría forma de moverse.
   useEffect(() => {
     const el = calendarWrapperRef.current;
     if (!el) return;
@@ -286,10 +278,8 @@ export default function WeeklyAttendanceCalendar({
       loadHolidaysForYear(arg.end.getFullYear());
     }
 
-    // Si el cambio de semana viene de un swipe, FullCalendar ya ha
-    // terminado de pintar la semana nueva en este punto: es el momento
-    // exacto de deslizar la copia congelada de la vieja hacia fuera y la
-    // nueva hacia dentro.
+    // Si viene de un swipe, FullCalendar ya pintó la semana nueva: toca
+    // deslizar la copia congelada de la vieja hacia fuera.
     const direction = pendingSlideDirectionRef.current;
     pendingSlideDirectionRef.current = null;
     const clone = slideCloneRef.current;
@@ -319,19 +309,15 @@ export default function WeeklyAttendanceCalendar({
     }, 300);
   }
 
-  // Deja preparada una copia congelada de la vista actual (para deslizarla
-  // fuera) y marca la dirección; la animación de verdad se dispara en
-  // handleDatesSet, una vez FullCalendar ya ha pintado la semana nueva.
+  // Prepara una copia congelada de la vista actual; la animación se
+  // dispara en handleDatesSet, cuando FullCalendar ya pintó la nueva.
   function prepareDaySlide(direction: 1 | -1): boolean {
     const container = calendarWrapperRef.current;
     const harness = container?.querySelector('.fc-view-harness') as HTMLElement | null;
     if (!container || !harness) return false;
 
-    // Importante: el clon tiene que quedar DENTRO de .fc (como hermano del
-    // .fc-view-harness real), no fuera. El CSS de FullCalendar usa
-    // selectores tipo ".fc .fc-timegrid-event-harness" que exigen un
-    // ancestro con clase "fc" — fuera de ahí pierde esas reglas y el
-    // navegador calcula mal la altura de los eventos (se ven enormes).
+    // El clon debe quedar DENTRO de .fc (hermano del harness real): el CSS
+    // de FullCalendar exige ese ancestro, si no calcula mal la altura.
     const fcRoot = harness.parentElement;
     if (!fcRoot) return false;
 
@@ -347,8 +333,7 @@ export default function WeeklyAttendanceCalendar({
     clone.style.pointerEvents = 'none';
     clone.style.overflow = 'hidden';
     clone.style.background = 'white';
-    // cloneNode no copia el scroll interno: si el usuario había bajado a
-    // ver horas más tardías, lo replicamos para que la copia coincida.
+    // cloneNode no copia el scroll interno, hay que replicarlo.
     clone.scrollTop = harness.scrollTop;
 
     fcRoot.appendChild(clone);

@@ -8,12 +8,9 @@ import Switch from '@/components/Switch';
 import { dayKey } from '@/components/MiniCalendar';
 import { DurationOption } from './useBookingForm';
 
-// La vista principal del formulario de crear/editar sesión: entrenador,
-// hora, duración, repetición (solo al crear), festivo, y clientes o nota
-// según el tipo. Las otras dos vistas (notas a pantalla completa,
-// entrenamiento) viven en sus propios componentes; el botón "Guardar" y
-// los de cancelar/borrar se quedan en BookingModal, que es quien decide
-// cuándo se pueden pulsar.
+// Vista principal del formulario: entrenador, hora, duración, repetición,
+// festivo, y clientes o nota según el tipo. Notas/entrenamiento viven en
+// sus propios componentes; Guardar/cancelar/borrar se quedan en BookingModal.
 export default function BookingFormFields({
   mode,
   canSetRecurrence,

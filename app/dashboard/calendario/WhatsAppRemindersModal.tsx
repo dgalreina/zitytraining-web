@@ -16,18 +16,15 @@ export interface Recordatorio {
   nombre: string;
   telefono: string | null;
   mensaje: string;
-  // Resumen de sus días y horas de esa semana. Se guarda al enviar, y al
-  // volver a abrir delata si algo se ha movido desde entonces.
+  // Resumen de días/horas de la semana; delata si algo se movió desde el envío.
   huella: string;
 }
 
 // Estado de cada uno frente a lo que ya se mandó.
 type Estado = 'nuevo' | 'enviado' | 'cambiado';
 
-// wa.me quiere el numero en internacional y solo digitos. Los telefonos se
-// guardan como los escriba quien da de alta, asi que hay que limpiarlos. A
-// los de nueve digitos se les asume prefijo de Espana; si viene con prefijo
-// se respeta el que traiga.
+// wa.me quiere el número internacional y solo dígitos. A los de 9 dígitos
+// se les asume prefijo de España; si ya trae uno, se respeta.
 export function telefonoWhatsApp(bruto?: string | null): string | null {
   if (!bruto) return null;
   let digitos = bruto.replace(/\D/g, '');
@@ -36,10 +33,8 @@ export function telefonoWhatsApp(bruto?: string | null): string | null {
   return digitos.length >= 11 && digitos.length <= 15 ? digitos : null;
 }
 
-// En el móvil se llama a la app por su propio esquema: iOS la abre sin
-// navegar, así que esta página se queda tal cual y no deja pestañas
-// vacías detrás. En escritorio no hay esquema que valga (puede no haber
-// WhatsApp instalado), así que se abre WhatsApp Web en otra pestaña.
+// Móvil: esquema whatsapp:// (iOS lo abre sin navegar, sin dejar pestañas
+// vacías). Escritorio: WhatsApp Web en otra pestaña (puede no haber app instalada).
 export function enlaceWhatsApp(
   telefono: string,
   mensaje: string,
@@ -52,15 +47,9 @@ export function enlaceWhatsApp(
     : { url: `https://wa.me/${telefono}?text=${texto}`, nuevaPestana: true };
 }
 
-// Un mensaje por cliente, no por sesión: si alguien entrena tres días esa
-// semana recibe un solo WhatsApp con las tres. Las sesiones privadas del
-// entrenador no llevan cliente, así que se quedan fuera.
-//
-// Solo cuentan las sesiones que imparte quien está usando la app, aunque
-// el calendario tenga más entrenadores marcados: el mensaje sale de su
-// propio WhatsApp, y sería raro que a un cliente le escriba un entrenador
-// que no es el suyo. A quien entrene esa semana con dos entrenadores le
-// escribe cada uno lo suyo.
+// Un mensaje por cliente (no por sesión): varias sesiones esa semana van
+// en el mismo WhatsApp. Solo cuenta lo que imparte quien usa la app (el
+// mensaje sale de su WhatsApp); con dos entrenadores, cada uno escribe lo suyo.
 export function construirRecordatorios(
   events: any[],
   trainerId: string,
@@ -118,13 +107,11 @@ export default function WhatsAppRemindersModal({
   weekStart: string;
   onClose: () => void;
 }) {
-  // Vacío hasta que se sepa qué plantilla usar (ver el useEffect de abajo):
-  // así no se construye primero con la de siempre y se pisa después si el
-  // entrenador tiene una propia guardada en Ajustes.
+  // Vacío hasta saber qué plantilla usar (ver useEffect), para no
+  // construir con la de siempre y pisarla si hay una propia en Ajustes.
   const [recordatorios, setRecordatorios] = useState<Recordatorio[]>([]);
   const [editando, setEditando] = useState<string | null>(null);
-  // Huella con la que se le escribió por última vez, por cliente. Vacío
-  // mientras se consulta: hasta saberlo, nadie sale marcado.
+  // Huella del último envío por cliente; vacío mientras se consulta.
   const [huellaEnviada, setHuellaEnviada] = useState<Map<string, string>>(new Map());
   const [cargando, setCargando] = useState(true);
 
@@ -144,8 +131,7 @@ export default function WhatsAppRemindersModal({
         setRecordatorios(construirRecordatorios(events, trainerId, me?.defaultReminderMessage));
       })
       .finally(() => setCargando(false));
-    // events/trainerId no cambian mientras el modal está abierto (se monta
-    // de cero cada vez que se abre), igual que antes con el useState inicial.
+    // events/trainerId no cambian con el modal abierto (se monta de cero cada vez).
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [weekStart]);
 
@@ -170,15 +156,12 @@ export default function WhatsAppRemindersModal({
     if (editando === clientId) setEditando(null);
   }
 
-  // WhatsApp solo atiende una conversación a la vez, así que no se pueden
-  // abrir todas de golpe: se va de uno en uno y se marca lo ya mandado
-  // para saber por dónde ibas al volver.
+  // WhatsApp solo atiende una conversación a la vez: se va de uno en uno.
   function enviar(r: Recordatorio) {
     if (!r.telefono) return;
 
-    // Se da por enviado en cuanto se abre WhatsApp. No hay forma de saber
-    // si luego se pulsó enviar de verdad, pero para eso está el "volver a
-    // enviar".
+    // Se da por enviado al abrir WhatsApp (no hay forma de saber si se
+    // pulsó enviar de verdad); para eso está "volver a enviar".
     setHuellaEnviada((prev) => new Map(prev).set(r.clientId, r.huella));
     const token = localStorage.getItem('token');
     if (token && weekStart) {
@@ -191,9 +174,7 @@ export default function WhatsAppRemindersModal({
 
     const { url, nuevaPestana } = enlaceWhatsApp(r.telefono, r.mensaje);
     if (nuevaPestana) window.open(url, '_blank');
-    // En el móvil NO se abre pestaña: el esquema whatsapp:// lanza la app
-    // y deja esta página intacta. Con window.open, iOS se quedaba con una
-    // pestaña en blanco por cada mensaje enviado.
+    // Sin pestaña en móvil: con window.open, iOS dejaba una en blanco por envío.
     else window.location.href = url;
   }
 

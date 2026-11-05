@@ -1,11 +1,7 @@
 'use client';
 
-// Preguntado al arrastrar a otro día/hora una sesión que pertenece a una
-// serie: solo esta, o esta y todas las futuras ya generadas (más la
-// plantilla de la serie, para las que se generen más adelante). Las
-// sesiones pasadas nunca se tocan, se decida lo que se decida aquí.
-// Cancelar deshace el arrastre (FullCalendar ya la había movido en
-// pantalla antes de preguntar).
+// Al arrastrar una sesión de serie: solo esta, o esta y las futuras +
+// plantilla (pasadas nunca se tocan). Cancelar deshace el arrastre ya hecho en pantalla.
 export default function MoveSeriesChoiceDialog({
   open,
   onCancel,
