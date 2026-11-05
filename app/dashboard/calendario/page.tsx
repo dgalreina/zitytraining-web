@@ -346,13 +346,17 @@ export default function CalendarioPage() {
   }
 
   // Arrastrar una sesión hasta el borde de la pantalla cambia de día/semana
-  // con el dedo aún pulsado; el swipe táctil hace lo mismo con un gesto.
-  // Ambos comparten la animación de deslizamiento de useCalendarDaySlide.
+  // con el dedo aún pulsado. A diferencia del swipe, aquí NO se anima el
+  // deslizamiento (ver useCalendarDaySlide): ese efecto transforma con CSS
+  // el mismo .fc-view-harness que FullCalendar está usando para calcular
+  // en tiempo real dónde está el evento arrastrado, y moverlo con un
+  // transform a mitad de un drag activo desincronizaba esa cuenta — el
+  // arrastre se volvía loco y seguía saltando de semana solo, sin soltar
+  // el dedo siquiera.
   const { handleEventDragStart, handleEventDragStop } = useEdgeDragNavigation({
     calendarRef,
     calendarWrapperRef,
     viewType,
-    prepareDaySlide,
     loadMonthDots,
   });
 
