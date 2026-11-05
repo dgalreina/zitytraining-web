@@ -144,6 +144,17 @@ export default function BookingFormFields({
         </button>
         <button
           type="button"
+          onClick={() => setDurationOption('50')}
+          className={`flex-1 rounded-lg border py-1.5 text-sm font-semibold transition ${
+            durationOption === '50'
+              ? 'border-[#6aa842] bg-[#a2c037]/10 text-[#4b7a1f]'
+              : 'border-gray-200 text-[#868585] hover:bg-gray-50'
+          }`}
+        >
+          50 min
+        </button>
+        <button
+          type="button"
           onClick={() => setDurationOption('60')}
           className={`flex-1 rounded-lg border py-1.5 text-sm font-semibold transition ${
             durationOption === '60'

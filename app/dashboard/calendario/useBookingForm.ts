@@ -34,7 +34,7 @@ export const KIND_OPTIONS: { value: BookingKind; label: string; color: string }[
   { value: 'interview', label: 'Entrevista', color: INTERVIEW_COLOR },
 ];
 
-export type DurationOption = '40' | '60' | 'custom' | 'endTime';
+export type DurationOption = '40' | '50' | '60' | 'custom' | 'endTime';
 export type ModalView = 'form' | 'notes' | 'training';
 
 function minutesBetween(start: Date, end: Date) {
@@ -179,6 +179,8 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
       setEndTime(rawEnd);
       if (diff === 40) {
         setDurationOption('40');
+      } else if (diff === 50) {
+        setDurationOption('50');
       } else if (diff === 60) {
         setDurationOption('60');
       } else {
@@ -387,6 +389,7 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
 
   function getEffectiveDurationMinutes() {
     if (durationOption === '40') return 40;
+    if (durationOption === '50') return 50;
     if (durationOption === '60') return 60;
     if (durationOption === 'endTime') return minutesBetween(start, endTime);
     return Number(customMinutes) || 0;
