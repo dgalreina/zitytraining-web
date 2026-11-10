@@ -196,16 +196,25 @@
 
 .fc .fc-timegrid-now-indicator-line {
   border-color: #2b2b2a;
+  z-index: 99;
+}
+
+/* Si no, recorta la mitad del punto que sobresale a propósito sobre el
+   borde de la columna de horas (ver fc-timegrid-now-indicator-arrow). */
+.fc .fc-timegrid-now-indicator-container {
+  overflow: visible;
 }
 
 /* Punto en vez del triángulo por defecto de FullCalendar (anula su
-   borde-triángulo con border:none y dibuja un círculo macizo). */
+   borde-triángulo con border:none y dibuja un círculo macizo). Por
+   encima de los eventos (que si no, lo tapan al coincidir en hora). */
 .fc .fc-timegrid-now-indicator-arrow {
   left: auto;
-  right: 0;
+  right: -4px;
   width: 8px;
   height: 8px;
   margin-top: -4px;
+  z-index: 99;
   border: none !important;
   border-radius: 50%;
   background-color: #2b2b2a;
