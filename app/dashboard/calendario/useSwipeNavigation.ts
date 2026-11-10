@@ -43,12 +43,12 @@ export function useSwipeNavigation({
 
     function handleTouchStart(e: TouchEvent) {
       if (e.touches.length !== 1) return;
-      // Si empieza sobre una sesión, se deja el gesto entero a
-      // FullCalendar: si no, al soltar competían los dos cambios y el
-      // nuestro reconstruía la vista antes de que resolviera el drag,
-      // descartándolo en silencio.
-      const target = e.target as HTMLElement | null;
-      if (target?.closest('.fc-event')) return;
+      // Antes esto se ignoraba entero si empezaba sobre una sesión, para
+      // no competir con el long-press de FullCalendar. Pero eso dejaba
+      // sin swipe cualquier zona con sesiones. Ahora se sigue igual que
+      // en hueco libre: si en ~180ms (ver más abajo) no se decide
+      // horizontal, se suelta sin tocar nada y el toque le llega entero
+      // a FullCalendar (long-press, tap...), así que no compite.
       start = { x: e.touches[0].clientX, y: e.touches[0].clientY, time: Date.now() };
       decided = null;
     }
@@ -85,7 +85,11 @@ export function useSwipeNavigation({
       if (Math.abs(dx) < SWIPE_THRESHOLD) return;
 
       const direction = dx < 0 ? 1 : -1;
-      startDaySlide(direction);
+      // Si el gesto empezó sobre una sesión, FullCalendar procesa este
+      // mismo touchend a la vez (para decidir si fue un tap). Cambiar de
+      // página ya mismo destruye esos elementos a medio procesar y lo
+      // descarta en silencio; se deja acabar su ciclo primero.
+      setTimeout(() => startDaySlide(direction), 0);
     }
 
     el.addEventListener('touchstart', handleTouchStart, { passive: true });

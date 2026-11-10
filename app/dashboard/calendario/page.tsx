@@ -498,7 +498,10 @@ export default function CalendarioPage() {
             // Más alto que selectLongPressDelay: mover una sesión existente
             // es más delicado que crear una (un toque confundido con un
             // arrastre la desplaza de verdad); 200ms colaba toques sueltos.
-            eventLongPressDelay={500}
+            // También da más margen al swipe de cambiar de día (ver
+            // useSwipeNavigation) cuando empieza sobre una sesión: decide
+            // en ~180ms, muy por debajo de este plazo.
+            eventLongPressDelay={700}
             // Evita el filo gris de repintado en Safari/iOS al volver el
             // bloque a su sitio (con top/left, no transform) si no se guarda.
             dragRevertDuration={0}
