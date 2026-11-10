@@ -374,7 +374,7 @@ export default function FicharPage() {
                       {entry.autoClockedOut && (
                         <p className="mt-1.5 flex items-center gap-1.5 text-xs text-amber-700">
                           <AlertTriangle size={13} />
-                          Cerrado automáticamente a las 22:00 (se olvidó fichar la salida)
+                          Cerrado automáticamente a las 23:00 (se olvidó fichar la salida)
                         </p>
                       )}
                     </div>

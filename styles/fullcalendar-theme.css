@@ -175,13 +175,40 @@
   white-space: nowrap;
 }
 
-.fc .fc-timegrid-now-indicator-line {
-  border-color: #6aa842;
+.ziti-day-hours {
+  font-size: 0.55rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: #4b7a1f;
+  white-space: nowrap;
 }
 
+/* Horas semanales del calendario de fichajes: texto informativo metido
+   en el hueco de un botón, no una acción real. */
+.fc .fc-weekHours-button {
+  border: none !important;
+  background: none !important;
+  color: #868585 !important;
+  font-weight: 600;
+  cursor: default !important;
+  box-shadow: none !important;
+}
+
+.fc .fc-timegrid-now-indicator-line {
+  border-color: #2b2b2a;
+}
+
+/* Punto en vez del triángulo por defecto de FullCalendar (anula su
+   borde-triángulo con border:none y dibuja un círculo macizo). */
 .fc .fc-timegrid-now-indicator-arrow {
-  border-color: #6aa842;
-  color: #6aa842;
+  left: auto;
+  right: 0;
+  width: 8px;
+  height: 8px;
+  margin-top: -4px;
+  border: none !important;
+  border-radius: 50%;
+  background-color: #2b2b2a;
 }
 
 .fc .fc-day-today {

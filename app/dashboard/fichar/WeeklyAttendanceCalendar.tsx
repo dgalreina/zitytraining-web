@@ -345,6 +345,16 @@ export default function WeeklyAttendanceCalendar({
   const selectedTrainer = trainers.find((t) => t._id === selectedTrainerId);
   const color = selectedTrainer?.color || DEFAULT_TRAINER_COLOR;
 
+  // Mismo filtro que "events" de abajo, pero sin mapear a evento de
+  // FullCalendar: aquí hace falta clockIn/clockOut en crudo para sumar.
+  const weekEntries = entries.filter((e) => (e.trainer?._id || e.trainer) === selectedTrainerId);
+  const weekHours = sumHoursWorked(weekEntries);
+  const hoursByDay = weekEntries.reduce<Record<string, number>>((acc, e) => {
+    const key = dayKey(new Date(e.clockIn));
+    acc[key] = (acc[key] || 0) + sumHoursWorked([e]);
+    return acc;
+  }, {});
+
   const events = entries
     .filter((e) => (e.trainer?._id || e.trainer) === selectedTrainerId)
     .map((e) => ({
@@ -389,17 +399,29 @@ export default function WeeklyAttendanceCalendar({
             initialView="timeGridWeek"
             firstDay={1}
             weekends
-            headerToolbar={{ left: 'prev,next today', center: '', right: '' }}
+            headerToolbar={{ left: 'prev,next today weekHours', center: '', right: '' }}
             buttonText={{ today: 'Esta semana' }}
+            customButtons={{
+              // Solo texto informativo, no un botón de verdad (ver
+              // .fc-weekHours-button en fullcalendar-theme.css).
+              weekHours: {
+                text: `Horas semanales: ${formatHoursWorked(weekHours)}`,
+                click: () => {},
+              },
+            }}
             dayHeaderFormat={{ weekday: 'short', day: 'numeric' }}
             dayCellClassNames={(arg) =>
               holidaysByDate[dayKey(arg.date)] ? ['ziti-day-holiday'] : []
             }
             dayHeaderContent={(arg) => {
               const holidayName = holidaysByDate[dayKey(arg.date)];
+              const dayHours = hoursByDay[dayKey(arg.date)];
               return (
                 <div className="flex flex-col items-center">
                   <span>{arg.text}</span>
+                  {!!dayHours && (
+                    <span className="ziti-day-hours">{formatHoursWorked(dayHours)}</span>
+                  )}
                   {holidayName && (
                     <span className="ziti-holiday-label" title={holidayName}>
                       Festivo
@@ -411,7 +433,7 @@ export default function WeeklyAttendanceCalendar({
             locale="es"
             allDaySlot={false}
             slotMinTime="07:00:00"
-            slotMaxTime="22:00:00"
+            slotMaxTime="23:30:00"
             height="100%"
             expandRows
             selectable={false}
