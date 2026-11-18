@@ -60,7 +60,9 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
   const [error, setError] = useState('');
   const [view, setView] = useState<ModalView>('form');
   const [status, setStatus] = useState<'active' | 'cancelled'>('active');
-  // Privada y entrevista no llevan clientes y solo las ve quien las crea.
+  // Privada y entrevista no llevan clientes (de ahí el nombre de esta
+  // variable). Solo Privada se oculta a los demás: Entrevista la ve
+  // cualquier entrenador (lo que se manda de verdad va en handleSave).
   const [kind, setKind] = useState<BookingKind>('normal');
   const isPrivate = kind !== 'normal';
   const kindColor = KIND_OPTIONS.find((o) => o.value === kind)!.color;
@@ -410,7 +412,9 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
           startTime: start.toISOString(),
           endTime: end.toISOString(),
           notes: notes || undefined,
-          isPrivate,
+          // Entrevista no lleva clientes (como Privada), pero sí la ve
+          // cualquier entrenador: solo "Privada" de verdad oculta la sesión.
+          isPrivate: kind === 'private',
           isInterview: kind === 'interview',
           workoutId: bookingWorkout?._id,
           recurrence,
@@ -425,7 +429,7 @@ export function useBookingForm(modal: ModalState, defaultTrainerId: string, onSa
           startTime: start.toISOString(),
           endTime: end.toISOString(),
           notes: notes || undefined,
-          isPrivate,
+          isPrivate: kind === 'private',
           isInterview: kind === 'interview',
           workoutId: bookingWorkout?._id || null,
           // Solo tiene efecto si de verdad cambió el entrenamiento de una serie.
