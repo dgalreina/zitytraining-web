@@ -360,6 +360,12 @@
   border: 2px solid #ef4444 !important;
 }
 
+/* Entrevista: fondo del color de quien la creó (ver bookingEvents.ts),
+   con este filo marrón para distinguirla de una sesión normal suya. */
+.fc-event.ziti-event-interview {
+  border: 2px solid #8a6d3b !important;
+}
+
 /* Hecho sin conexión y aún en la cola local, pendiente de mandarse al
    servidor en cuanto vuelva la red (ver lib/offlineQueue.ts). */
 .fc-event.ziti-event-pending-sync {

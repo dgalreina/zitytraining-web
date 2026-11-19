@@ -524,6 +524,7 @@ export default function CalendarioPage() {
             eventClassNames={(arg) => {
               const classes: string[] = [];
               if (arg.event.extendedProps.raw?.status === 'cancelled') classes.push('ziti-event-cancelled');
+              if (arg.event.extendedProps.raw?.isInterview) classes.push('ziti-event-interview');
               if (arg.event.extendedProps.raw?.holidaySkip) classes.push('ziti-event-holiday-skip');
               if (arg.event.extendedProps.pendingSync) classes.push('ziti-event-pending-sync');
               return classes;

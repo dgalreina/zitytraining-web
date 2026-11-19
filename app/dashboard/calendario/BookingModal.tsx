@@ -129,6 +129,7 @@ export default function BookingModal({
               clients={clients}
               holidaysByDate={holidaysByDate}
               isPrivate={form.isPrivate}
+              kind={form.kind}
               modalTrainerId={form.modalTrainerId}
               setModalTrainerId={form.setModalTrainerId}
               start={form.start}

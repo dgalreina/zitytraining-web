@@ -6,7 +6,7 @@ import { Star, Repeat, CalendarOff, RotateCcw } from 'lucide-react';
 import FilterDropdown from '@/components/FilterDropdown';
 import Switch from '@/components/Switch';
 import { dayKey } from '@/components/MiniCalendar';
-import { DurationOption } from './useBookingForm';
+import { DurationOption, BookingKind } from './useBookingForm';
 
 // Vista principal del formulario: entrenador, hora, duración, repetición,
 // festivo, y clientes o nota según el tipo. Notas/entrenamiento viven en
@@ -18,6 +18,7 @@ export default function BookingFormFields({
   clients,
   holidaysByDate,
   isPrivate,
+  kind,
   modalTrainerId,
   setModalTrainerId,
   start,
@@ -55,6 +56,7 @@ export default function BookingFormFields({
   clients: any[];
   holidaysByDate: Record<string, string>;
   isPrivate: boolean;
+  kind: BookingKind;
   modalTrainerId: string;
   setModalTrainerId: (id: string) => void;
   start: Date;
@@ -86,7 +88,10 @@ export default function BookingFormFields({
 }) {
   return (
     <>
-      {!isPrivate && (
+      {/* Oculto solo en Privada (es tuya, no hace falta elegir). En
+          Entrevista sí se ve: la crea un entrenador pero la ve cualquiera,
+          así que hace falta saber de quién es. */}
+      {kind !== 'private' && (
         <div className="mb-3">
           <label className="mb-1 block text-xs font-semibold text-[#868585]">Entrenador</label>
           <FilterDropdown

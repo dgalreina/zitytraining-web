@@ -1,5 +1,5 @@
 import { PendingBookingEntry } from '@/lib/offlineQueue';
-import { INTERVIEW_COLOR, PRIVATE_COLOR } from '@/lib/colors';
+import { PRIVATE_COLOR } from '@/lib/colors';
 
 export const FALLBACK_COLOR = '#868585';
 
@@ -11,9 +11,11 @@ export function bookingToEvent(b: any) {
   let color = FALLBACK_COLOR;
 
   if (b.isInterview) {
-    // Como una privada, pero en beige para distinguirla.
+    // Fondo del color de quien la creó (se ve de quién es, ahora que la
+    // ven todos); el filo marrón que la distingue va aparte, por CSS
+    // (ziti-event-interview, puesto en eventClassNames de page.tsx).
     candidates = ['Entrevista'];
-    color = INTERVIEW_COLOR;
+    color = b.trainer?.color || FALLBACK_COLOR;
   } else if (b.isPrivate) {
     // Siempre en salmón, independiente del color del entrenador.
     candidates = ['Privada'];
